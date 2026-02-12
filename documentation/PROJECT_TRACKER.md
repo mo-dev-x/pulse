@@ -15,7 +15,7 @@
 | Phase | Status | Completion |
 |-------|--------|------------|
 | **Phase 1: Foundation** | ✅ Complete | 100% |
-| **Phase 2: Privacy & Social** | 🔄 In Progress | 0% |
+| **Phase 2: Privacy & Social** | 🔄 In Progress | 20% |
 | **Phase 3: Interactions** | ⏳ Pending | 0% |
 | **Phase 4: Analytics** | ⏳ Pending | 0% |
 
@@ -60,12 +60,10 @@
 - [x] GIT_SETUP_GUIDE.md created
 - [x] SETUP_FOR_TEAMMATES.md created
 - [x] Pushed to GitHub (mo-dev-x/pulse-backend)
-- [x] Repository shared with team
-- [x] Documentation consolidated (removed duplicate QUICKSTART.md)
 
 ### Posts
-- [ ] Post model created
-- [ ] NLP service implemented (VADER)
+- [X] Post model created
+- [X] NLP service implemented (VADER)
 - [ ] Create post endpoint (`POST /api/posts`)
 - [ ] Sentiment analysis integration
 - [ ] Public vs. anonymous toggle
@@ -133,13 +131,13 @@
 #### Week 1: Day 1-2 — Database Setup
 
 **Tasks:**
-- [ ] Create virtual environment
-- [ ] Install Python dependencies
-- [ ] Create MySQL database `pulse_db`
-- [ ] Create database user with privileges
-- [ ] Execute schema creation SQL
-- [ ] Seed `campus_zones` table with initial data
-- [ ] Test database connection from Python
+- [X] Create virtual environment
+- [X] Install Python dependencies
+- [X] Create MySQL database `pulse_db`
+- [X] Create database user with privileges
+- [X] Execute schema creation SQL
+- [X] Seed `campus_zones` table with initial data
+- [X] Test database connection from Python
 
 **Success Criteria:**
 - Can connect to MySQL from Python
@@ -152,15 +150,15 @@
 #### Week 1: Day 3-4 — User Authentication
 
 **Tasks:**
-- [ ] Create Flask app factory (`app/__init__.py`)
-- [ ] Set up configuration (`app/config.py`)
-- [ ] Create User model (`app/models/user.py`)
-- [ ] Create auth blueprint (`app/routes/auth.py`)
-- [ ] Implement password hashing with bcrypt
-- [ ] Implement JWT token generation
-- [ ] Build registration endpoint
-- [ ] Build login endpoint
-- [ ] Test with Postman/curl
+- [X] Create Flask app factory (`app/__init__.py`)
+- [X] Set up configuration (`app/config.py`)
+- [X] Create User model (`app/models/user.py`)
+- [X] Create auth blueprint (`app/routes/auth.py`)
+- [X] Implement password hashing with bcrypt
+- [X] Implement JWT token generation
+- [X] Build registration endpoint
+- [X] Build login endpoint
+- [X] Test with Postman/curl
 
 **Success Criteria:**
 - User can register with email, username, password
@@ -169,8 +167,8 @@
 - Token can be decoded to extract user_id
 
 **Security Checklist:**
-- [ ] Email validation (proper format)
-- [ ] Password strength requirements (min 8 chars, mix of types)
+- [X] Email validation (proper format)
+- [X] Password strength requirements (min 8 chars, mix of types)
 - [ ] Username uniqueness enforced
 - [ ] SQL injection prevented (ORM parameterized queries)
 - [ ] Rate limiting on registration (prevent spam accounts)
@@ -182,8 +180,8 @@
 **Tasks:**
 - [ ] Create Post model (`app/models/post.py`)
 - [ ] Create CampusZone model (`app/models/campus_zone.py`)
-- [ ] Create NLP service (`app/services/nlp_service.py`)
-- [ ] Install VADER sentiment analyzer
+- [X] Create NLP service (`app/services/nlp_service.py`)
+- [X] Install VADER sentiment analyzer
 - [ ] Create posts blueprint (`app/routes/posts.py`)
 - [ ] Implement `POST /api/posts` endpoint
 - [ ] Integrate sentiment analysis
@@ -198,11 +196,11 @@
 - Returns created post with sentiment to user
 
 **NLP Testing:**
-- [ ] Test positive text: "I love this campus! ❤️"
-- [ ] Test negative text: "So stressed about exams 😭"
-- [ ] Test neutral text: "Library closes at 10pm"
-- [ ] Test edge case: Very short text (<10 chars)
-- [ ] Test edge case: Emojis only
+- [X] Test positive text: "I love this campus! ❤️"
+- [X] Test negative text: "So stressed about exams 😭"
+- [X] Test neutral text: "Library closes at 10pm"
+- [X] Test edge case: Very short text (<10 chars)
+- [X] Test edge case: Emojis only
 
 ---
 
@@ -258,10 +256,10 @@ Key components:
 ## 🔍 TESTING CHECKLIST
 
 ### Authentication Tests
-- [ ] Register with valid data succeeds
-- [ ] Register with duplicate email fails
-- [ ] Register with duplicate username fails
-- [ ] Register with weak password fails
+- [X] Register with valid data succeeds
+- [X] Register with duplicate email fails
+- [X] Register with duplicate username fails
+- [X] Register with weak password fails
 - [ ] Login with correct credentials succeeds
 - [ ] Login with wrong password fails
 - [ ] JWT token contains correct user_id
