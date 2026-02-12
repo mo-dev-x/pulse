@@ -15,6 +15,7 @@ from datetime import datetime
 
 from app import db
 from app.models.user import User
+from app.utils.i18n import get_bilingual_message, get_message
 
 # Create blueprint
 bp = Blueprint('auth', __name__)
@@ -62,34 +63,34 @@ def register():
     if not User.validate_email(email):
         return jsonify({
             'error': 'Validation error',
-            'message': 'Invalid email format'
+            'message': 'Vous devez utiliser votre adresse courriel @ulaval.ca / You must use your @ulaval.ca email address'
         }), 400
     
     # Validate username format
     if not User.validate_username(username):
         return jsonify({
-            'error': 'Validation error',
-            'message': 'Username must be 3-50 characters, alphanumeric and underscores only, cannot start with number'
+            'error': get_message('validation_error', 'en'),
+            'message': get_bilingual_message('username_invalid')
         }), 400
     
     # Validate password strength
     if not User.validate_password_strength(password):
         return jsonify({
-            'error': 'Validation error',
-            'message': 'Password must be at least 8 characters with uppercase, lowercase, and digit'
+            'error': get_message('validation_error', 'en'),
+            'message': get_bilingual_message('password_weak')
         }), 400
     
     # Check if user already exists
     if User.query.filter_by(email=email.lower()).first():
         return jsonify({
-            'error': 'User already exists',
-            'message': 'An account with this email already exists'
+            'error': get_message('validation_error', 'en'),
+            'message': get_bilingual_message('user_exists_email')
         }), 400
     
     if User.query.filter_by(username=username.lower()).first():
         return jsonify({
-            'error': 'User already exists',
-            'message': 'This username is already taken'
+            'error': get_message('validation_error', 'en'),
+            'message': get_bilingual_message('user_exists_username')
         }), 400
     
     try:
@@ -186,7 +187,7 @@ def login():
         access_token = create_access_token(identity=str(user.id))
         
         return jsonify({
-            'message': 'Login successful',
+            'message': f"{get_message('login_successful', 'fr')} / {get_message('login_successful', 'en')}",
             'user': user.to_dict(include_private=True),
             'token': access_token
         }), 200
@@ -239,7 +240,7 @@ def get_current_user():
     """
     try:
         # Get user ID from JWT token (comes back as string)
-        user_id = get_jwt_identity()
+        user_id = int(get_jwt_identity())
         
         # Fetch user from database
         user = User.query.get(user_id)

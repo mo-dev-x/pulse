@@ -1,8 +1,12 @@
 # 🫀 PULSE BACKEND
 
-**Privacy-First Campus Wellness Platform**
+**Privacy-First Campus Wellness Platform for Université Laval**
 
 A Flask-based REST API that enables students to share their emotional states anonymously while providing aggregated campus mood insights.
+
+**University:** Université Laval  
+**Languages:** Bilingual (French/English)  
+**Access:** @ulaval.ca email addresses only
 
 ---
 
@@ -83,6 +87,7 @@ Anonymous posts store `user_id` in database but API **never** exposes it.
 
 ```bash
 # 1. Clone/navigate to project
+git clone https://github.com/mo-dev-x/pulse-backend.git
 cd pulse-backend
 
 # 2. Create virtual environment
@@ -183,7 +188,6 @@ GET    /api/analytics/campus?date=YYYY-MM-DD
 - **Negative:** score < -0.05 (stressed, sad)
 
 **Limitations:**
-- English-only
 - May struggle with sarcasm
 - Not clinically validated
 - Should not be used for individual mental health assessment
@@ -250,6 +254,7 @@ Educational project for software engineering coursework.
 - **VADER Sentiment Analysis** - Hutto, C.J. & Gilbert, E.E. (2014)
 - **Flask Framework** - Pallets Projects
 - **SQLAlchemy ORM** - Michael Bayer
+- **My Partner in crime** - Principessa
 
 ---
 
@@ -257,7 +262,7 @@ Educational project for software engineering coursework.
 
 **Project Lead:** Backend, Data & Intelligence Lead  
 **Course:** Software Engineering  
-**Institution:** [Your University]
+**Institution:** Université Laval
 
 ---
 

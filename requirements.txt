@@ -14,8 +14,10 @@ cryptography==42.0.0
 # Security
 bcrypt==4.1.2
 
-# NLP
-vaderSentiment==3.3.2
+# NLP - Bilingual Support (French/English)
+vaderSentiment==3.3.2    # English sentiment analysis
+langdetect==1.0.9        # Language detection
+textblob==0.17.1         # French sentiment analysis
 
 # Utilities
 python-dotenv==1.0.0

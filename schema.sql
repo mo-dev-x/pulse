@@ -31,6 +31,9 @@ CREATE TABLE users (
     bio TEXT,
     profile_picture VARCHAR(500),
     
+    -- Language preference (Université Laval bilingual community)
+    preferred_language ENUM('en', 'fr') DEFAULT 'fr' NOT NULL,
+    
     -- Anonymous identity (persistent pseudonym)
     pseudonym VARCHAR(50) NOT NULL DEFAULT 'anonymous',
     pseudonym_last_changed TIMESTAMP NULL,
@@ -46,7 +49,8 @@ CREATE TABLE users (
     
     -- Constraints
     CONSTRAINT chk_username_length CHECK (CHAR_LENGTH(username) >= 3),
-    CONSTRAINT chk_pseudonym_length CHECK (CHAR_LENGTH(pseudonym) >= 3)
+    CONSTRAINT chk_pseudonym_length CHECK (CHAR_LENGTH(pseudonym) >= 3),
+    CONSTRAINT chk_email_domain CHECK (email LIKE '%@ulaval.ca')
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
@@ -105,9 +109,10 @@ CREATE TABLE posts (
     -- Privacy mode
     is_anonymous BOOLEAN NOT NULL DEFAULT FALSE,
     
-    -- NLP analysis results
+    -- NLP analysis results (bilingual support)
     sentiment_score DECIMAL(3,2),  -- -1.00 to 1.00
     sentiment_label ENUM('positive', 'neutral', 'negative'),
+    detected_language ENUM('en', 'fr') DEFAULT 'fr',  -- Auto-detected language
     
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     
@@ -121,6 +126,7 @@ CREATE TABLE posts (
     INDEX idx_zone_recent (zone_id, created_at DESC),
     INDEX idx_public_recent (is_anonymous, created_at DESC),
     INDEX idx_sentiment_date (sentiment_label, created_at),
+    INDEX idx_language (detected_language),
     
     -- Constraints
     CONSTRAINT chk_content_length CHECK (CHAR_LENGTH(content) >= 10 AND CHAR_LENGTH(content) <= 500),

@@ -43,6 +43,13 @@ class User(db.Model):
     pseudonym = db.Column(db.String(50), nullable=False, default='anonymous')
     pseudonym_last_changed = db.Column(db.DateTime, nullable=True)
     
+    # Language preference (Université Laval bilingual community)
+    preferred_language = db.Column(
+        db.Enum('en', 'fr'),
+        default='fr',
+        nullable=False
+    )
+    
     # Metadata
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime, nullable=True)
@@ -107,16 +114,20 @@ class User(db.Model):
     @staticmethod
     def validate_email(email):
         """
-        Validate email format
+        Validate email format and domain (Université Laval only)
         
         Args:
             email (str): Email address to validate
         
         Returns:
-            bool: True if valid, False otherwise
+            bool: True if valid @ulaval.ca email, False otherwise
         """
-        # Basic email regex
-        pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        # Must be @ulaval.ca email
+        if not email.lower().endswith('@ulaval.ca'):
+            return False
+        
+        # Check basic email format
+        pattern = r'^[a-zA-Z0-9._%+-]+@ulaval\.ca$'
         return re.match(pattern, email) is not None
     
     @staticmethod
