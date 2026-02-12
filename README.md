@@ -200,8 +200,8 @@ GET    /api/analytics/campus?date=YYYY-MM-DD
 ## 📚 DOCUMENTATION
 
 - **[QUICKSTART.md](documentation/QUICKSTART.md)** - Setup guide
-- **[PROJECT_TRACKER.md](documentation/QUICKSTART.md)** - Development progress
-- **[ARCHITECTURE_DECISIONS.md](documentation/QUICKSTART.md)** - Technical decisions
+- **[PROJECT_TRACKER.md](documentation/PROJECT_TRACKER.md)** - Development progress
+- **[ARCHITECTURE_DECISIONS.md](documentation/ARCHITECTURE_DECISIONS.md)** - Technical decisions
 - **[schema.sql](schema.sql)** - Database schema
 
 ---
