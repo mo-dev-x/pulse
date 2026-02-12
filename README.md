@@ -199,9 +199,9 @@ GET    /api/analytics/campus?date=YYYY-MM-DD
 
 ## 📚 DOCUMENTATION
 
-- **[QUICKSTART.md](QUICKSTART.md)** - Setup guide
-- **[PROJECT_TRACKER.md](PROJECT_TRACKER.md)** - Development progress
-- **[ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md)** - Technical decisions
+- **[QUICKSTART.md](documentation/QUICKSTART.md)** - Setup guide
+- **[PROJECT_TRACKER.md](documentation/QUICKSTART.md)** - Development progress
+- **[ARCHITECTURE_DECISIONS.md](documentation/QUICKSTART.md)** - Technical decisions
 - **[schema.sql](schema.sql)** - Database schema
 
 ---
@@ -211,11 +211,11 @@ GET    /api/analytics/campus?date=YYYY-MM-DD
 ### ✅ Phase 1: Foundation (Current)
 - [x] Environment setup
 - [x] Database schema
-- [ ] User authentication
-- [ ] Basic post creation
+- [x] User authentication
+- [x] Basic post creation
 
 ### ⏳ Phase 2: Privacy & Social
-- [ ] Anonymous posting
+- [x] Anonymous posting
 - [ ] Follow/unfollow system
 - [ ] Feed generation
 - [ ] Friends computation
@@ -254,7 +254,7 @@ Educational project for software engineering coursework.
 - **VADER Sentiment Analysis** - Hutto, C.J. & Gilbert, E.E. (2014)
 - **Flask Framework** - Pallets Projects
 - **SQLAlchemy ORM** - Michael Bayer
-- **My Partner in crime** - Principessa
+- **My Partner in crime** - Principessa 
 
 ---
 
