@@ -1,4 +1,4 @@
-# 🫀 PULSE BACKEND
+# 🫀 PULSE
 
 **Privacy-First Campus Wellness Platform for Université Laval**
 
