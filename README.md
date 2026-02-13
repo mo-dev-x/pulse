@@ -94,21 +94,25 @@ cd pulse-backend
 python3 -m venv venv
 source venv/bin/activate
 
-# 3. Install dependencies
+# 3. Install PyTorch (CPU version)
+# PyTorch is installed separately to avoid downloading GPU CUDA libraries (~4GB)
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+# 4. Install remaining Python dependencies
 pip install -r requirements.txt
 
-# 4. Set up environment variables
+# 5. Set up environment variables
 cp .env.template .env
 # Edit .env with your MySQL credentials and secret keys
 
-# 5. Initialize database
+# 6. Initialize database
 python setup_db.py
 
-# 6. Run the app
+# 7. Run the app
 python run.py
 ```
 
-**See [QUICKSTART.md](QUICKSTART.md) for detailed instructions.**
+**See [QUICKSTART.md](documentation/QUICKSTART.md) for detailed instructions.**
 
 ---
 

@@ -1,0 +1,33 @@
+# Pulse Backend - Python Dependencies
+# Install with: pip install -r requirements.txt
+
+# Flask Framework
+Flask==3.0.0
+Flask-SQLAlchemy==3.1.1
+Flask-JWT-Extended==4.6.0
+Flask-CORS==4.0.0
+
+# Database
+PyMySQL==1.1.0
+cryptography==42.0.0
+
+# Security
+bcrypt==4.1.2
+
+# NLP - Production Bilingual Support (French/English)
+vaderSentiment==3.3.2          # English sentiment (social media optimized)
+langdetect==1.0.9              # Language detection
+
+# French Emotion Model (optimized for social posts, not product reviews)
+transformers==4.36.0           # Hugging Face transformers
+protobuf>=4.25.0               # Required for transformers
+sentencepiece==0.1.99          # Tokenization
+
+# NOTE: PyTorch must be installed separately (CPU vs GPU)
+# Install with: pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+# Utilities
+python-dotenv==1.0.0
+
+# Development (optional)
+requests==2.31.0
