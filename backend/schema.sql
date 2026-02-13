@@ -7,7 +7,7 @@
 -- 
 -- IMPORTANT PRIVACY NOTES:
 -- 1. Anonymous posts store user_id but API never exposes it
--- 2. Aggregates require ≥10 posts before showing mood data
+-- 2. Aggregates require â‰¥10 posts before showing mood data
 -- 3. No individual emotional tracking
 -- 
 -- ============================================
@@ -31,7 +31,7 @@ CREATE TABLE users (
     bio TEXT,
     profile_picture VARCHAR(500),
     
-    -- Language preference (Université Laval bilingual community)
+    -- Language preference (UniversitÃ© Laval bilingual community)
     preferred_language ENUM('en', 'fr') DEFAULT 'fr' NOT NULL,
     
     -- Anonymous identity (persistent pseudonym)
@@ -115,6 +115,7 @@ CREATE TABLE posts (
     detected_language ENUM('en', 'fr') DEFAULT 'fr',  -- Auto-detected language
     
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
     -- Foreign keys
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,

@@ -6,6 +6,8 @@ Models are imported here to avoid circular imports.
 """
 
 from app.models.user import User
+from app.models.post import Post
+from app.models.campus_zone import CampusZone
 
 # We'll add other models as we create them:
 # from app.models.post import Post
@@ -15,4 +17,4 @@ from app.models.user import User
 # from app.models.follower import Follower
 # from app.models.aggregate import DailyAggregate, WeeklyAggregate
 
-__all__ = ['User']
+__all__ = ['User', 'Post', 'CampusZone']
