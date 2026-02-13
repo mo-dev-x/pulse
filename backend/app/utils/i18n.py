@@ -155,6 +155,76 @@ MESSAGES = {
     'post_deleted': {
         'en': 'Post deleted successfully',
         'fr': 'Publication supprimée avec succès'
+    },
+
+    # Social / Follow messages
+    'cannot_follow_self': {
+        'en': 'You cannot follow yourself',
+        'fr': 'Vous ne pouvez pas vous suivre vous-même'
+    },
+    'already_following': {
+        'en': 'You are already following this user',
+        'fr': 'Vous suivez déjà cet utilisateur'
+    },
+    'not_following': {
+        'en': 'You are not following this user',
+        'fr': 'Vous ne suivez pas cet utilisateur'
+    },
+    'follow_success': {
+        'en': 'Successfully followed user',
+        'fr': 'Utilisateur suivi avec succès'
+    },
+    'unfollow_success': {
+        'en': 'Successfully unfollowed user',
+        'fr': 'Utilisateur désabonné avec succès'
+    },
+
+    # Feed messages
+    'feed_empty': {
+        'en': 'Your feed is empty. Follow users to see their posts!',
+        'fr': 'Votre fil est vide. Suivez des utilisateurs pour voir leurs publications !'
+    },
+
+    # Reaction messages
+    'emoji_required': {
+        'en': 'Emoji is required',
+        'fr': "L'émoji est requis"
+    },
+    'emoji_invalid': {
+        'en': 'Invalid emoji. Use one of the allowed emojis.',
+        'fr': 'Émoji invalide. Utilisez un des émojis autorisés.'
+    },
+    'reaction_added': {
+        'en': 'Reaction added',
+        'fr': 'Réaction ajoutée'
+    },
+    'reaction_updated': {
+        'en': 'Reaction updated',
+        'fr': 'Réaction mise à jour'
+    },
+    'reaction_removed': {
+        'en': 'Reaction removed',
+        'fr': 'Réaction retirée'
+    },
+    'no_reaction': {
+        'en': 'You have not reacted to this post',
+        'fr': "Vous n'avez pas réagi à cette publication"
+    },
+
+    # Post management
+    'post_not_found': {
+        'en': 'Post not found',
+        'fr': 'Publication non trouvée'
+    },
+    'post_delete_expired': {
+        'en': 'Posts can only be deleted within 24 hours of creation',
+        'fr': 'Les publications ne peuvent être supprimées que dans les 24 heures suivant leur création'
+    },
+
+    # Media messages
+    'file_type_invalid': {
+        'en': 'Invalid file type. Allowed: PNG, JPG, GIF, WebP',
+        'fr': 'Type de fichier invalide. Autorisés : PNG, JPG, GIF, WebP'
     }
 }
 

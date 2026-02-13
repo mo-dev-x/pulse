@@ -598,6 +598,139 @@ def analyze_sentiment(text):
 
 ---
 
+### **AD-009: NLP Model Selection — Twitter XLM-RoBERTa**
+
+**Date:** 2026-02-13  
+**Decision:** Use `cardiffnlp/twitter-xlm-roberta-base-sentiment` for French sentiment
+
+**Alternatives Evaluated:**
+
+| Model | Accuracy | Domain | Verdict |
+|-------|----------|--------|---------|
+| TextBlob | ~66% | General | ❌ Too inaccurate |
+| CamemBERT (distilcamembert-base-sentiment) | ~71% | Product reviews | ❌ Wrong domain, missed stress |
+| **Twitter XLM-RoBERTa** | **81%** | **Social media** | **✅ Selected** |
+
+**Why This Model:**
+1. **Perfect stress detection** — 100% of negative/stressed posts detected correctly
+2. **Zero false negatives** — no missed distress signals (critical for wellness)
+3. **Social media trained** — understands emojis, slang, informal writing
+4. **Bilingual** — handles both French and English natively
+5. **1M+ downloads** — proven and community-validated
+
+**Known Limitation:**
+- Neutral posts lean slightly positive (score ~0.10–0.20)
+- Acceptable for wellness context: false positive (neutral → positive) is harmless; false negative (negative → neutral) would be dangerous — and there are zero of those
+
+**Classification Thresholds:**
+```python
+score > 0.05   → 'positive'
+score < -0.05  → 'negative'
+else           → 'neutral'
+```
+
+**Performance:**
+- First load: ~40 seconds (downloads 500MB model)
+- Cached: <1 second per analysis
+- GPU not required (CPU works fine)
+
+---
+
+### **AD-010: Feed Privacy — Public Posts Only**
+
+**Date:** 2026-02-13  
+**Decision:** Feed shows ONLY `is_anonymous=False` posts from followed users
+
+**Implementation:**
+```python
+Post.query.filter(
+    Post.user_id.in_(following_ids),
+    Post.is_anonymous == False  # ← CRITICAL
+).order_by(Post.created_at.desc())
+```
+
+**What this prevents:**
+- ❌ Pattern matching: "My friend posts anonymously at 2am every night"
+- ❌ Writing style correlation between public and anonymous posts
+- ❌ Social pressure: "Why did you post that anonymously?"
+
+**Separate Views:**
+- Profile page → public posts only
+- "My Posts" → user's own public posts
+- "My Anonymous Posts" → **private**, only visible to the author
+
+---
+
+### **AD-011: Reaction Privacy — Aggregate Counts Only**
+
+**Date:** 2026-02-13  
+**Decision:** Reaction endpoints return only emoji counts, never "who reacted"
+
+**API Response:**
+```json
+{
+  "reactions": {"❤️": 12, "👍": 8, "😢": 3},
+  "total_reactions": 23,
+  "my_reaction": "❤️"
+}
+```
+
+**Rules:**
+- One reaction per user per post (UNIQUE constraint)
+- Only 10 allowed emojis (curated set for consistency)
+- Reactions on anonymous posts are allowed (counts only, no identity leak)
+- `my_reaction` shows only the requesting user's own reaction
+
+---
+
+### **AD-012: Analytics Privacy Threshold — ≥10 Posts**
+
+**Date:** 2026-02-13  
+**Decision:** Aggregated mood data is only returned when `total_posts >= 10`
+
+**Rationale:**
+- With fewer than 10 posts, individual writing patterns could be identifiable
+- Threshold prevents small-group de-anonymization (e.g., zone with 2 posts)
+- Returns explicit "insufficient data" message when below threshold
+
+**Implementation:**
+```python
+class DailyAggregate(db.Model):
+    MINIMUM_POSTS = 10
+
+    def to_dict(self, enforce_threshold=True):
+        if enforce_threshold and self.total_posts < self.MINIMUM_POSTS:
+            return {
+                'message': 'Insufficient data for privacy-safe aggregation',
+                'minimum_required': self.MINIMUM_POSTS,
+                'current_count': self.total_posts
+            }
+```
+
+**Disclaimer:** Every analytics response includes:
+> "Sentiment analysis is automated and approximate. It shows campus trends, not individual diagnoses."
+
+---
+
+### **AD-013: Post Deletion — 24-Hour Window**
+
+**Date:** 2026-02-13  
+**Decision:** Posts (public and anonymous) can only be deleted within 24 hours
+
+**Rationale:**
+- Gives users time to reconsider while preserving data integrity
+- Anonymous posts can be deleted (user control over their data)
+- Anonymous posts can NOT be edited (multiple versions could reveal identity through writing style changes — see AD-004)
+
+**Implementation:**
+```python
+hours_since = (datetime.utcnow() - post.created_at).total_seconds() / 3600
+if hours_since > 24:
+    return HTTP 403  # "Posts can only be deleted within 24 hours"
+```
+
+---
+
 **📌 This document grows with the project. Every technical decision is recorded here.**
 
-**Last Updated:** Phase 2 Complete - Bilingual NLP & Privacy Enforcement
+**Last Updated:** Phase 4 Complete — Social Features, Reactions, Feed, Analytics

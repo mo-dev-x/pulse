@@ -60,16 +60,13 @@ def register_blueprints(app):
     """
     Register all Flask blueprints
     """
-    from app.routes import auth, posts
+    from app.routes import auth, posts, social, reactions, analytics
     
     app.register_blueprint(auth.bp, url_prefix='/api/auth')
     app.register_blueprint(posts.bp, url_prefix='/api/posts')
-    
-    # We'll uncomment these as we create them
-    # from app.routes import posts, users, analytics, reactions
-    # app.register_blueprint(users.bp, url_prefix='/api/users')
-    # app.register_blueprint(analytics.bp, url_prefix='/api/analytics')
-    # app.register_blueprint(reactions.bp, url_prefix='/api')
+    app.register_blueprint(social.bp, url_prefix='/api')
+    app.register_blueprint(reactions.bp, url_prefix='/api/posts')
+    app.register_blueprint(analytics.bp, url_prefix='/api/analytics')
 
 
 def register_error_handlers(app):

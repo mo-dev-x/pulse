@@ -87,44 +87,6 @@ pip install -r requirements.txt
 
 **Note:** French emotion model (~250MB) downloads on first use, not during installation.
 
----
-
-### **Option B: Bilingual NLP Installation (Using Script)**
-
-For a guided installation of the bilingual NLP packages:
-
-```bash
-# Make script executable
-chmod +x install_bilingual.sh
-
-# Run installation script
-bash install_bilingual.sh
-```
-
-**This script:**
-- ✅ Checks virtual environment
-- ✅ Upgrades pip
-- ✅ Installs all NLP dependencies
-- ✅ Tests imports
-- ✅ Verifies CUDA/GPU availability
-
-**Expected output:**
-```
-╔═══════════════════════════════════════╗
-║   INSTALLING CAMEMBERT NLP PACKAGES   ║
-╚═══════════════════════════════════════╝
-
-🇫🇷 Using French emotion model for campus social posts
-🇬🇧 Using VADER for English sentiment
-
-✅ Virtual environment detected
-📦 Installing bilingual NLP packages...
-✅ All bilingual NLP packages installed successfully!
-
-╔═══════════════════════════════════════╗
-║        INSTALLATION COMPLETE!         ║
-╚═══════════════════════════════════════╝
-```
 
 ---
 

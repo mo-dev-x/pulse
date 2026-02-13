@@ -1,20 +1,30 @@
 """
 Posts Routes
 
-Handles post creation, retrieval, and management.
+Handles post creation, retrieval, feed generation, and management.
 
 Endpoints:
-- POST /api/posts - Create new post (public or anonymous)
-- GET /api/posts/feed - Get user's feed (future)
-- GET /api/posts/me - Get user's public posts (future)
-- GET /api/posts/me/anonymous - Get user's anonymous posts (future)
+- POST   /api/posts                — Create new post (public or anonymous)
+- GET    /api/posts/feed           — Feed (public posts from followed users)
+- GET    /api/posts/me             — Current user's public posts
+- GET    /api/posts/me/anonymous   — Current user's anonymous posts (private)
+- GET    /api/posts/@{username}    — User's public posts
+- GET    /api/posts/zone/{zone_id} — All posts in a zone
+- DELETE /api/posts/{post_id}      — Delete own post
 """
 
-from flask import Blueprint, request, jsonify
+import os
+import uuid
+from datetime import datetime
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from werkzeug.utils import secure_filename
 
 from app import db
 from app.models import Post, CampusZone, User
+from app.models.follower import Follower
+from app.models.media import Media
+from app.models.reaction import Reaction
 from app.services import analyze_sentiment
 from app.utils.i18n import get_bilingual_message, get_message
 
@@ -22,56 +32,81 @@ from app.utils.i18n import get_bilingual_message, get_message
 bp = Blueprint('posts', __name__)
 
 
+def _enrich_post_dict(post_dict, post, current_user_id):
+    """Add reaction counts and media to a serialized post dict"""
+    # Add reaction counts
+    post_dict['reactions'] = Reaction.get_counts(post.id)
+    post_dict['my_reaction'] = Reaction.get_user_reaction(current_user_id, post.id)
+    post_dict['reaction_count'] = Reaction.get_total_count(post.id)
+
+    # Add media
+    if post.media:
+        post_dict['media'] = [m.to_dict() for m in post.media]
+    else:
+        post_dict['media'] = []
+
+    return post_dict
+
+
+def _allowed_file(filename):
+    """Check if uploaded file has an allowed extension"""
+    allowed = current_app.config.get('ALLOWED_EXTENSIONS', {'png', 'jpg', 'jpeg', 'gif', 'webp'})
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed
+
+
 @bp.route('', methods=['POST'])
 @jwt_required()
 def create_post():
     """
-    Create a new post with sentiment analysis
-    
-    Request Body:
+    Create a new post with sentiment analysis.
+
+    Supports JSON body or multipart form data (for image uploads).
+
+    Request Body (JSON):
         {
             "content": "Post content here (10-500 chars)",
-            "zone_id": 1,  // Optional: Campus zone ID
-            "is_anonymous": false  // Optional: Default false
+            "zone_id": 1,
+            "is_anonymous": false
         }
-    
+
     Returns:
         201: Post created successfully with sentiment analysis
         400: Validation error
         404: Zone not found
-    
-    Features:
-    - Automatic bilingual sentiment analysis (FR/EN)
-    - Privacy-aware: Anonymous posts hide user_id in response
-    - Zone validation
     """
     user_id = int(get_jwt_identity())
-    data = request.get_json()
-    
-    # Validate required fields
-    if not data or 'content' not in data:
-        return jsonify({
-            'error': get_message('validation_error', 'en'),
-            'message': get_bilingual_message('post_content_required')
-        }), 400
-    
-    content = data['content'].strip()
-    zone_id = data.get('zone_id')
-    is_anonymous = data.get('is_anonymous', False)
-    
+
+    # Handle both JSON and form data (for file uploads)
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        content = request.form.get('content', '').strip()
+        zone_id = request.form.get('zone_id', type=int)
+        is_anonymous = request.form.get('is_anonymous', 'false').lower() == 'true'
+        uploaded_file = request.files.get('image')
+    else:
+        data = request.get_json()
+        if not data or 'content' not in data:
+            return jsonify({
+                'error': get_message('validation_error', 'en'),
+                'message': get_bilingual_message('post_content_required')
+            }), 400
+        content = data['content'].strip()
+        zone_id = data.get('zone_id')
+        is_anonymous = data.get('is_anonymous', False)
+        uploaded_file = None
+
     # Validate content length
     if len(content) < 10:
         return jsonify({
             'error': get_message('validation_error', 'en'),
             'message': get_bilingual_message('post_too_short')
         }), 400
-    
+
     if len(content) > 500:
         return jsonify({
             'error': get_message('validation_error', 'en'),
             'message': get_bilingual_message('post_too_long')
         }), 400
-    
+
     # Validate zone if provided
     if zone_id:
         zone = CampusZone.get_by_id(zone_id)
@@ -80,11 +115,11 @@ def create_post():
                 'error': get_message('validation_error', 'en'),
                 'message': get_bilingual_message('zone_not_found')
             }), 404
-    
+
     try:
         # Analyze sentiment (bilingual: FR + EN)
         sentiment_result = analyze_sentiment(content)
-        
+
         # Create post
         new_post = Post(
             content=content,
@@ -95,18 +130,51 @@ def create_post():
             sentiment_label=sentiment_result['label'],
             detected_language=sentiment_result['language']
         )
-        
+
         db.session.add(new_post)
+        db.session.flush()  # Get the post ID before committing
+
+        # Handle file upload
+        if uploaded_file and uploaded_file.filename:
+            if not _allowed_file(uploaded_file.filename):
+                db.session.rollback()
+                return jsonify({
+                    'error': get_message('validation_error', 'en'),
+                    'message': get_bilingual_message('file_type_invalid')
+                }), 400
+
+            # Generate unique filename
+            ext = uploaded_file.filename.rsplit('.', 1)[1].lower()
+            unique_filename = f"{uuid.uuid4().hex}.{ext}"
+
+            upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads/')
+            os.makedirs(upload_folder, exist_ok=True)
+            file_path = os.path.join(upload_folder, unique_filename)
+
+            uploaded_file.save(file_path)
+            file_size = os.path.getsize(file_path)
+
+            media = Media(
+                post_id=new_post.id,
+                file_path=file_path,
+                file_type='image',
+                file_size=file_size,
+                mime_type=uploaded_file.content_type
+            )
+            db.session.add(media)
+
         db.session.commit()
-        
+
         # Return post (privacy-aware serialization)
+        post_dict = new_post.to_dict(current_user_id=user_id)
+        post_dict = _enrich_post_dict(post_dict, new_post, user_id)
+
         return jsonify({
             'message': get_bilingual_message('post_created'),
-            'post': new_post.to_dict(current_user_id=user_id)
+            'post': post_dict
         }), 201
-        
+
     except ValueError as e:
-        # NLP validation error (text too short)
         db.session.rollback()
         return jsonify({
             'error': get_message('validation_error', 'en'),
@@ -114,7 +182,7 @@ def create_post():
         }), 400
     except Exception as e:
         db.session.rollback()
-        print(f"Error creating post: {str(e)}")  # Log for debugging
+        print(f"Error creating post: {str(e)}")
         return jsonify({
             'error': get_message('server_error', 'en'),
             'message': 'Failed to create post'
@@ -125,14 +193,53 @@ def create_post():
 @jwt_required()
 def get_feed():
     """
-    Get user's personalized feed
-    
-    TODO: Phase 2 - Implement feed generation
-    Shows public posts from followed users
+    Get user's personalized feed.
+
+    Shows ONLY public posts from followed users (never anonymous).
+    Ordered by newest first, paginated.
+
+    Query Params:
+        page (int): Page number (default 1)
+        per_page (int): Items per page (default 20, max 50)
     """
+    current_user_id = int(get_jwt_identity())
+
+    page = request.args.get('page', 1, type=int)
+    per_page = min(request.args.get('per_page', 20, type=int), 50)
+
+    # Get IDs of users the current user follows
+    following_ids = Follower.get_following_ids(current_user_id)
+
+    if not following_ids:
+        return jsonify({
+            'posts': [],
+            'total': 0,
+            'page': 1,
+            'pages': 0,
+            'has_next': False,
+            'message': get_bilingual_message('feed_empty')
+        }), 200
+
+    # CRITICAL: Only public posts from followed users
+    feed_query = Post.query.filter(
+        Post.user_id.in_(following_ids),
+        Post.is_anonymous == False  # noqa: E712 — SQLAlchemy requires ==
+    ).order_by(Post.created_at.desc())
+
+    paginated = feed_query.paginate(page=page, per_page=per_page, error_out=False)
+
+    posts = []
+    for post in paginated.items:
+        post_dict = post.to_dict(current_user_id=current_user_id)
+        post_dict = _enrich_post_dict(post_dict, post, current_user_id)
+        posts.append(post_dict)
+
     return jsonify({
-        'message': 'Feed endpoint - Coming in Phase 2!',
-        'posts': []
+        'posts': posts,
+        'total': paginated.total,
+        'page': paginated.page,
+        'pages': paginated.pages,
+        'has_next': paginated.has_next
     }), 200
 
 
@@ -140,13 +247,32 @@ def get_feed():
 @jwt_required()
 def get_my_posts():
     """
-    Get current user's public posts
-    
-    TODO: Phase 2 - Implement user posts retrieval
+    Get current user's public posts (paginated).
     """
+    current_user_id = int(get_jwt_identity())
+
+    page = request.args.get('page', 1, type=int)
+    per_page = min(request.args.get('per_page', 20, type=int), 50)
+
+    query = Post.query.filter_by(
+        user_id=current_user_id,
+        is_anonymous=False
+    ).order_by(Post.created_at.desc())
+
+    paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    posts = []
+    for post in paginated.items:
+        post_dict = post.to_dict(current_user_id=current_user_id)
+        post_dict = _enrich_post_dict(post_dict, post, current_user_id)
+        posts.append(post_dict)
+
     return jsonify({
-        'message': 'My posts endpoint - Coming in Phase 2!',
-        'posts': []
+        'posts': posts,
+        'total': paginated.total,
+        'page': paginated.page,
+        'pages': paginated.pages,
+        'has_next': paginated.has_next
     }), 200
 
 
@@ -154,15 +280,171 @@ def get_my_posts():
 @jwt_required()
 def get_my_anonymous_posts():
     """
-    Get current user's anonymous posts (private view)
-    
+    Get current user's anonymous posts (private view).
+
     Privacy Note:
-    - Only the post author can see their own anonymous posts
-    - This endpoint is for "My Anonymous Posts" feature
-    
-    TODO: Phase 2 - Implement anonymous posts retrieval
+    - Only the post author can see their own anonymous posts.
+    - This is the ONLY endpoint that links user_id to anonymous posts.
     """
+    current_user_id = int(get_jwt_identity())
+
+    page = request.args.get('page', 1, type=int)
+    per_page = min(request.args.get('per_page', 20, type=int), 50)
+
+    query = Post.query.filter_by(
+        user_id=current_user_id,
+        is_anonymous=True
+    ).order_by(Post.created_at.desc())
+
+    paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    posts = []
+    for post in paginated.items:
+        post_dict = post.to_dict(current_user_id=current_user_id)
+        post_dict = _enrich_post_dict(post_dict, post, current_user_id)
+        posts.append(post_dict)
+
     return jsonify({
-        'message': 'My anonymous posts endpoint - Coming in Phase 2!',
-        'posts': []
+        'posts': posts,
+        'total': paginated.total,
+        'page': paginated.page,
+        'pages': paginated.pages,
+        'has_next': paginated.has_next
     }), 200
+
+
+@bp.route('/@<string:username>', methods=['GET'])
+@jwt_required()
+def get_user_posts(username):
+    """
+    Get a user's public posts (paginated).
+
+    Privacy: Only shows public (non-anonymous) posts.
+    """
+    current_user_id = int(get_jwt_identity())
+
+    user = User.query.filter_by(username=username.lower()).first()
+    if not user:
+        return jsonify({
+            'error': get_message('validation_error', 'en'),
+            'message': get_bilingual_message('user_not_found')
+        }), 404
+
+    page = request.args.get('page', 1, type=int)
+    per_page = min(request.args.get('per_page', 20, type=int), 50)
+
+    query = Post.query.filter_by(
+        user_id=user.id,
+        is_anonymous=False
+    ).order_by(Post.created_at.desc())
+
+    paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    posts = []
+    for post in paginated.items:
+        post_dict = post.to_dict(current_user_id=current_user_id)
+        post_dict = _enrich_post_dict(post_dict, post, current_user_id)
+        posts.append(post_dict)
+
+    return jsonify({
+        'user': username,
+        'posts': posts,
+        'total': paginated.total,
+        'page': paginated.page,
+        'pages': paginated.pages,
+        'has_next': paginated.has_next
+    }), 200
+
+
+@bp.route('/zone/<int:zone_id>', methods=['GET'])
+@jwt_required()
+def get_zone_posts(zone_id):
+    """
+    Get all posts in a campus zone (paginated).
+
+    Shows both public and anonymous posts (anonymous hide author info).
+    """
+    current_user_id = int(get_jwt_identity())
+
+    zone = CampusZone.get_by_id(zone_id)
+    if not zone:
+        return jsonify({
+            'error': get_message('validation_error', 'en'),
+            'message': get_bilingual_message('zone_not_found')
+        }), 404
+
+    page = request.args.get('page', 1, type=int)
+    per_page = min(request.args.get('per_page', 20, type=int), 50)
+
+    query = Post.query.filter_by(
+        zone_id=zone_id
+    ).order_by(Post.created_at.desc())
+
+    paginated = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    posts = []
+    for post in paginated.items:
+        post_dict = post.to_dict(current_user_id=current_user_id)
+        post_dict = _enrich_post_dict(post_dict, post, current_user_id)
+        posts.append(post_dict)
+
+    return jsonify({
+        'zone': zone.to_dict(),
+        'posts': posts,
+        'total': paginated.total,
+        'page': paginated.page,
+        'pages': paginated.pages,
+        'has_next': paginated.has_next
+    }), 200
+
+
+@bp.route('/<int:post_id>', methods=['DELETE'])
+@jwt_required()
+def delete_post(post_id):
+    """
+    Delete own post.
+
+    Authorization:
+    - Only the post author can delete their post
+    - Posts can only be deleted within 24 hours of creation (AD-004)
+    """
+    current_user_id = int(get_jwt_identity())
+
+    post = Post.query.get(post_id)
+    if not post:
+        return jsonify({
+            'error': get_message('validation_error', 'en'),
+            'message': get_bilingual_message('post_not_found')
+        }), 404
+
+    # Authorization: only author can delete
+    if post.user_id != current_user_id:
+        return jsonify({
+            'error': get_message('forbidden', 'en'),
+            'message': get_bilingual_message('forbidden')
+        }), 403
+
+    # Time restriction: within 24 hours
+    if post.created_at:
+        hours_since = (datetime.utcnow() - post.created_at).total_seconds() / 3600
+        if hours_since > 24:
+            return jsonify({
+                'error': get_message('validation_error', 'en'),
+                'message': get_bilingual_message('post_delete_expired')
+            }), 403
+
+    try:
+        db.session.delete(post)
+        db.session.commit()
+
+        return jsonify({
+            'message': get_bilingual_message('post_deleted'),
+            'deleted': True
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            'error': get_message('server_error', 'en'),
+            'message': 'Failed to delete post'
+        }), 500
