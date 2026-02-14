@@ -1,14 +1,173 @@
 <!doctype html>
 <html>
 
-<body>
-    <h1>ASLEEMAAA fl Feed </h1>
-    
-    <script type="module">
-    import { isLoggedIn } from "js/auth.js";
-    if (!isLoggedIn()) window.location.href = "login.html";
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>PULSE — Feed</title>
+    <link rel="stylesheet" href="css/feed.css">
+</head>
 
-    <button onclick="logout()">Logout</button>
-    </script>
+<body>
+    <link rel="stylesheet" href="https://unicons.iconscout.com/release/v2.1.6/css/unicons.css">
+
+    <link rel="stylesheet" href="css/feed.css">
+    </head>
+
+    <body>
+        <nav>
+            <div class="container">
+                <h2 class="log">
+                    PULSE
+                </h2>
+                <div class="search-bar">
+                    <i class="uil uil-search"></i>
+                    <input type="search" placeholder="Search for friends or posts...">
+                </div>
+                <div class="create">
+                    <label for="create-post" class="btn btn-primary">Create Post</label>
+                    <div class="Profile-photo nav-profile">
+                        <img src="images/image2.jpg" alt="Profile">
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+
+        <!-- MAINNNNN  -->
+        <main>
+            <div class="container">
+                <!-- KOOL MAHOU AAL YSAAAAAAAAAAAAAAARRRRRRRRRRR -->
+                <div class="left">
+                    <a class="profile">
+                        <div class="profile-photo">
+                            <!-- <img src="..."> -->
+                        </div>
+                        <div class="handle">
+                            <h4>Bonhomme</h4>
+                            <p class="text-muted">
+                                @goat
+                            </p>
+                        </div>
+                    </a>
+                <div class="sidebar">
+                <a class="menu-item active" href="#">
+                    <span><i class="uil uil-home"></i></span>
+                    <h3>Feed</h3>
+                </a>
+
+                <a class="menu-item" href="#">
+                    <span><i class="uil uil-compass"></i></span>
+                    <h3>Explore</h3>
+                </a>
+
+                <a class="menu-item" href="#">
+                    <span><i class="uil uil-map-marker"></i></span>
+                    <h3>Campus Map</h3>
+                </a>
+
+                <a class="menu-item" href="#">
+                    <span><i class="uil uil-smile"></i></span>
+                    <h3>Mood Dashboard</h3>
+                </a>
+
+                <a class="menu-item" href="#">
+                    <span><i class="uil uil-bell"></i></span>
+                    <h3>Notifications</h3>
+                </a>
+
+                <a class="menu-item" href="#">
+                    <span><i class="uil uil-envelope-alt"></i></span>
+                    <h3>Messages</h3>
+                </a>
+
+                <a class="menu-item" href="#">
+                    <span><i class="uil uil-plus-circle"></i></span>
+                    <h3>Post</h3>
+                </a>
+
+                <a class="menu-item" href="#">
+                    <span><i class="uil uil-setting"></i></span>
+                    <h3>Settings</h3>
+                </a>
+                </div>
+
+                    <!-- KOOL MAHOU FLWSSSSSTTTTTTTTT-->
+                    <div class="middle">
+
+
+
+                    </div>
+                <!-- KOOL MAHOU AAL YMIIIIIIIIIINNNNNNN -->
+                    <div class="right">
+
+
+
+                    </div>
+
+
+                </div>
+
+
+
+
+        </main>
+
+
+
+    </body>
+
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- <h1>ASLEEMAAA fl Feed </h1>
+     <main class="page">
+        <section class="card">
+            <div class="brand">
+                <div>
+                    <h1>PULSE</h1>
+                    <p>ASLEEMAAA fl Feed </p>
+                </div>
+            </div>
+             <button class="btn" id="logoutBtn" type="button">Logout</button> -->
+<!-- <button onclick="logout()">Logout</button>
+
+</section>
+</main>
+
+<script type="module">
+    import { isLoggedIn } from "./js/auth.js"; //or ./js/....
+    if (!isLoggedIn()) window.location.href = "login.html"; //window.location.replace("login.html");
+</script> -->
+
+
 </body>
+
 </html>

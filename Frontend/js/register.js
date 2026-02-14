@@ -55,3 +55,6 @@ form.addEventListener("submit", async (e) => {
     showError(err.message || "Register failed");
   }
 });
+
+import { logout } from "./auth.js";
+window.logout = logout;

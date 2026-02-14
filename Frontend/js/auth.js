@@ -17,6 +17,7 @@ export function isLoggedIn() {
 export function logout() {
   localStorage.removeItem("pulse_token");
 }
+window.logout = logout;
 
 //appel backend
 
