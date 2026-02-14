@@ -14,7 +14,7 @@ form.addEventListener("submit", async (e) => {
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
 
-  // ✅ validation ULaval
+  // validation ULaval
   if (!email.endsWith("@ulaval.ca")) {
     showError("Email must end with @ulaval.ca");
     return;
@@ -26,7 +26,7 @@ form.addEventListener("submit", async (e) => {
       body: JSON.stringify({ username, email, password }),
     });
 
-    // ✅ souvent register renvoie aussi un token
+    //souvent register renvoie aussi un token
     if (data.token) {
       saveToken(data.token);
       window.location.href = "feed.html";
