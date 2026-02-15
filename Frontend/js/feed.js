@@ -449,6 +449,33 @@ function demoPosts() {
       mine: false,
       reactions: { like: 52, wow: 6, sad: 31 },
     },
+        {
+      id: "p2b",
+      username: "Dina A.",
+      handle: "@dinaa",
+      zone: "Zone 6 • PEPS Gym",
+      time: "40 minutes ago",
+      sentiment: "positive",
+      text: "I forced myself to do a 15-minute walk outside and it genuinely reset my brain. If you’re stuck, try a tiny move — it helps 🌿",
+      imageUrl: "",
+      videoUrl: "",
+      mine: false,
+      reactions: { like: 63, wow: 14, sad: 1 }
+    },
+    {
+      id: "p2c",
+      username: "Campus Notice",
+      handle: "@pulse",
+      zone: "Zone 2 • Cafeteria",
+      time: "50 minutes ago",
+      sentiment: "neutral",
+      text: "FYI: cafeteria is extra crowded today around noon. If you want a calmer break, try going a bit earlier or later 🕒",
+      imageUrl: "",
+      videoUrl: "",
+      mine: false,
+      reactions: { like: 18, wow: 3, sad: 0 }
+    },
+
   ];
 }
 
