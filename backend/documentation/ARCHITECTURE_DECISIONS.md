@@ -1,6 +1,6 @@
 # 🗂️ PULSE BACKEND — ARCHITECTURE DECISIONS
 
-**Last Updated:** 2026-02-13  
+**Last Updated:** 2026-02-15  
 **Project:** Pulse Privacy-First Campus Wellness Platform  
 **Maintainer:** Backend, Data & Intelligence Lead
 
@@ -731,6 +731,196 @@ if hours_since > 24:
 
 ---
 
+### **AD-024: Token-Based Email Verification**
+
+**Date:** 2026-02-15  
+**Decision:** Use `secrets.token_urlsafe(32)` tokens stored in DB for email verification
+
+**Rationale:**
+- Single-use, revocable, and server-controlled lifecycle
+- 256-bit entropy URL-safe tokens are sufficient for auth links
+- Simpler than JWT for one-time verification flow
+
+**Implementation:** `users.verification_token` + `users.verification_expires`, validated by `/api/auth/verify-email/<token>`.
+
+---
+
+### **AD-025: 24-Hour Verification Expiration**
+
+**Date:** 2026-02-15  
+**Decision:** Verification tokens expire after 24 hours
+
+**Rationale:** Balances mailbox latency and account security risk window.
+
+**Implementation:** `verification_expires = now + 24h`, reject expired token and require resend.
+
+---
+
+### **AD-026: No Email Enumeration (Verification + Reset)**
+
+**Date:** 2026-02-15  
+**Decision:** Public auth flows always return generic success for account-discovery-sensitive actions
+
+**Rationale:** Prevent attackers from probing valid `@ulaval.ca` accounts.
+
+**Implementation:** `/api/auth/forgot-password` and `/api/auth/send-verification` never disclose account existence in response payload.
+
+---
+
+### **AD-027: CAS as Primary Institutional Authentication**
+
+**Date:** 2026-02-15  
+**Decision:** Integrate CAS endpoints while retaining password auth for backwards compatibility
+
+**Rationale:** CAS is institution-backed identity proof; legacy users still require continuity until migration completes.
+
+**Implementation:** `/api/auth/cas/login` + `/api/auth/cas/callback`, with password auth still available.
+
+---
+
+### **AD-028: CAS Callback Auto-Provisioning**
+
+**Date:** 2026-02-15  
+**Decision:** Create user automatically from CAS attributes when email does not already exist
+
+**Rationale:** Removes onboarding friction and ensures verified university identity at first login.
+
+**Implementation:** Callback upserts by email, sets `is_verified=True`, and stores `cas_username`.
+
+---
+
+### **AD-029: Distinct CAS Identifier Field**
+
+**Date:** 2026-02-15  
+**Decision:** Store CAS IDUL in `users.cas_username`, not in app-facing `username`
+
+**Rationale:** Keeps app username user-friendly and editable while preserving stable institutional identifier.
+
+**Implementation:** Separate columns `username` and `cas_username` with CAS mapped during callback.
+
+---
+
+### **AD-030: 1-Hour Password Reset Expiration**
+
+**Date:** 2026-02-15  
+**Decision:** Password reset tokens expire after 1 hour
+
+**Rationale:** Reset links grant direct credential change and require shorter exposure window than email verification.
+
+**Implementation:** `users.reset_token` + `users.reset_expires`, checked in `/api/auth/reset-password`.
+
+---
+
+### **AD-031: One-Time Password Reset Tokens**
+
+**Date:** 2026-02-15  
+**Decision:** Clear reset token immediately after successful reset
+
+**Rationale:** Prevent replay and stale-link reuse.
+
+**Implementation:** On successful password update, set `reset_token` and `reset_expires` to `NULL`.
+
+---
+
+### **AD-032: Server-Side Image Processing Boundary**
+
+**Date:** 2026-02-15  
+**Decision:** Validate extension/size server-side and process uploads server-side
+
+**Rationale:** Prevent trusting client-provided metadata and normalize stored profile assets.
+
+**Implementation:** `upload-profile-pic` and `upload-header` enforce type/size checks and resize pipeline.
+
+---
+
+### **AD-033: Deterministic Secure Upload Filenames**
+
+**Date:** 2026-02-15  
+**Decision:** File naming pattern combines user ID + random token, never raw original filename
+
+**Rationale:** Prevent collisions and path traversal vectors.
+
+**Implementation:** `profile_{user_id}_{random}.jpg` / `header_{user_id}_{random}.jpg`.
+
+---
+
+### **AD-034: 500-Character Bio Limit**
+
+**Date:** 2026-02-15  
+**Decision:** Enforce max 500 chars for bio updates
+
+**Rationale:** Prevent abuse and keep profile summaries concise.
+
+**Implementation:** Validation in `/api/auth/update-bio`.
+
+---
+
+### **AD-035: Comment Edit Window (5 Minutes)**
+
+**Date:** 2026-02-15  
+**Decision:** Comments are editable only within 5 minutes
+
+**Rationale:** Allows typo fixes while minimizing context-rewrite abuse.
+
+**Implementation:** `/api/comments/<id>` PATCH checks `now - created_at <= 5 minutes`.
+
+---
+
+### **AD-036: One-Level Comment Threading**
+
+**Date:** 2026-02-15  
+**Decision:** Support parent comments + single reply depth only
+
+**Rationale:** Keeps query/UI complexity bounded and moderation manageable.
+
+**Implementation:** `comments.parent_id` exists; replies to replies are rejected.
+
+---
+
+### **AD-037: Anonymous Comment Author Privacy**
+
+**Date:** 2026-02-15  
+**Decision:** Anonymous comments expose pseudonym-based author payload only
+
+**Rationale:** Aligns comments privacy model with anonymous posts.
+
+**Implementation:** `Comment.to_dict()` omits user identifiers when `is_anonymous=True`.
+
+---
+
+### **AD-038: Comment Length Validation (1-500)**
+
+**Date:** 2026-02-15  
+**Decision:** Enforce comment length in range 1..500
+
+**Rationale:** Prevent empty abuse and excessively long content while matching post constraints.
+
+**Implementation:** DB check constraint + route-level validation.
+
+---
+
+### **AD-039: ORM-to-DB Schema Parity Is a Hard Requirement**
+
+**Date:** 2026-02-15  
+**Decision:** Treat model/schema drift as a release blocker; all columns referenced by SQLAlchemy models must exist in live DB.
+
+**Rationale:** Missing columns (for example `users.website` / `users.location`) cause runtime 500s even in basic auth flows.
+
+**Implementation:** Keep `schema.sql` aligned with models and run schema verification before API script tests.
+
+---
+
+### **AD-040: Legacy HTTP Script Tests Auto-Verify Test Accounts**
+
+**Date:** 2026-02-15  
+**Decision:** Script-style integration tests that create users must immediately mark those users verified.
+
+**Rationale:** Phase 5 introduces verification-gated actions (`@require_verification`), which otherwise break older script tests.
+
+**Implementation:** Shared helper `backend/tests/http_test_utils.py` provides `register_verified_user(...)`.
+
+---
+
 **📌 This document grows with the project. Every technical decision is recorded here.**
 
-**Last Updated:** Phase 4 Complete — Social Features, Reactions, Feed, Analytics
+**Last Updated:** Phase 5A in progress — Auth hardening, CAS, profiles, comments

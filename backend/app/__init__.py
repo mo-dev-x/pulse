@@ -5,12 +5,13 @@ Creates and configures the Flask application with all extensions,
 blueprints, and error handlers.
 """
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 
 from app.config import config
+from app.utils.i18n import get_localized_message
 
 # Initialize extensions (without binding to app yet)
 db = SQLAlchemy()
@@ -60,13 +61,14 @@ def register_blueprints(app):
     """
     Register all Flask blueprints
     """
-    from app.routes import auth, posts, social, reactions, analytics
+    from app.routes import auth, posts, social, reactions, analytics, comments
     
     app.register_blueprint(auth.bp, url_prefix='/api/auth')
     app.register_blueprint(posts.bp, url_prefix='/api/posts')
     app.register_blueprint(social.bp, url_prefix='/api')
     app.register_blueprint(reactions.bp, url_prefix='/api/posts')
     app.register_blueprint(analytics.bp, url_prefix='/api/analytics')
+    app.register_blueprint(comments.bp, url_prefix='/api')
 
 
 def register_error_handlers(app):
@@ -77,42 +79,42 @@ def register_error_handlers(app):
     @app.errorhandler(404)
     def not_found(error):
         return jsonify({
-            'error': 'Not found',
-            'message': 'The requested resource does not exist'
+            'error': get_localized_message(request, 'not_found'),
+            'message': get_localized_message(request, 'not_found')
         }), 404
     
     @app.errorhandler(500)
     def internal_error(error):
         db.session.rollback()  # Rollback any failed database transactions
         return jsonify({
-            'error': 'Internal server error',
-            'message': 'An unexpected error occurred'
+            'error': get_localized_message(request, 'server_error'),
+            'message': get_localized_message(request, 'server_error')
         }), 500
     
     @app.errorhandler(400)
     def bad_request(error):
         return jsonify({
-            'error': 'Bad request',
-            'message': 'Invalid request data'
+            'error': get_localized_message(request, 'validation_error'),
+            'message': get_localized_message(request, 'validation_error')
         }), 400
     
     @app.errorhandler(401)
     def unauthorized(error):
         return jsonify({
-            'error': 'Unauthorized',
-            'message': 'Authentication required'
+            'error': get_localized_message(request, 'unauthorized'),
+            'message': get_localized_message(request, 'unauthorized')
         }), 401
     
     @app.errorhandler(403)
     def forbidden(error):
         return jsonify({
-            'error': 'Forbidden',
-            'message': 'You do not have permission to access this resource'
+            'error': get_localized_message(request, 'forbidden'),
+            'message': get_localized_message(request, 'forbidden')
         }), 403
     
     @app.errorhandler(429)
     def rate_limit_exceeded(error):
         return jsonify({
-            'error': 'Rate limit exceeded',
-            'message': 'Too many requests. Please try again later.'
+            'error': get_localized_message(request, 'rate_limit_exceeded'),
+            'message': get_localized_message(request, 'rate_limit_exceeded')
         }), 429

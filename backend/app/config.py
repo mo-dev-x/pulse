@@ -43,6 +43,8 @@ class Config:
     # File Upload Configuration
     MAX_CONTENT_LENGTH = int(os.getenv('MAX_CONTENT_LENGTH', 5242880))  # 5MB default
     UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', 'uploads/')
+    PROFILE_UPLOAD_FOLDER = os.getenv('PROFILE_UPLOAD_FOLDER', 'uploads/profiles')
+    HEADER_UPLOAD_FOLDER = os.getenv('HEADER_UPLOAD_FOLDER', 'uploads/headers')
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
     ALLOWED_MIME_TYPES = {
         'image/png',
@@ -53,6 +55,21 @@ class Config:
     
     # CORS Configuration
     CORS_HEADERS = 'Content-Type'
+
+    # Frontend integration
+    FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+
+    # SMTP configuration
+    SMTP_HOST = os.getenv('SMTP_HOST')
+    SMTP_PORT = int(os.getenv('SMTP_PORT', 587))
+    SMTP_USER = os.getenv('SMTP_USER')
+    SMTP_PASSWORD = os.getenv('SMTP_PASSWORD')
+    SMTP_FROM = os.getenv('SMTP_FROM', 'noreply@pulse.ulaval.ca')
+    SMTP_USE_TLS = os.getenv('SMTP_USE_TLS', 'true').lower() == 'true'
+
+    # CAS configuration
+    CAS_SERVER_URL = os.getenv('CAS_SERVER_URL', 'https://cas.ulaval.ca/cas/')
+    CAS_CALLBACK_URL = os.getenv('CAS_CALLBACK_URL', 'http://localhost:5000/api/auth/cas/callback')
 
 
 class DevelopmentConfig(Config):

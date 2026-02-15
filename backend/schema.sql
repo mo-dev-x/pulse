@@ -23,13 +23,23 @@
 CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
+    password_hash VARCHAR(255) NULL,
+    is_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    verification_token VARCHAR(255) NULL,
+    verification_expires TIMESTAMP NULL,
+    reset_token VARCHAR(255) NULL,
+    reset_expires TIMESTAMP NULL,
+    cas_username VARCHAR(50) UNIQUE NULL,
+    account_type ENUM('student', 'staff', 'faculty', 'alumni') NOT NULL DEFAULT 'student',
     
     -- Public identity
     username VARCHAR(50) UNIQUE NOT NULL,
     display_name VARCHAR(100),
     bio TEXT,
     profile_picture VARCHAR(500),
+    header_image VARCHAR(500),
+    website VARCHAR(255),
+    location VARCHAR(100),
     
     -- Language preference (UniversitÃ© Laval bilingual community)
     preferred_language ENUM('en', 'fr') DEFAULT 'fr' NOT NULL,
@@ -46,6 +56,8 @@ CREATE TABLE users (
     -- Indexes for fast lookups
     INDEX idx_email (email),
     INDEX idx_username (username),
+    INDEX idx_verification_token (verification_token),
+    INDEX idx_reset_token (reset_token),
     
     -- Constraints
     CONSTRAINT chk_username_length CHECK (CHAR_LENGTH(username) >= 3),
@@ -132,6 +144,28 @@ CREATE TABLE posts (
     -- Constraints
     CONSTRAINT chk_content_length CHECK (CHAR_LENGTH(content) >= 10 AND CHAR_LENGTH(content) <= 500),
     CONSTRAINT chk_sentiment_range CHECK (sentiment_score >= -1.00 AND sentiment_score <= 1.00)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+CREATE TABLE comments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    content TEXT NOT NULL,
+    post_id INT NOT NULL,
+    user_id INT NOT NULL,
+    parent_id INT NULL,
+    is_anonymous BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (parent_id) REFERENCES comments(id) ON DELETE CASCADE,
+
+    INDEX idx_post_comments (post_id, created_at DESC),
+    INDEX idx_parent_comments (parent_id),
+    INDEX idx_comment_user (user_id),
+
+    CONSTRAINT chk_comment_length CHECK (CHAR_LENGTH(content) >= 1 AND CHAR_LENGTH(content) <= 500)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 

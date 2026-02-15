@@ -21,12 +21,13 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from werkzeug.utils import secure_filename
 
 from app import db
+from app.middleware import require_verification
 from app.models import Post, CampusZone, User
 from app.models.follower import Follower
 from app.models.media import Media
 from app.models.reaction import Reaction
 from app.services import analyze_sentiment
-from app.utils.i18n import get_bilingual_message, get_message
+from app.utils.i18n import get_localized_message
 
 # Create blueprint
 bp = Blueprint('posts', __name__)
@@ -56,6 +57,7 @@ def _allowed_file(filename):
 
 @bp.route('', methods=['POST'])
 @jwt_required()
+@require_verification
 def create_post():
     """
     Create a new post with sentiment analysis.
@@ -86,8 +88,8 @@ def create_post():
         data = request.get_json()
         if not data or 'content' not in data:
             return jsonify({
-                'error': get_message('validation_error', 'en'),
-                'message': get_bilingual_message('post_content_required')
+                'error': get_localized_message(request, 'validation_error'),
+                'message': get_localized_message(request, 'post_content_required')
             }), 400
         content = data['content'].strip()
         zone_id = data.get('zone_id')
@@ -97,14 +99,14 @@ def create_post():
     # Validate content length
     if len(content) < 10:
         return jsonify({
-            'error': get_message('validation_error', 'en'),
-            'message': get_bilingual_message('post_too_short')
+            'error': get_localized_message(request, 'validation_error'),
+            'message': get_localized_message(request, 'post_too_short')
         }), 400
 
     if len(content) > 500:
         return jsonify({
-            'error': get_message('validation_error', 'en'),
-            'message': get_bilingual_message('post_too_long')
+            'error': get_localized_message(request, 'validation_error'),
+            'message': get_localized_message(request, 'post_too_long')
         }), 400
 
     # Validate zone if provided
@@ -112,8 +114,8 @@ def create_post():
         zone = CampusZone.get_by_id(zone_id)
         if not zone:
             return jsonify({
-                'error': get_message('validation_error', 'en'),
-                'message': get_bilingual_message('zone_not_found')
+                'error': get_localized_message(request, 'validation_error'),
+                'message': get_localized_message(request, 'zone_not_found')
             }), 404
 
     try:
@@ -139,8 +141,8 @@ def create_post():
             if not _allowed_file(uploaded_file.filename):
                 db.session.rollback()
                 return jsonify({
-                    'error': get_message('validation_error', 'en'),
-                    'message': get_bilingual_message('file_type_invalid')
+                    'error': get_localized_message(request, 'validation_error'),
+                    'message': get_localized_message(request, 'file_type_invalid')
                 }), 400
 
             # Generate unique filename
@@ -170,22 +172,22 @@ def create_post():
         post_dict = _enrich_post_dict(post_dict, new_post, user_id)
 
         return jsonify({
-            'message': get_bilingual_message('post_created'),
+            'message': get_localized_message(request, 'post_created'),
             'post': post_dict
         }), 201
 
     except ValueError as e:
         db.session.rollback()
         return jsonify({
-            'error': get_message('validation_error', 'en'),
+            'error': get_localized_message(request, 'validation_error'),
             'message': str(e)
         }), 400
     except Exception as e:
         db.session.rollback()
         print(f"Error creating post: {str(e)}")
         return jsonify({
-            'error': get_message('server_error', 'en'),
-            'message': 'Failed to create post'
+            'error': get_localized_message(request, 'server_error'),
+            'message': get_localized_message(request, 'server_error')
         }), 500
 
 
@@ -217,7 +219,7 @@ def get_feed():
             'page': 1,
             'pages': 0,
             'has_next': False,
-            'message': get_bilingual_message('feed_empty')
+            'message': get_localized_message(request, 'feed_empty')
         }), 200
 
     # CRITICAL: Only public posts from followed users
@@ -326,8 +328,8 @@ def get_user_posts(username):
     user = User.query.filter_by(username=username.lower()).first()
     if not user:
         return jsonify({
-            'error': get_message('validation_error', 'en'),
-            'message': get_bilingual_message('user_not_found')
+            'error': get_localized_message(request, 'validation_error'),
+            'message': get_localized_message(request, 'user_not_found')
         }), 404
 
     page = request.args.get('page', 1, type=int)
@@ -369,8 +371,8 @@ def get_zone_posts(zone_id):
     zone = CampusZone.get_by_id(zone_id)
     if not zone:
         return jsonify({
-            'error': get_message('validation_error', 'en'),
-            'message': get_bilingual_message('zone_not_found')
+            'error': get_localized_message(request, 'validation_error'),
+            'message': get_localized_message(request, 'zone_not_found')
         }), 404
 
     page = request.args.get('page', 1, type=int)
@@ -413,15 +415,15 @@ def delete_post(post_id):
     post = Post.query.get(post_id)
     if not post:
         return jsonify({
-            'error': get_message('validation_error', 'en'),
-            'message': get_bilingual_message('post_not_found')
+            'error': get_localized_message(request, 'validation_error'),
+            'message': get_localized_message(request, 'post_not_found')
         }), 404
 
     # Authorization: only author can delete
     if post.user_id != current_user_id:
         return jsonify({
-            'error': get_message('forbidden', 'en'),
-            'message': get_bilingual_message('forbidden')
+            'error': get_localized_message(request, 'forbidden'),
+            'message': get_localized_message(request, 'forbidden')
         }), 403
 
     # Time restriction: within 24 hours
@@ -429,8 +431,8 @@ def delete_post(post_id):
         hours_since = (datetime.utcnow() - post.created_at).total_seconds() / 3600
         if hours_since > 24:
             return jsonify({
-                'error': get_message('validation_error', 'en'),
-                'message': get_bilingual_message('post_delete_expired')
+                'error': get_localized_message(request, 'validation_error'),
+                'message': get_localized_message(request, 'post_delete_expired')
             }), 403
 
     try:
@@ -438,13 +440,13 @@ def delete_post(post_id):
         db.session.commit()
 
         return jsonify({
-            'message': get_bilingual_message('post_deleted'),
+            'message': get_localized_message(request, 'post_deleted'),
             'deleted': True
         }), 200
 
     except Exception as e:
         db.session.rollback()
         return jsonify({
-            'error': get_message('server_error', 'en'),
-            'message': 'Failed to delete post'
+            'error': get_localized_message(request, 'server_error'),
+            'message': get_localized_message(request, 'server_error')
         }), 500

@@ -12,9 +12,10 @@ from app.models.follower import Follower
 from app.models.reaction import Reaction
 from app.models.media import Media
 from app.models.aggregate import DailyAggregate, WeeklyAggregate
+from app.models.comment import Comment
 
 __all__ = [
     'User', 'Post', 'CampusZone',
     'Follower', 'Reaction', 'Media',
-    'DailyAggregate', 'WeeklyAggregate'
+    'DailyAggregate', 'WeeklyAggregate', 'Comment'
 ]

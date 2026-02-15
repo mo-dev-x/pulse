@@ -1,6 +1,6 @@
 # 🎯 PULSE BACKEND — PROJECT TRACKER
 
-**Last Updated:** 2026-02-14  
+**Last Updated:** 2026-02-15  
 **University:** Université Laval  
 **Project:** Pulse Backend (Privacy-First Campus Wellness Platform)  
 **Tech Stack:** Python 3.12.3 + Flask + MySQL + CAS  
@@ -15,22 +15,22 @@
 
 | Phase 5 Component | Status | Completion | Priority |
 |-------------------|--------|------------|----------|
-| **5A: Email Verification** | 🚧 Not Started | 0% | Must Have |
-| **5A: CAS Integration** | 🚧 Not Started | 0% | Must Have |
-| **5A: Password Reset** | 🚧 Not Started | 0% | Must Have |
-| **5A: Profile Customization** | 🚧 Not Started | 0% | Must Have |
-| **5A: Comment System** | 🚧 Not Started | 0% | Must Have |
+| **5A: Email Verification** | ✅ Implemented | 100% | Must Have |
+| **5A: CAS Integration** | 🚧 In Progress | 85% | Must Have |
+| **5A: Password Reset** | ✅ Implemented | 100% | Must Have |
+| **5A: Profile Customization** | ✅ Implemented | 100% | Must Have |
+| **5A: Comment System** | ✅ Implemented | 100% | Must Have |
 | **5B: Notifications** | ⏸️ Pending | 0% | Should Have |
 | **5B: Session Management** | ⏸️ Pending | 0% | Should Have |
 | **5B: Mentions & Bookmarks** | ⏸️ Pending | 0% | Should Have |
 | **5C: 2FA & Security** | ⏸️ Pending | 0% | Nice to Have |
 | **5C: UX Enhancements** | ⏸️ Pending | 0% | Nice to Have |
 
-**Phase 5A Progress:** 🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥 0% (Must Have - 5 days)  
+**Phase 5A Progress:** 🟩🟩🟩🟩🟩🟩🟩🟩🟩⬜ 90% (Must Have - 5 days)  
 **Phase 5B Progress:** ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ 0% (Should Have - 3 days)  
 **Phase 5C Progress:** ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ 0% (Nice to Have - 2 days)
 
-**Overall Phase 5 Progress:** 🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥 0% / 100%
+**Overall Phase 5 Progress:** 🟩🟩🟩🟩🟩🟩🟩🟩⬜⬜ 45% / 100%
 
 ---
 
@@ -644,59 +644,59 @@ Afternoon:
 ### **Phase 5A: Must Have (Priority 1) — 5 days**
 
 #### 🔐 Authentication Security
-- [ ] **Email Verification System**
-  - [ ] `verification_token`, `verification_expires` fields in User model
-  - [ ] Email service with SMTP integration (`app/services/email_service.py`)
-  - [ ] `POST /api/auth/send-verification` — Resend verification email
-  - [ ] `GET /api/auth/verify-email/{token}` — Verify email with token
-  - [ ] Bilingual email templates (FR/EN)
-  - [ ] Middleware: `@require_verification` decorator
-  - [ ] Tests: Email sending, token validation, expiration
+- [x] **Email Verification System**
+  - [x] `verification_token`, `verification_expires` fields in User model
+  - [x] Email service with SMTP integration (`app/services/email_service.py`)
+  - [x] `POST /api/auth/send-verification` — Resend verification email
+  - [x] `GET /api/auth/verify-email/{token}` — Verify email with token
+  - [x] Bilingual email templates (FR/EN)
+  - [x] Middleware: `@require_verification` decorator
+  - [x] Tests: Email sending, token validation, expiration
   
 - [ ] **Université Laval CAS Integration**
-  - [ ] Install `python-cas` library
-  - [ ] CAS client configuration
-  - [ ] `GET /api/auth/cas/login` — Redirect to CAS
-  - [ ] `GET /api/auth/cas/callback` — Handle CAS response
-  - [ ] User fields: `cas_username`, `account_type`, `is_verified`
-  - [ ] Auto-create users from CAS attributes
+  - [x] Install `python-cas` library
+  - [x] CAS client configuration
+  - [x] `GET /api/auth/cas/login` — Redirect to CAS
+  - [x] `GET /api/auth/cas/callback` — Handle CAS response
+  - [x] User fields: `cas_username`, `account_type`, `is_verified`
+  - [x] Auto-create users from CAS attributes
   - [ ] Migration strategy for existing users
-  - [ ] Tests: CAS flow, user creation, attribute mapping
+  - [x] Tests: CAS flow, user creation, attribute mapping
   
-- [ ] **Password Reset Flow**
-  - [ ] User fields: `reset_token`, `reset_expires`
-  - [ ] `POST /api/auth/forgot-password` — Request reset
-  - [ ] `POST /api/auth/reset-password` — Reset with token
-  - [ ] Password reset email template (bilingual)
-  - [ ] Token expiration (1 hour)
-  - [ ] Security: Always return success (don't reveal if email exists)
-  - [ ] Tests: Token generation, expiration, password validation
+- [x] **Password Reset Flow**
+  - [x] User fields: `reset_token`, `reset_expires`
+  - [x] `POST /api/auth/forgot-password` — Request reset
+  - [x] `POST /api/auth/reset-password` — Reset with token
+  - [x] Password reset email template (bilingual)
+  - [x] Token expiration (1 hour)
+  - [x] Security: Always return success (don't reveal if email exists)
+  - [x] Tests: Token generation, expiration, password validation
 
 #### 👤 Profile Customization
-- [ ] **Basic Profile Features**
-  - [ ] User fields: `bio`, `profile_picture`, `header_image`, `website`, `location`
-  - [ ] `PATCH /api/auth/update-bio` — Update bio (max 500 chars)
-  - [ ] `POST /api/auth/upload-profile-pic` — Upload profile picture
-  - [ ] `POST /api/auth/upload-header` — Upload header image
-  - [ ] File upload directory structure: `/uploads/profiles/`, `/uploads/headers/`
-  - [ ] Image validation: types (jpg, png, gif, webp), size (5MB max)
-  - [ ] Image optimization with Pillow (resize to 500x500 for profiles)
-  - [ ] Tests: Upload validation, size limits, image optimization
+- [x] **Basic Profile Features**
+  - [x] User fields: `bio`, `profile_picture`, `header_image`, `website`, `location`
+  - [x] `PATCH /api/auth/update-bio` — Update bio (max 500 chars)
+  - [x] `POST /api/auth/upload-profile-pic` — Upload profile picture
+  - [x] `POST /api/auth/upload-header` — Upload header image
+  - [x] File upload directory structure: `/uploads/profiles/`, `/uploads/headers/`
+  - [x] Image validation: types (jpg, png, gif, webp), size (5MB max)
+  - [x] Image optimization with Pillow (resize to 500x500 for profiles)
+  - [x] Tests: Upload validation, size limits, image optimization
 
 #### 💬 Comment System
-- [ ] **Comment Model & Routes**
-  - [ ] Comment model (`app/models/comment.py`)
+- [x] **Comment Model & Routes**
+  - [x] Comment model (`app/models/comment.py`)
     - Fields: `content`, `post_id`, `user_id`, `parent_id`, `is_anonymous`
     - Threading support (parent_id for replies)
     - Cascade delete with posts
-  - [ ] `POST /api/posts/{post_id}/comments` — Add comment
-  - [ ] `GET /api/posts/{post_id}/comments` — List comments (paginated)
-  - [ ] `GET /api/comments/{comment_id}/replies` — Get replies
-  - [ ] `PATCH /api/comments/{comment_id}` — Edit (5 min window)
-  - [ ] `DELETE /api/comments/{comment_id}` — Delete comment
-  - [ ] Privacy: Anonymous comments hide user_id
-  - [ ] Validation: 1-500 characters
-  - [ ] Tests: Create, edit, delete, threading, anonymity
+  - [x] `POST /api/posts/{post_id}/comments` — Add comment
+  - [x] `GET /api/posts/{post_id}/comments` — List comments (paginated)
+  - [x] `GET /api/comments/{comment_id}/replies` — Get replies
+  - [x] `PATCH /api/comments/{comment_id}` — Edit (5 min window)
+  - [x] `DELETE /api/comments/{comment_id}` — Delete comment
+  - [x] Privacy: Anonymous comments hide user_id
+  - [x] Validation: 1-500 characters
+  - [x] Tests: Create, edit, delete, threading, anonymity
 
 ---
 
@@ -791,7 +791,7 @@ Afternoon:
 ### **Database Schema Updates**
 
 #### New Tables (5):
-- [ ] `comments` — Post comments with threading
+- [x] `comments` — Post comments with threading
 - [ ] `notifications` — User notifications
 - [ ] `sessions` — Active user sessions
 - [ ] `security_logs` — Security event audit trail
@@ -812,7 +812,7 @@ Afternoon:
 
 ### **New Services (3)**
 
-- [ ] **Email Service** (`app/services/email_service.py`)
+- [x] **Email Service** (`app/services/email_service.py`)
   - Send verification emails
   - Send password reset emails
   - Send notification emails
@@ -834,28 +834,28 @@ Afternoon:
 ### **New Routes (~30 endpoints)**
 
 **Authentication (8):**
-- [ ] `POST /api/auth/send-verification`
-- [ ] `GET /api/auth/verify-email/{token}`
-- [ ] `GET /api/auth/cas/login`
-- [ ] `GET /api/auth/cas/callback`
-- [ ] `POST /api/auth/forgot-password`
-- [ ] `POST /api/auth/reset-password`
+- [x] `POST /api/auth/send-verification`
+- [x] `GET /api/auth/verify-email/{token}`
+- [x] `GET /api/auth/cas/login`
+- [x] `GET /api/auth/cas/callback`
+- [x] `POST /api/auth/forgot-password`
+- [x] `POST /api/auth/reset-password`
 - [ ] `POST /api/auth/deactivate`
 - [ ] `POST /api/auth/reactivate`
 
 **Profile (5):**
-- [ ] `PATCH /api/auth/update-bio`
-- [ ] `POST /api/auth/upload-profile-pic`
-- [ ] `POST /api/auth/upload-header`
+- [x] `PATCH /api/auth/update-bio`
+- [x] `POST /api/auth/upload-profile-pic`
+- [x] `POST /api/auth/upload-header`
 - [ ] `PATCH /api/auth/privacy-settings`
 - [ ] `PATCH /api/auth/preferences`
 
 **Comments (5):**
-- [ ] `POST /api/posts/{post_id}/comments`
-- [ ] `GET /api/posts/{post_id}/comments`
-- [ ] `GET /api/comments/{comment_id}/replies`
-- [ ] `PATCH /api/comments/{comment_id}`
-- [ ] `DELETE /api/comments/{comment_id}`
+- [x] `POST /api/posts/{post_id}/comments`
+- [x] `GET /api/posts/{post_id}/comments`
+- [x] `GET /api/comments/{comment_id}/replies`
+- [x] `PATCH /api/comments/{comment_id}`
+- [x] `DELETE /api/comments/{comment_id}`
 
 **Notifications (4):**
 - [ ] `GET /api/notifications`
@@ -885,35 +885,35 @@ Afternoon:
 
 ### **Test Suites to Create:**
 
-- [ ] `test_email_verification.py` (~10 tests)
+- [x] `test_email_verification.py` (~10 tests)
   - Email sending
   - Token validation
   - Token expiration
   - Resend verification
   - Verification enforcement
 
-- [ ] `test_cas_integration.py` (~8 tests)
+- [x] `test_cas_integration.py` (~8 tests)
   - CAS login redirect
   - CAS callback handling
   - User creation from CAS
   - Attribute mapping
   - Error handling
 
-- [ ] `test_password_reset.py` (~8 tests)
+- [x] `test_password_reset.py` (~8 tests)
   - Reset request
   - Token generation
   - Token expiration
   - Password update
   - Security (no email enumeration)
 
-- [ ] `test_profile_customization.py` (~10 tests)
+- [x] `test_profile_customization.py` (~10 tests)
   - Bio update
   - Profile picture upload
   - Header upload
   - Image validation
   - Size limits
 
-- [ ] `test_comments.py` (~15 tests)
+- [x] `test_comments.py` (~15 tests)
   - Create comment
   - List comments
   - Threading/replies
@@ -1061,7 +1061,7 @@ FRONTEND_URL=https://pulse.ulaval.ca
 - [ ] `2FA_USER_GUIDE.md` — How to enable/use 2FA
 - [ ] `FILE_UPLOAD_GUIDE.md` — File handling best practices
 - [ ] `MIGRATION_GUIDE.md` — Existing user migration
-- [ ] Updated `ARCHITECTURE_DECISIONS.md` — AD-024 to AD-035
+- [x] Updated `ARCHITECTURE_DECISIONS.md` — AD-024 to AD-035
 
 ---
 
@@ -1180,6 +1180,8 @@ FRONTEND_URL=https://pulse.ulaval.ca
 - Existing users can continue using password auth
 - Gradual migration to CAS encouraged
 - Email verification required for new features
+- Legacy script tests register verified users via shared helper (`tests/http_test_utils.py`)
+- Live DB schema must stay in sync with ORM fields (`users.website`, `users.location`, etc.)
 
 **Team Coordination:**
 - Backend: Focus on Phase 5A first
@@ -1198,20 +1200,20 @@ FRONTEND_URL=https://pulse.ulaval.ca
 
 ---
 
-**Last Update:** 2026-02-14 (Planning Complete)  
-**Current Component:** None (Phase 5 Not Started)  
-**Next Milestone:** Email Verification System (Component 1)  
-**Blockers:** None - Ready to Start
+**Last Update:** 2026-02-15 (Phase 5A Implementation In Progress)  
+**Current Component:** CAS Integration hardening (migration strategy pending)  
+**Next Milestone:** Complete CAS migration strategy + production integration checks  
+**Blockers:** CAS credentials/sandbox validation from Université Laval IT pending
 
 ---
 
-**Phase 5A Status:** 🔴 Not Started (5 components)  
+**Phase 5A Status:** 🟡 In Progress (4/5 components complete, CAS migration pending)  
 **Phase 5B Status:** ⏸️ Pending 5A Completion (3 components)  
 **Phase 5C Status:** ⏸️ Pending 5B Completion (2 components)
 
 ---
 
-**Status:** 🟢 Planning Complete - Ready for Development  
+**Status:** 🟡 Development Active - Phase 5A near completion  
 **Priority:** 🔴 High - Production Readiness Critical  
 **Timeline:** 📅 10-14 days (as planned)  
 **Confidence:** ✅ High - Detailed plan with architectural decisions

@@ -5,6 +5,8 @@ Provides bilingual error messages and content for Université Laval.
 All messages are in both French and English.
 """
 
+from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+
 # Bilingual error messages
 MESSAGES = {
     # Authentication errors
@@ -73,6 +75,10 @@ MESSAGES = {
     'rate_limit': {
         'en': 'Too many posts. Please wait before posting again.',
         'fr': 'Trop de publications. Veuillez patienter avant de publier à nouveau.'
+    },
+    'rate_limit_exceeded': {
+        'en': 'Too many requests. Please try again later.',
+        'fr': 'Trop de requetes. Veuillez reessayer plus tard.'
     },
     'zone_not_found': {
         'en': 'Campus zone not found',
@@ -225,7 +231,153 @@ MESSAGES = {
     'file_type_invalid': {
         'en': 'Invalid file type. Allowed: PNG, JPG, GIF, WebP',
         'fr': 'Type de fichier invalide. Autorisés : PNG, JPG, GIF, WebP'
-    }
+    },
+
+    # Comment messages
+    'comment_not_found': {
+        'en': 'Comment not found',
+        'fr': 'Commentaire non trouvé'
+    },
+    'comment_added': {
+        'en': 'Comment added',
+        'fr': 'Commentaire ajouté'
+    },
+    'comment_updated': {
+        'en': 'Comment updated',
+        'fr': 'Commentaire mis à jour'
+    },
+    'comment_deleted': {
+        'en': 'Comment deleted',
+        'fr': 'Commentaire supprimé'
+    },
+    'comment_length_invalid': {
+        'en': 'Comment must be 1-500 characters',
+        'fr': 'Le commentaire doit contenir 1 à 500 caractères'
+    },
+    'comment_parent_invalid': {
+        'en': 'Invalid parent comment',
+        'fr': 'Commentaire parent invalide'
+    },
+    'comment_reply_depth': {
+        'en': 'Only one reply level is allowed',
+        'fr': "Un seul niveau de réponse est autorisé"
+    },
+    'comment_edit_own_only': {
+        'en': 'You can only edit your own comments',
+        'fr': 'Vous ne pouvez modifier que vos propres commentaires'
+    },
+    'comment_delete_own_only': {
+        'en': 'You can only delete your own comments',
+        'fr': 'Vous ne pouvez supprimer que vos propres commentaires'
+    },
+    'comment_edit_expired': {
+        'en': 'Edit window has expired',
+        'fr': "La fenêtre de modification a expiré"
+    },
+    'verification_required': {
+        'en': 'Please verify your @ulaval.ca account before performing this action',
+        'fr': 'Veuillez verifier votre compte @ulaval.ca avant de faire cette action'
+    },
+    'verification_required_login': {
+        'en': 'Please verify your @ulaval.ca account before logging in',
+        'fr': 'Veuillez verifier votre compte @ulaval.ca avant de vous connecter'
+    },
+    'invalid_date_format': {
+        'en': 'Invalid date format. Use YYYY-MM-DD.',
+        'fr': 'Format de date invalide. Utilisez YYYY-MM-DD.'
+    },
+    'analytics_disclaimer': {
+        'en': 'Sentiment analysis is automated and approximate. It shows campus trends, not individual diagnoses.',
+        'fr': "L'analyse de sentiment est automatisée et approximative. Elle montre des tendances de campus, pas des diagnostics individuels."
+    },
+    'email_password_required': {
+        'en': 'Email and password are required',
+        'fr': 'Le courriel et le mot de passe sont requis'
+    },
+    'account_already_verified': {
+        'en': 'Account already verified',
+        'fr': 'Compte deja verifie'
+    },
+    'verification_sent_generic': {
+        'en': 'If your account is eligible, a verification email has been sent',
+        'fr': 'Si votre compte est admissible, un courriel de verification a ete envoye'
+    },
+    'invalid_verification_token': {
+        'en': 'Invalid verification token',
+        'fr': 'Jeton de verification invalide'
+    },
+    'verification_token_expired': {
+        'en': 'Verification token expired',
+        'fr': 'Jeton de verification expire'
+    },
+    'email_verified_success': {
+        'en': 'Email verified successfully',
+        'fr': 'Courriel verifie avec succes'
+    },
+    'reset_link_sent_generic': {
+        'en': 'If that email exists, a reset link has been sent',
+        'fr': 'Si ce courriel existe, un lien de reinitialisation a ete envoye'
+    },
+    'token_new_password_required': {
+        'en': 'Token and new_password are required',
+        'fr': 'Le jeton et new_password sont requis'
+    },
+    'invalid_reset_token': {
+        'en': 'Invalid reset token',
+        'fr': 'Jeton de reinitialisation invalide'
+    },
+    'reset_token_expired': {
+        'en': 'Reset token expired',
+        'fr': 'Jeton de reinitialisation expire'
+    },
+    'password_reset_success': {
+        'en': 'Password reset successful',
+        'fr': 'Mot de passe reinitialise avec succes'
+    },
+    'cas_unavailable': {
+        'en': 'CAS unavailable',
+        'fr': 'CAS indisponible'
+    },
+    'python_cas_missing': {
+        'en': 'python-cas is not installed',
+        'fr': "python-cas n'est pas installe"
+    },
+    'missing_cas_ticket': {
+        'en': 'Missing CAS ticket',
+        'fr': 'Ticket CAS manquant'
+    },
+    'auth_failed': {
+        'en': 'Authentication failed',
+        'fr': "Echec de l'authentification"
+    },
+    'cas_invalid_ulaval_email': {
+        'en': 'CAS did not return a valid @ulaval.ca email',
+        'fr': "CAS n'a pas retourne un courriel @ulaval.ca valide"
+    },
+    'cas_auth_success': {
+        'en': 'CAS authentication successful',
+        'fr': 'Authentification CAS reussie'
+    },
+    'no_file_uploaded': {
+        'en': 'No file uploaded',
+        'fr': 'Aucun fichier televerse'
+    },
+    'file_too_large': {
+        'en': 'File too large (max 5MB)',
+        'fr': 'Fichier trop volumineux (max 5 Mo)'
+    },
+    'bio_updated_success': {
+        'en': 'Bio updated successfully',
+        'fr': 'Bio mise a jour avec succes'
+    },
+    'profile_picture_updated': {
+        'en': 'Profile picture updated',
+        'fr': 'Photo de profil mise a jour'
+    },
+    'header_image_updated': {
+        'en': 'Header image updated',
+        'fr': "Image d'en-tete mise a jour"
+    },
 }
 
 
@@ -308,3 +460,36 @@ def detect_language_preference(request):
     
     # Default to French
     return 'fr'
+
+
+def get_request_language(request):
+    """
+    Resolve response language from request context.
+
+    Priority:
+    1. `?lang=fr|en`
+    2. Authenticated user's `preferred_language`
+    3. `Accept-Language` header
+    4. default `fr`
+    """
+    lang_param = request.args.get('lang', '').lower()
+    if lang_param in ['fr', 'en']:
+        return lang_param
+
+    try:
+        verify_jwt_in_request(optional=True)
+        identity = get_jwt_identity()
+        if identity:
+            from app.models.user import User
+            user = User.query.get(int(identity))
+            if user and user.preferred_language in ['fr', 'en']:
+                return user.preferred_language
+    except Exception:
+        pass
+
+    return detect_language_preference(request)
+
+
+def get_localized_message(request, key, **kwargs):
+    """Return translated message for current request language."""
+    return get_message(key, get_request_language(request), **kwargs)

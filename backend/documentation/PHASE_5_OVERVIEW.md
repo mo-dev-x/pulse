@@ -34,7 +34,7 @@ Phase 5 will transform Pulse into a production-ready platform with:
 
 **Option A: CAS (Central Authentication Service)**
 ```
-UniversitÃ© Laval's SSO: https://cas.ulaval.ca/
+Université Laval's SSO: https://cas.ulaval.ca/
 - Industry standard for universities
 - Single sign-on across campus services
 - Validates student/staff status

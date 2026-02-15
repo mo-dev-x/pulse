@@ -13,6 +13,7 @@ cryptography==42.0.0
 
 # Security
 bcrypt==4.1.2
+python-cas==1.6.0
 
 # NLP - Production Bilingual Support (French/English)
 vaderSentiment==3.3.2          # English sentiment (social media optimized)
@@ -28,6 +29,7 @@ sentencepiece==0.1.99          # Tokenization
 
 # Utilities
 python-dotenv==1.0.0
+Pillow==10.1.0
 
 # Development (optional)
 requests==2.31.0
