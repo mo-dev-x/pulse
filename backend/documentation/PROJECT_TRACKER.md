@@ -11,20 +11,631 @@
 
 ## 📊 PROJECT STATUS OVERVIEW
 
-| Phase | Status | Completion | Tests |
-|-------|--------|------------|-------|
-| **Phase 1: Foundation** | ✅ Complete | 100% | 7/7 ✅ |
-| **Phase 2: Posts & NLP** | ✅ Complete | 100% | 8/8 ✅ |
-| **Phase 3: Social Features** | ✅ Complete | 100% | 26/26 ✅ |
-| **Phase 4: Analytics** | ✅ Complete | 100% | 30/30 ✅ |
-| **Phase 5: Production Auth & UX** | 🚧 In Progress | 0% | 0/50 |
+**Current Focus:** Phase 5 - Production Authentication & User Experience
 
-**Overall Progress (Phases 1-4):** 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 100%  
-**Phase 5 Progress:** 🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥 0%
+| Phase 5 Component | Status | Completion | Priority |
+|-------------------|--------|------------|----------|
+| **5A: Email Verification** | 🚧 Not Started | 0% | Must Have |
+| **5A: CAS Integration** | 🚧 Not Started | 0% | Must Have |
+| **5A: Password Reset** | 🚧 Not Started | 0% | Must Have |
+| **5A: Profile Customization** | 🚧 Not Started | 0% | Must Have |
+| **5A: Comment System** | 🚧 Not Started | 0% | Must Have |
+| **5B: Notifications** | ⏸️ Pending | 0% | Should Have |
+| **5B: Session Management** | ⏸️ Pending | 0% | Should Have |
+| **5B: Mentions & Bookmarks** | ⏸️ Pending | 0% | Should Have |
+| **5C: 2FA & Security** | ⏸️ Pending | 0% | Nice to Have |
+| **5C: UX Enhancements** | ⏸️ Pending | 0% | Nice to Have |
+
+**Phase 5A Progress:** 🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥 0% (Must Have - 5 days)  
+**Phase 5B Progress:** ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ 0% (Should Have - 3 days)  
+**Phase 5C Progress:** ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ 0% (Nice to Have - 2 days)
+
+**Overall Phase 5 Progress:** 🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥 0% / 100%
 
 ---
 
-## 🚀 PHASE 5: PRODUCTION AUTHENTICATION & USER EXPERIENCE
+## 📝 FOUNDATION STATUS (Phases 1-4)
+
+All foundational phases complete. See [INITIAL_PHASES_TRACKER.md](INITIAL_PHASES_TRACKER.md) for details.
+
+- ✅ **Phase 1:** Foundation (7/7 tests)
+- ✅ **Phase 2:** Posts & NLP (8/8 tests)
+- ✅ **Phase 3:** Social Features (26/26 tests)
+- ✅ **Phase 4:** Analytics (30/30 tests)
+
+**Foundation Status:** 71/71 tests passing ✅
+
+---
+
+## 🗺️ PHASE 5 DETAILED PLANNING
+
+### **Overview**
+Phase 5 transforms Pulse into a production-ready platform with enterprise-grade authentication, enhanced user experience, and comprehensive security features.
+
+**Timeline:** 10-14 days  
+**Approach:** Iterative development with testing at each step  
+**Priority:** Security first, then UX
+
+---
+
+## 📋 PHASE 5A: MUST HAVE FEATURES (Days 1-5)
+
+### **Component 1: Email Verification System**
+**Timeline:** Days 1-2 (2 days)  
+**Priority:** Critical - Security Foundation
+
+#### Planning Steps:
+
+**Day 1 - Database & Service Setup:**
+1. **Morning: Database Schema**
+   - Add fields to User model:
+     - `is_verified` (Boolean, default False)
+     - `verification_token` (String 255)
+     - `verification_expires` (DateTime)
+   - Create migration script
+   - Test schema changes
+
+2. **Afternoon: Email Service**
+   - Create `app/services/email_service.py`
+   - Implement SMTP configuration
+   - Create bilingual email templates (FR/EN)
+   - Test email sending locally
+
+**Day 2 - Endpoints & Integration:**
+3. **Morning: Verification Endpoints**
+   - `POST /api/auth/send-verification`
+     - Generate secure token (secrets.token_urlsafe)
+     - Store token with 24h expiration
+     - Send bilingual email
+     - Return success (no email enumeration)
+   
+   - `GET /api/auth/verify-email/{token}`
+     - Validate token exists
+     - Check expiration
+     - Mark user as verified
+     - Clear token
+     - Return success/error
+
+4. **Afternoon: Middleware & Testing**
+   - Create `@require_verification` decorator
+   - Apply to sensitive endpoints (posts, comments)
+   - Write tests (10 test cases)
+   - Integration testing
+
+#### Architectural Decisions:
+
+**AD-024: Token-Based Email Verification**
+- **Decision:** Use cryptographically secure tokens (secrets.token_urlsafe)
+- **Rationale:** More secure than UUID, URL-safe, 32 bytes = 256-bit security
+- **Alternative Considered:** JWT tokens (rejected - overkill for single-use)
+- **Implementation:** Store in database with expiration
+
+**AD-025: 24-Hour Token Expiration**
+- **Decision:** Verification tokens expire after 24 hours
+- **Rationale:** Balance security and user convenience
+- **Alternative Considered:** 1 hour (rejected - too short for email delivery)
+- **Implementation:** Check expiration before accepting token
+
+**AD-026: No Email Enumeration**
+- **Decision:** Always return success when requesting verification
+- **Rationale:** Prevents attackers from discovering valid emails
+- **Alternative Considered:** Return error for invalid emails (rejected - security risk)
+- **Implementation:** Send email only if user exists, always return 200
+
+#### Deliverables:
+- ✅ User model updated with verification fields
+- ✅ Email service with SMTP integration
+- ✅ Bilingual email templates
+- ✅ 2 new endpoints
+- ✅ Verification middleware
+- ✅ 10 tests passing
+
+---
+
+### **Component 2: CAS Integration**
+**Timeline:** Days 3-4 (2 days)  
+**Priority:** Critical - University Authentication
+
+#### Planning Steps:
+
+**Day 3 - CAS Client Setup:**
+1. **Morning: Dependencies & Configuration**
+   - Install `python-cas` library
+   - Configure CAS settings in config.py
+   - Set up CAS callback URL
+   - Coordinate with University IT for credentials
+
+2. **Afternoon: User Model Updates**
+   - Add fields:
+     - `cas_username` (String 50) - IDUL
+     - `account_type` (Enum: student/staff/faculty/alumni)
+     - `is_verified` (auto-set to True for CAS users)
+   - Create migration script
+   - Test schema changes
+
+**Day 4 - CAS Flow Implementation:**
+3. **Morning: CAS Login Endpoint**
+   - `GET /api/auth/cas/login`
+     - Initialize CAS client
+     - Generate service URL
+     - Redirect to CAS server
+     - Return redirect response
+
+4. **Afternoon: CAS Callback & Testing**
+   - `GET /api/auth/cas/callback`
+     - Receive ticket from CAS
+     - Validate ticket with CAS server
+     - Extract user attributes (email, IDUL, displayName)
+     - Create or update user in database
+     - Generate JWT token
+     - Return token + user info
+   
+   - Write tests (8 test cases)
+   - Integration testing with CAS sandbox
+
+#### Architectural Decisions:
+
+**AD-027: CAS as Primary Authentication**
+- **Decision:** CAS integration as production authentication method
+- **Rationale:** Official university SSO, validates student/staff status
+- **Alternative Considered:** OAuth 2.0 (rejected - university uses CAS)
+- **Implementation:** Parallel with password auth during migration
+
+**AD-028: Auto-Create Users from CAS**
+- **Decision:** Automatically create user accounts from CAS attributes
+- **Rationale:** Seamless onboarding, no pre-registration needed
+- **Alternative Considered:** Manual registration required (rejected - friction)
+- **Implementation:** Check if user exists, create if not, always update attributes
+
+**AD-029: CAS Username as IDUL**
+- **Decision:** Store university IDUL separately from app username
+- **Rationale:** IDUL is permanent, username can be customized
+- **Alternative Considered:** Use IDUL as username (rejected - less friendly)
+- **Implementation:** `cas_username` field stores IDUL, `username` is customizable
+
+#### Deliverables:
+- ✅ python-cas library integrated
+- ✅ CAS client configured
+- ✅ User model with CAS fields
+- ✅ 2 new endpoints (login, callback)
+- ✅ Auto-create user logic
+- ✅ 8 tests passing
+
+---
+
+### **Component 3: Password Reset Flow**
+**Timeline:** Day 5 Morning (0.5 days)  
+**Priority:** High - User Support
+
+#### Planning Steps:
+
+**Day 5 Morning:**
+1. **Database Schema**
+   - Add fields:
+     - `reset_token` (String 255)
+     - `reset_expires` (DateTime)
+   - Create migration
+
+2. **Endpoints Implementation**
+   - `POST /api/auth/forgot-password`
+     - Validate email format
+     - Find user (if exists)
+     - Generate secure reset token
+     - Store token with 1-hour expiration
+     - Send reset email (bilingual)
+     - Always return success
+   
+   - `POST /api/auth/reset-password`
+     - Validate token
+     - Check expiration
+     - Validate new password strength
+     - Hash and update password
+     - Clear reset token
+     - Return success
+
+3. **Testing**
+   - Write tests (8 test cases)
+   - Test token expiration
+   - Test security (no enumeration)
+
+#### Architectural Decisions:
+
+**AD-030: 1-Hour Reset Token Expiration**
+- **Decision:** Reset tokens expire after 1 hour
+- **Rationale:** Shorter window than verification (more sensitive)
+- **Alternative Considered:** 24 hours (rejected - security risk)
+- **Implementation:** Check expiration, clear after use
+
+**AD-031: One-Time Use Tokens**
+- **Decision:** Reset tokens are single-use, cleared after successful reset
+- **Rationale:** Prevents replay attacks
+- **Alternative Considered:** Multi-use tokens (rejected - security risk)
+- **Implementation:** Clear token in database after password change
+
+#### Deliverables:
+- ✅ User model with reset fields
+- ✅ 2 new endpoints
+- ✅ Reset email template
+- ✅ 8 tests passing
+
+---
+
+### **Component 4: Profile Customization**
+**Timeline:** Day 5 Afternoon (0.5 days)  
+**Priority:** High - User Experience
+
+#### Planning Steps:
+
+**Day 5 Afternoon:**
+1. **Database Schema**
+   - Add fields:
+     - `bio` (Text, max 500 chars)
+     - `profile_picture` (String 255, file path)
+     - `header_image` (String 255, file path)
+     - `website` (String 255)
+     - `location` (String 100)
+   - Create migration
+
+2. **File Upload Setup**
+   - Create `/uploads/profiles/` directory
+   - Create `/uploads/headers/` directory
+   - Configure upload limits (5MB)
+   - Set up Pillow for image processing
+
+3. **Endpoints**
+   - `PATCH /api/auth/update-bio`
+     - Validate length (max 500 chars)
+     - Update bio field
+     - Return updated user
+   
+   - `POST /api/auth/upload-profile-pic`
+     - Validate file type (jpg, png, gif, webp)
+     - Validate file size (5MB max)
+     - Generate secure filename
+     - Resize to 500x500 (Pillow)
+     - Delete old picture
+     - Save new picture
+     - Update user record
+     - Return image URL
+   
+   - `POST /api/auth/upload-header`
+     - Similar to profile pic
+     - Resize to 1500x500
+
+4. **Testing**
+   - Write tests (10 test cases)
+   - Test file validation
+   - Test image optimization
+
+#### Architectural Decisions:
+
+**AD-032: Server-Side Image Processing**
+- **Decision:** Process images on server using Pillow
+- **Rationale:** Consistent quality, prevents malicious uploads
+- **Alternative Considered:** Client-side processing (rejected - inconsistent)
+- **Implementation:** Resize, optimize, convert to standard format
+
+**AD-033: Secure Filename Generation**
+- **Decision:** Use user_id + random token for filenames
+- **Rationale:** Prevents path traversal, ensures uniqueness
+- **Alternative Considered:** Original filename (rejected - security risk)
+- **Implementation:** `profile_{user_id}_{token}.{ext}`
+
+**AD-034: 500-Character Bio Limit**
+- **Decision:** Maximum 500 characters for bio
+- **Rationale:** Encourages concise profiles, prevents abuse
+- **Alternative Considered:** Unlimited (rejected - spam potential)
+- **Implementation:** Validation in endpoint
+
+#### Deliverables:
+- ✅ User model with profile fields
+- ✅ File upload system
+- ✅ Image optimization (Pillow)
+- ✅ 3 new endpoints
+- ✅ 10 tests passing
+
+---
+
+### **Component 5: Comment System**
+**Timeline:** Days 6-7 (2 days)  
+**Priority:** High - User Engagement
+
+#### Planning Steps:
+
+**Day 6 - Model & Basic CRUD:**
+1. **Morning: Database Schema**
+   - Create Comment model:
+     - `id` (Integer, PK)
+     - `content` (Text, 1-500 chars)
+     - `post_id` (FK to posts)
+     - `user_id` (FK to users)
+     - `parent_id` (FK to comments, nullable) - for threading
+     - `is_anonymous` (Boolean)
+     - `created_at` (DateTime)
+     - `updated_at` (DateTime)
+   - Add relationships
+   - Create migration
+   - Test schema
+
+2. **Afternoon: Create & List Endpoints**
+   - `POST /api/posts/{post_id}/comments`
+     - Validate post exists
+     - Validate content (1-500 chars)
+     - Create comment
+     - Return comment (privacy-aware)
+   
+   - `GET /api/posts/{post_id}/comments`
+     - Query top-level comments (parent_id = NULL)
+     - Paginate (20 per page)
+     - Order by created_at DESC
+     - Return comments (privacy-aware)
+
+**Day 7 - Threading & Management:**
+3. **Morning: Threading & Replies**
+   - `GET /api/comments/{id}/replies`
+     - Query comments with parent_id = {id}
+     - Paginate
+     - Return replies
+   
+   - Update create endpoint to accept parent_id
+
+4. **Afternoon: Edit, Delete & Testing**
+   - `PATCH /api/comments/{id}`
+     - Validate ownership
+     - Check 5-minute edit window
+     - Update content
+     - Update updated_at
+     - Return updated comment
+   
+   - `DELETE /api/comments/{id}`
+     - Validate ownership
+     - Check if has replies (cascade or prevent?)
+     - Delete comment
+     - Return success
+   
+   - Write tests (15 test cases)
+   - Test threading
+   - Test privacy (anonymous)
+
+#### Architectural Decisions:
+
+**AD-035: 5-Minute Edit Window**
+- **Decision:** Comments editable for 5 minutes after posting
+- **Rationale:** Fix typos, prevent abuse (no context changes)
+- **Alternative Considered:** No editing (rejected - user frustration)
+- **Implementation:** Check `created_at` timestamp
+
+**AD-036: Threaded Comments (1 Level)**
+- **Decision:** Support one level of replies (comments → replies)
+- **Rationale:** Simple, prevents deep nesting complexity
+- **Alternative Considered:** Unlimited nesting (rejected - UI complexity)
+- **Implementation:** `parent_id` field, UI shows 2 levels
+
+**AD-037: Anonymous Comment Privacy**
+- **Decision:** Same privacy rules as posts (show pseudonym, not user_id)
+- **Rationale:** Consistency with existing privacy model
+- **Alternative Considered:** Force public comments (rejected - reduces engagement)
+- **Implementation:** Check `is_anonymous` in to_dict()
+
+**AD-038: Comment Character Limit**
+- **Decision:** 1-500 characters (same as posts)
+- **Rationale:** Consistency, prevents spam
+- **Alternative Considered:** Longer limit (rejected - encourage focused discussion)
+- **Implementation:** Validation in endpoint
+
+#### Deliverables:
+- ✅ Comment model with threading
+- ✅ 5 new endpoints
+- ✅ Privacy-aware serialization
+- ✅ Edit window enforcement
+- ✅ 15 tests passing
+
+---
+
+## 📋 PHASE 5B: SHOULD HAVE FEATURES (Days 8-9)
+
+### **Component 6: Notification System**
+**Timeline:** Day 8 (1 day)  
+**Priority:** Medium - User Engagement
+
+#### Planning Steps:
+
+**Day 8:**
+1. **Morning: Models & Service**
+   - Create Notification model
+   - Create NotificationService
+   - Implement auto-notification triggers
+
+2. **Afternoon: Endpoints**
+   - 4 notification endpoints
+   - Write tests (10 test cases)
+
+#### Architectural Decisions:
+
+**AD-039: Real-Time vs Polling**
+- **Decision:** Polling-based notifications (REST API)
+- **Rationale:** Simpler implementation, WebSocket for Phase 6
+- **Alternative Considered:** WebSocket (deferred to Phase 6)
+- **Implementation:** Frontend polls every 30 seconds
+
+**AD-040: Notification Types**
+- **Decision:** 6 notification types (follower, comment, reply, reaction, mention, system)
+- **Rationale:** Cover main user interactions
+- **Alternative Considered:** More types (rejected - keep simple)
+- **Implementation:** Enum in model
+
+---
+
+### **Component 7: Session Management**
+**Timeline:** Day 8 Afternoon (0.5 days)  
+**Priority:** Medium - Security
+
+#### Planning Steps:
+
+**Day 8 Afternoon:**
+1. Create Session model
+2. Track sessions on login
+3. Implement revocation endpoints
+4. Write tests (8 test cases)
+
+#### Architectural Decisions:
+
+**AD-041: Session Storage**
+- **Decision:** Store sessions in database (not Redis yet)
+- **Rationale:** Simpler for Phase 5, Redis in Phase 6
+- **Alternative Considered:** Redis (deferred - no dependency)
+- **Implementation:** Session model with JWT ID
+
+---
+
+### **Component 8: Mentions & Bookmarks**
+**Timeline:** Day 9 (1 day)  
+**Priority:** Medium - User Experience
+
+#### Planning Steps:
+
+**Day 9:**
+1. **Morning: Mentions**
+   - Extract @username from content
+   - Create notifications
+   - Write tests
+
+2. **Afternoon: Bookmarks**
+   - Create Bookmark model
+   - Implement 3 endpoints
+   - Write tests
+
+#### Architectural Decisions:
+
+**AD-042: Mention Pattern**
+- **Decision:** Use regex `@(\w+)` to extract mentions
+- **Rationale:** Simple, standard pattern
+- **Alternative Considered:** Complex parser (rejected - overkill)
+- **Implementation:** Extract in post/comment creation
+
+**AD-043: Bookmark Privacy**
+- **Decision:** Bookmarks are private, never shared
+- **Rationale:** Personal collection, no social pressure
+- **Alternative Considered:** Public bookmarks (rejected - privacy)
+- **Implementation:** User-scoped queries only
+
+---
+
+## 📋 PHASE 5C: NICE TO HAVE FEATURES (Days 10-12)
+
+### **Component 9: Two-Factor Authentication**
+**Timeline:** Days 10-11 (2 days)  
+**Priority:** Low - Optional Security
+
+#### Planning Steps:
+
+**Day 10:**
+1. Install pyotp, qrcode
+2. Add TOTP fields to User model
+3. Implement enable/disable endpoints
+
+**Day 11:**
+1. QR code generation
+2. Backup codes
+3. Login flow with 2FA
+4. Write tests (10 test cases)
+
+#### Architectural Decisions:
+
+**AD-044: TOTP-Based 2FA**
+- **Decision:** Use TOTP (Time-based One-Time Password)
+- **Rationale:** Standard, works with Google Authenticator
+- **Alternative Considered:** SMS (rejected - cost, less secure)
+- **Implementation:** pyotp library
+
+**AD-045: Optional 2FA**
+- **Decision:** 2FA is optional, user choice
+- **Rationale:** Balance security and friction
+- **Alternative Considered:** Mandatory (rejected - too restrictive)
+- **Implementation:** Flag in user preferences
+
+---
+
+### **Component 10: UX Enhancements**
+**Timeline:** Day 12 (1 day)  
+**Priority:** Low - Polish
+
+#### Planning Steps:
+
+**Day 12:**
+1. Privacy settings endpoints
+2. User preferences endpoints
+3. Account deactivation
+4. Post pinning
+5. Write tests
+
+#### Architectural Decisions:
+
+**AD-046: Profile Visibility Levels**
+- **Decision:** 3 levels (public, followers, private)
+- **Rationale:** Granular privacy control
+- **Alternative Considered:** 2 levels (rejected - not enough control)
+- **Implementation:** Enum in user model
+
+---
+
+## 🧪 TESTING STRATEGY
+
+### Test-Driven Development Approach:
+1. Write tests BEFORE implementing features
+2. Run tests after each component
+3. Integration tests after each phase
+4. Cumulative regression testing
+
+### Test Coverage Targets:
+- Phase 5A: 46 tests
+- Phase 5B: 18 tests  
+- Phase 5C: 10 tests
+- **Total Target: 50+ new tests**
+- **Grand Total: 120+ tests**
+
+---
+
+## 🔄 DEVELOPMENT WORKFLOW
+
+### Daily Workflow:
+```
+Morning:
+  ├─ Review previous day
+  ├─ Write tests for today's features
+  ├─ Implement features
+  └─ Run tests
+
+Afternoon:
+  ├─ Continue implementation
+  ├─ Run integration tests
+  ├─ Update documentation
+  ├─ Commit changes
+  └─ Plan next day
+```
+
+### Code Review Checkpoints:
+- End of 5A (Day 5)
+- End of 5B (Day 9)
+- End of 5C (Day 12)
+
+---
+
+## 📊 PROGRESS TRACKING
+
+### Daily Updates:
+- Update checkboxes in PROJECT_TRACKER.md
+- Update progress bars
+- Document any blockers
+- Adjust timeline if needed
+
+### Weekly Review:
+- Review completed components
+- Test all features together
+- Update documentation
+- Plan adjustments
+
+---
 
 **Timeline:** 10-14 days  
 **Priority:** High - Production Readiness  
@@ -441,7 +1052,8 @@ FRONTEND_URL=https://pulse.ulaval.ca
 | `QUICKSTART.md` | Setup guide, first run |
 | `ARCHITECTURE_DECISIONS.md` | Technical decisions (AD-001 to AD-023) |
 | `PHASE_5_OVERVIEW.md` | Phase 5 planning & features |
-
+| `EMOJI_COLLATION_BUG.md` | Bug fix documentation |
+| `BILINGUAL_GUIDE.md` | NLP implementation guide |
 
 ### **Documentation to Create:**
 - [ ] `CAS_INTEGRATION_GUIDE.md` — CAS setup instructions
@@ -577,12 +1189,29 @@ FRONTEND_URL=https://pulse.ulaval.ca
 
 ---
 
-**📌 Remember:** Update this tracker daily during Phase 5 development!
+**📌 Daily Update Protocol:**
+1. Check off completed tasks (convert [ ] to [x])
+2. Update progress bars for each component
+3. Document any blockers or issues
+4. Commit changes with descriptive message
+5. Update timeline if needed
 
-**Last Achievement:** Phase 4 Complete — Analytics Operational 🎉  
-**Current Milestone:** Phase 5 Started — Production Authentication 🚀  
-**Next Milestone:** Phase 5A Complete — Core Security Features ✅
+---
 
-**Status:** 🟢 Ready to Start Phase 5A  
-**Priority:** 🔴 High — Production Readiness  
-**Timeline:** 📅 10-14 days estimated
+**Last Update:** 2026-02-14 (Planning Complete)  
+**Current Component:** None (Phase 5 Not Started)  
+**Next Milestone:** Email Verification System (Component 1)  
+**Blockers:** None - Ready to Start
+
+---
+
+**Phase 5A Status:** 🔴 Not Started (5 components)  
+**Phase 5B Status:** ⏸️ Pending 5A Completion (3 components)  
+**Phase 5C Status:** ⏸️ Pending 5B Completion (2 components)
+
+---
+
+**Status:** 🟢 Planning Complete - Ready for Development  
+**Priority:** 🔴 High - Production Readiness Critical  
+**Timeline:** 📅 10-14 days (as planned)  
+**Confidence:** ✅ High - Detailed plan with architectural decisions
