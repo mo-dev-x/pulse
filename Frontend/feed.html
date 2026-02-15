@@ -1,173 +1,239 @@
 <!doctype html>
-<html>
+<html lang="en">
 
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>PULSE — Feed</title>
-    <link rel="stylesheet" href="css/feed.css">
+    <link rel="stylesheet" href="https://unicons.iconscout.com/release/v4.0.8/css/line.css">
+    <link rel="stylesheet" href="feed.css">
 </head>
 
 <body>
-    <link rel="stylesheet" href="https://unicons.iconscout.com/release/v2.1.6/css/unicons.css">
+    <!-- TOPPPP BAR -->
+    <header class="topbar">
+        <div class="topbar-left">
+            <div class="brand">PULSE</div>
+        </div>
 
-    <link rel="stylesheet" href="css/feed.css">
-    </head>
+        <div class="topbar-center">
+            <div class="search">
+                <i class="uil uil-search"></i>
+                <input id="globalSearch" type="search" placeholder="Search for posts, campus' news and friends" />
+            </div>
+        </div>
 
-    <body>
-        <nav>
-            <div class="container">
-                <h2 class="log">
-                    PULSE
-                </h2>
-                <div class="search-bar">
-                    <i class="uil uil-search"></i>
-                    <input type="search" placeholder="Search for friends or posts...">
+        <div class="topbar-right">
+            <button id="btnOpenCreateTop" class="btn btn-accent">Create</button>
+
+            <div class="userchip" id="userChip">
+                <img class="avatar" src="https://i.pravatar.cc/80?img=12" alt="Profile" />
+                <span class="caret">▾</span>
+
+                <div class="menu" id="userMenu">
+                    <button id="btnLogout" class="menu-item">Logout</button>
                 </div>
-                <div class="create">
-                    <label for="create-post" class="btn btn-primary">Create Post</label>
-                    <div class="Profile-photo nav-profile">
-                        <img src="images/image2.jpg" alt="Profile">
+            </div>
+        </div>
+    </header>
+
+    <!-- APP GRIDDDDD -->
+    <div class="app">
+        <!-- LEFT SIDEBARRRRRRR -->
+        <aside class="sidebar">
+            <div class="panel profile">
+                <div class="profile-row">
+                    <img class="avatar-lg" src="https://i.pravatar.cc/100?img=12" alt="You" />
+                    <div>
+                        <div class="name" id="meName">Foulen</div>
+                        <div class="handle" id="meHandle">@Lfalteni</div>
                     </div>
                 </div>
             </div>
-        </nav>
 
-
-        <!-- MAINNNNN  -->
-        <main>
-            <div class="container">
-                <!-- KOOL MAHOU AAL YSAAAAAAAAAAAAAAARRRRRRRRRRR -->
-                <div class="left">
-                    <a class="profile">
-                        <div class="profile-photo">
-                            <!-- <img src="..."> -->
-                        </div>
-                        <div class="handle">
-                            <h4>Bonhomme</h4>
-                            <p class="text-muted">
-                                @goat
-                            </p>
-                        </div>
-                    </a>
-                <div class="sidebar">
-                <a class="menu-item active" href="#">
-                    <span><i class="uil uil-home"></i></span>
-                    <h3>Feed</h3>
+            <nav class="panel nav">
+                <a class="nav-item active" href="#">
+                    <span><i class="uil uil-home"></i></span>Home
                 </a>
 
-                <a class="menu-item" href="#">
-                    <span><i class="uil uil-compass"></i></span>
-                    <h3>Explore</h3>
+                <a class="nav-item" href="#">
+                    <span><i class="uil uil-compass"></i></span>Explore
                 </a>
 
-                <a class="menu-item" href="#">
-                    <span><i class="uil uil-map-marker"></i></span>
-                    <h3>Campus Map</h3>
+                <a class="nav-item" href="#">
+                    <i class="uil uil-map-marker"></i>
+                    <span>Campus Map</span>
                 </a>
 
-                <a class="menu-item" href="#">
-                    <span><i class="uil uil-smile"></i></span>
-                    <h3>Mood Dashboard</h3>
+                <a class="nav-item" href="dashboard.html">
+                    <i class="uil uil-smile"></i>
+                    <span>Mood Dashboard</span>
+                </a>
+                <a class="nav-item" href="#">
+                    <i class="uil uil-palette"></i>
+                    <span>Theme</span>
                 </a>
 
-                <a class="menu-item" href="#">
-                    <span><i class="uil uil-bell"></i></span>
-                    <h3>Notifications</h3>
+                <a class="nav-item" href="#">
+                    <i class="uil uil-setting"></i>
+                    <span>Settings</span>
                 </a>
 
-                <a class="menu-item" href="#">
-                    <span><i class="uil uil-envelope-alt"></i></span>
-                    <h3>Messages</h3>
-                </a>
+                <button id="btnOpenCreateLeft" class="btn btn-full btn-accent">Create Post</button>
+            </nav>
+        </aside>
 
-                <a class="menu-item" href="#">
-                    <span><i class="uil uil-plus-circle"></i></span>
-                    <h3>Post</h3>
-                </a>
+        <!-- CENTER FEEDDDDDDDD -->
+        <main class="main">
 
-                <a class="menu-item" href="#">
-                    <span><i class="uil uil-setting"></i></span>
-                    <h3>Settings</h3>
-                </a>
-                </div>
+            <!-- STORIESSSSSSSSSSS -->
+            <section class="stories panel">
+            <div class="stories-head">
+                <h3 class="stories-title">Campus Pulse</h3>
+            </div>
 
-                    <!-- KOOL MAHOU FLWSSSSSTTTTTTTTT-->
-                    <div class="middle">
-
-
-
-                    </div>
-                <!-- KOOL MAHOU AAL YMIIIIIIIIIINNNNNNN -->
-                    <div class="right">
-
-
-
-                    </div>
-
-
-                </div>
+            <div class="stories-row" id="storiesRow">
+                <!-- injected by JS -->
+            </div>
+            </section>
 
 
 
 
+            <!-- COMPOSERRRRRR -->
+            <section class="composer panel">
+                <img class="avatar" src="https://i.pravatar.cc/80?img=12" alt="You" />
+                <button id="btnOpenCreateComposer" class="composer-input">
+                    What’s on your mind ?
+                </button>
+                <button id="btnOpenCreateSmall" class="btn btn-accent btn-sm">Post</button>
+            </section>
+
+            <!-- FEED LISTTTTTTTTT -->
+            <section class="feed" id="feed">
+                <!-- posts injected by JS-->
+            </section>
+
+            <!-- LOADING / EMPTY -->
+            <div class="state" id="stateBox">Loading feed…</div>
         </main>
 
-
-
-    </body>
-
-</html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<!-- <h1>ASLEEMAAA fl Feed </h1>
-     <main class="page">
-        <section class="card">
-            <div class="brand">
-                <div>
-                    <h1>PULSE</h1>
-                    <p>ASLEEMAAA fl Feed </p>
+        <!-- RIGHT PANELLLLLLLL -->
+        <aside class="right">
+            <section class="panel messages">
+                <div class="panel-title">
+                    <span>Messages</span>
+                    <button class="iconbtn" title="New message"><i class="uil uil-pen"></i></button>
                 </div>
+
+                <div class="search small">
+                    <i class="uil uil-search"></i>
+                    <input id="msgSearch" type="search" placeholder="Search messages" />
+                </div>
+
+                <div class="tabs">
+                    <button class="tab active" data-tab="primary">Primary</button>
+                    <button class="tab" data-tab="general">General</button>
+                    <button class="tab" data-tab="requests">Requests(7)</button>
+                </div>
+
+                <div class="msg-list" id="msgList">
+                    <!-- injected by JS-->
+                </div>
+            </section>
+
+            <section class="panel requests">
+                <div class="panel-title">
+                    <span>Requests</span>
+                </div>
+
+                <div class="request-card">
+                    <div class="req-left">
+                        <img class="avatar" src="https://i.pravatar.cc/80?img=32" alt="Requester" />
+                        <div>
+                            <div class="req-name">Emma Bois</div>
+                            <div class="req-sub">8 mutual friends</div>
+                        </div>
+                    </div>
+                    <div class="req-actions">
+                        <button class="btn btn-ghost btn-sm">Decline</button>
+                        <button class="btn btn-accent btn-sm">Accept</button>
+                    </div>
+                </div>
+                                <div class="request-card">
+                    <div class="req-left">
+                        <img class="avatar" src="https://i.pravatar.cc/80?img=31" alt="Requester" />
+                        <div>
+                            <div class="req-name">Laurence parent</div>
+                            <div class="req-sub">2 mutual friends</div>
+                        </div>
+                    </div>
+                    <div class="req-actions">
+                        <button class="btn btn-ghost btn-sm">Decline</button>
+                        <button class="btn btn-accent btn-sm">Accept</button>
+                    </div>
+                </div>
+            </section>
+        </aside>
+    </div>
+
+    <!-- CREATE POST MODALLLLLLLL -->
+    <div class="modal" id="createModal" aria-hidden="true">
+        <div class="modal-card" role="dialog" aria-modal="true" aria-label="Create post">
+            <div class="modal-head">
+                <div class="modal-title">Create Post</div>
+                <button id="btnCloseModal" class="iconbtn" aria-label="Close">✖️</button>
             </div>
-             <button class="btn" id="logoutBtn" type="button">Logout</button> -->
-<!-- <button onclick="logout()">Logout</button>
 
-</section>
-</main>
+            <form id="createForm" class="modal-body">
+                <label class="label" for="postText">Text</label>
+                <textarea id="postText" class="textarea" maxlength="500" placeholder="Write something (10–500 chars)..."
+                    required></textarea>
+                <div class="counter"><span id="charCount">0</span>/500</div>
 
-<script type="module">
-    import { isLoggedIn } from "./js/auth.js"; //or ./js/....
-    if (!isLoggedIn()) window.location.href = "login.html"; //window.location.replace("login.html");
-</script> -->
+                <div class="row">
+                    <label class="checkbox">
+                        <input id="anonymousToggle" type="checkbox" />
+                        <span>Post anonymously</span>
+                    </label>
 
+                    <select id="zoneSelect" class="select">
+                        <option value="">Select zone</option>
+                        <option value="1">Zone 1</option>
+                        <option value="2">Zone 2</option>
+                        <option value="3">Zone 3</option>
+                    </select>
+                </div>
 
+                <div class="row">
+                    <label class="file">
+                        <i class="uil uil-camera"></i>Image
+                        <input id="imageFile" type="file" accept="image/*" />
+                    </label>
+                    <!--
+                    <label class="file">
+                        <i class="uil uil-video"></i>Video
+                        <input id="videoFile" type="file" accept="video/*" />
+                    </label> -->
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-ghost" id="btnCancel">Cancel</button>
+                    <button type="submit" class="btn btn-accent">Post</button>
+                </div>
+
+                <div class="error" id="createError" style="display:none;"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ymkn nst7a9hom -->
+    <script src="config.js"></script>
+    <script src="api.js"></script>
+    <script src="auth.js"></script>
+
+    <!-- logic lpage -->
+    <script src="feed.js"></script>
 </body>
 
 </html>
