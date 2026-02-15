@@ -82,6 +82,12 @@ def add_reaction(post_id):
             existing.emoji = emoji
             db.session.commit()
 
+            # Remove session to force completely fresh queries
+            db.session.remove()
+
+            # Get counts - this will now query the database freshly
+            counts = Reaction.get_counts(post_id)
+
             return jsonify({
                 'message': get_bilingual_message('reaction_updated'),
                 'reaction': {

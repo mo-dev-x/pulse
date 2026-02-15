@@ -91,7 +91,7 @@ class DailyAggregate(db.Model):
                 'negative': round(self.negative_count / self.total_posts * 100, 1) if self.total_posts > 0 else 0
             },
             'avg_sentiment': round(self.avg_sentiment, 2) if self.avg_sentiment is not None else None,
-            'mood': self._get_mood_label()
+            'mood_label': self._get_mood_label()
         }
 
     def _get_mood_label(self):
@@ -180,7 +180,7 @@ class WeeklyAggregate(db.Model):
                 'negative': round(self.negative_count / self.total_posts * 100, 1) if self.total_posts > 0 else 0
             },
             'avg_sentiment': round(self.avg_sentiment, 2) if self.avg_sentiment is not None else None,
-            'mood': self._get_mood_label()
+            'mood_label': self._get_mood_label()
         }
 
     def _get_mood_label(self):

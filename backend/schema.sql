@@ -157,7 +157,7 @@ CREATE TABLE reactions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     post_id INT NOT NULL,
     user_id INT NOT NULL,
-    emoji VARCHAR(10) NOT NULL,  -- Unicode emoji
+    emoji VARCHAR(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,  -- Binary collation for exact emoji matching
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     
     FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,

@@ -63,12 +63,15 @@ class Reaction(db.Model):
         Get aggregate reaction counts for a post.
         Returns dict like: {"❤️": 12, "👍": 8}
         """
+        # Use COUNT(*) and disable query caching for fresh results
         results = db.session.query(
             Reaction.emoji,
-            db.func.count(Reaction.id)
+            db.func.count('*')
         ).filter(
             Reaction.post_id == post_id
-        ).group_by(Reaction.emoji).all()
+        ).group_by(Reaction.emoji).execution_options(
+            compiled_cache=None
+        ).all()
 
         return {emoji: count for emoji, count in results}
 

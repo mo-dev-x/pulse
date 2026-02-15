@@ -65,11 +65,17 @@ def get_daily_analytics():
     # Compute/fetch aggregate
     aggregate = compute_daily_aggregate(target_date, zone_id=zone_id)
 
-    return jsonify({
-        'analytics': aggregate.to_dict(enforce_threshold=True),
+    response = {
+        'aggregate': aggregate.to_dict(enforce_threshold=True),
         'type': 'daily',
-        'disclaimer': 'Sentiment analysis is automated and approximate.'
-    }), 200
+        'date': target_date.isoformat(),
+        'disclaimer': 'Sentiment analysis is automated and approximate. It shows campus trends, not individual diagnoses.'
+    }
+    
+    if zone_id is not None:
+        response['zone_id'] = zone_id
+
+    return jsonify(response), 200
 
 
 @bp.route('/weekly', methods=['GET'])
@@ -113,11 +119,17 @@ def get_weekly_analytics():
     # Compute/fetch aggregate
     aggregate = compute_weekly_aggregate(week_start, zone_id=zone_id)
 
-    return jsonify({
-        'analytics': aggregate.to_dict(enforce_threshold=True),
+    response = {
+        'aggregate': aggregate.to_dict(enforce_threshold=True),
         'type': 'weekly',
-        'disclaimer': 'Sentiment analysis is automated and approximate.'
-    }), 200
+        'week_start': week_start.isoformat(),
+        'disclaimer': 'Sentiment analysis is automated and approximate. It shows campus trends, not individual diagnoses.'
+    }
+    
+    if zone_id is not None:
+        response['zone_id'] = zone_id
+
+    return jsonify(response), 200
 
 
 @bp.route('/campus', methods=['GET'])
@@ -146,5 +158,13 @@ def get_campus_overview():
         target_date = date.today()
 
     overview = get_campus_mood_overview(target_date)
+    
+    # Restructure response to match test expectations
+    response = {
+        'date': target_date.isoformat(),
+        'campus_overview': overview['campus_wide'],
+        'zone_breakdown': overview['zones'],
+        'disclaimer': overview['disclaimer']
+    }
 
-    return jsonify(overview), 200
+    return jsonify(response), 200
