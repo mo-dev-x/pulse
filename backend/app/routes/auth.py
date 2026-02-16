@@ -13,15 +13,13 @@ import os
 import re
 import secrets
 from datetime import datetime
+from urllib.parse import urlencode
 
-from flask import Blueprint, request, jsonify, current_app, redirect
+import jwt as pyjwt
+import requests
+from flask import Blueprint, request, jsonify, current_app, redirect, session
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from werkzeug.utils import secure_filename
-
-try:
-    from cas import CASClient
-except ImportError:  # pragma: no cover - optional dependency for local dev
-    CASClient = None
 
 try:
     from PIL import Image
@@ -35,6 +33,11 @@ from app.utils.i18n import get_localized_message
 
 # Create blueprint
 bp = Blueprint('auth', __name__)
+
+
+def _is_oidc_enabled():
+    """Feature flag guard to keep OIDC code available but disabled by default."""
+    return bool(current_app.config.get('ENABLE_OIDC_AUTH', False))
 
 
 def _allowed_file(filename):
@@ -137,20 +140,35 @@ def register():
         db.session.add(new_user)
         db.session.commit()
 
-        # Best effort: send verification email without blocking registration success
+        # Best effort: attempt to send verification email without blocking registration.
+        verification_email_sent = False
+        verification_email_error = None
         try:
-            send_verification_email(new_user)
-        except Exception:
-            pass
+            verification_email_sent, verification_email_error = send_verification_email(new_user)
+        except Exception as exc:
+            verification_email_error = str(exc)
+
+        if not verification_email_sent:
+            current_app.logger.warning(
+                "Verification email not sent for user_id=%s email=%s reason=%s",
+                new_user.id,
+                new_user.email,
+                verification_email_error or "unknown error",
+            )
         
         # Generate JWT token (identity must be a string)
         access_token = create_access_token(identity=str(new_user.id))
         
-        return jsonify({
+        response = {
             'message': get_localized_message(request, 'user_created'),
             'user': new_user.to_dict(include_private=True),
-            'token': access_token
-        }), 201
+            'token': access_token,
+            'verification_email_sent': verification_email_sent
+        }
+        if current_app.debug and not verification_email_sent:
+            response['verification_email_error'] = verification_email_error or 'email delivery failed'
+
+        return jsonify(response), 201
         
     except ValueError as e:
         db.session.rollback()
@@ -217,7 +235,7 @@ def login():
             'message': get_localized_message(request, 'account_disabled')
         }), 403
 
-    # Only verified users (email link or CAS) can log in.
+    # Only verified users (email link or institutional SSO) can log in.
     if not user.is_verified:
         return jsonify({
             'error': get_localized_message(request, 'validation_error'),
@@ -452,15 +470,30 @@ def send_verification():
             'message': get_localized_message(request, 'account_already_verified')
         }), 200
 
+    sent = False
+    error = None
     try:
-        send_verification_email(user)
-    except Exception:
-        # Prevent enumeration and internal details from leaking.
-        pass
+        sent, error = send_verification_email(user)
+    except Exception as exc:
+        error = str(exc)
 
-    return jsonify({
+    if not sent:
+        current_app.logger.warning(
+            "Resend verification failed for user_id=%s email=%s reason=%s",
+            user.id,
+            user.email,
+            error or "unknown error",
+        )
+
+    response = {
         'message': get_localized_message(request, 'verification_sent_generic')
-    }), 200
+    }
+    if current_app.debug:
+        response['verification_email_sent'] = sent
+        if not sent:
+            response['verification_email_error'] = error or 'email delivery failed'
+
+    return jsonify(response), 200
 
 
 @bp.route('/verify-email/<token>', methods=['GET'])
@@ -494,9 +527,20 @@ def forgot_password():
         user = User.query.filter_by(email=email).first()
         if user:
             try:
-                send_password_reset_email(user)
-            except Exception:
-                pass
+                sent, error = send_password_reset_email(user)
+                if not sent:
+                    current_app.logger.warning(
+                        "Password reset email not sent for user_id=%s email=%s reason=%s",
+                        user.id,
+                        user.email,
+                        error or "unknown error",
+                    )
+            except Exception as exc:
+                current_app.logger.warning(
+                    "Password reset email exception for email=%s reason=%s",
+                    user.email,
+                    str(exc),
+                )
 
     return jsonify({
         'message': get_localized_message(request, 'reset_link_sent_generic')
@@ -544,98 +588,229 @@ def reset_password():
     return jsonify({'message': get_localized_message(request, 'password_reset_success')}), 200
 
 
-@bp.route('/cas/login', methods=['GET'])
-def cas_login():
-    """Redirect user to Universite Laval CAS login."""
-    if CASClient is None:
-        return jsonify({
-            'error': get_localized_message(request, 'cas_unavailable'),
-            'message': get_localized_message(request, 'python_cas_missing')
-        }), 503
+def _resolve_account_type(claims):
+    """Map OIDC affiliation-like claims to local account_type enum."""
+    affiliation = str(
+        claims.get('eduPersonPrimaryAffiliation', '')
+        or claims.get('affiliation', '')
+        or claims.get('employeeType', '')
+    ).lower()
 
-    cas_client = CASClient(
-        version=3,
-        service_url=current_app.config.get('CAS_CALLBACK_URL'),
-        server_url=current_app.config.get('CAS_SERVER_URL')
-    )
-    return redirect(cas_client.get_login_url())
-
-
-@bp.route('/cas/callback', methods=['GET'])
-def cas_callback():
-    """Handle CAS callback and issue API JWT token."""
-    if CASClient is None:
-        return jsonify({
-            'error': get_localized_message(request, 'cas_unavailable'),
-            'message': get_localized_message(request, 'python_cas_missing')
-        }), 503
-
-    ticket = request.args.get('ticket')
-    if not ticket:
-        return jsonify({'error': get_localized_message(request, 'missing_cas_ticket')}), 400
-
-    cas_client = CASClient(
-        version=3,
-        service_url=current_app.config.get('CAS_CALLBACK_URL'),
-        server_url=current_app.config.get('CAS_SERVER_URL')
-    )
-
-    cas_user, attributes, _ = cas_client.verify_ticket(ticket)
-    if not cas_user:
-        return jsonify({'error': get_localized_message(request, 'auth_failed')}), 401
-
-    attributes = attributes or {}
-    affiliation = str(attributes.get('eduPersonPrimaryAffiliation', '') or attributes.get('affiliation', '')).lower()
-    account_type = 'student'
     if 'staff' in affiliation:
-        account_type = 'staff'
-    elif 'faculty' in affiliation or 'prof' in affiliation:
-        account_type = 'faculty'
-    elif 'alumni' in affiliation:
-        account_type = 'alumni'
+        return 'staff'
+    if 'faculty' in affiliation or 'prof' in affiliation:
+        return 'faculty'
+    if 'alumni' in affiliation:
+        return 'alumni'
+    return 'student'
 
-    cas_email = (
-        attributes.get('mail')
-        or attributes.get('email')
-        or attributes.get('userPrincipalName')
+
+def _extract_identity_from_claims(claims):
+    """Extract stable identity id, email and display name from OIDC claims."""
+    email = (
+        claims.get('email')
+        or claims.get('upn')
+        or claims.get('preferred_username')
+        or claims.get('userPrincipalName')
     )
-    if not cas_email or not User.validate_email(cas_email):
-        return jsonify({'error': get_localized_message(request, 'cas_invalid_ulaval_email')}), 400
+    external_id = claims.get('oid') or claims.get('sub')
+    display_name = claims.get('name') or claims.get('displayName')
+    return external_id, email, display_name
 
-    db_user = User.query.filter_by(email=cas_email.lower()).first()
+
+def _upsert_user_from_oidc_claims(claims):
+    """Create/update local user from validated institutional OIDC claims."""
+    external_id, oidc_email, display_name = _extract_identity_from_claims(claims)
+    if not oidc_email or not User.validate_email(oidc_email):
+        return None, ({
+            'error': get_localized_message(request, 'oidc_invalid_ulaval_email')
+        }, 400)
+
+    if not external_id:
+        return None, ({
+            'error': get_localized_message(request, 'oidc_missing_identity')
+        }, 400)
+
+    # Keep existing DB column for now. `cas_username` stores institutional unique id (OID/sub).
+    db_user = User.query.filter_by(email=oidc_email.lower()).first()
+    id_owner = User.query.filter_by(cas_username=external_id).first()
+    if id_owner and (not db_user or id_owner.id != db_user.id):
+        return None, ({
+            'error': get_localized_message(request, 'validation_error'),
+            'message': get_localized_message(request, 'cas_identity_conflict')
+        }, 409)
+
+    account_type = _resolve_account_type(claims)
     if not db_user:
-        sanitized_cas = re.sub(r'[^a-zA-Z0-9_]', '_', cas_user.lower())
-        generated_username = f"u{sanitized_cas}"[:50]
+        sanitized = re.sub(r'[^a-zA-Z0-9_]', '_', str(external_id).lower())
+        generated_username = f"u{sanitized}"[:50]
         if len(generated_username) < 3:
             generated_username = f"user_{secrets.token_hex(2)}"
         if User.query.filter_by(username=generated_username).first():
-            generated_username = f"u{cas_user.lower()}_{secrets.token_hex(3)}"
+            generated_username = f"u{generated_username}_{secrets.token_hex(3)}"[:50]
 
         db_user = User(
-            email=cas_email,
+            email=oidc_email,
             password=None,
             username=generated_username,
-            display_name=attributes.get('displayName') or cas_user,
+            display_name=display_name or str(external_id),
             is_verified=True,
-            cas_username=cas_user,
+            cas_username=str(external_id),
             account_type=account_type
         )
         db.session.add(db_user)
     else:
-        db_user.cas_username = cas_user
+        db_user.cas_username = str(external_id)
         db_user.is_verified = True
         db_user.account_type = account_type
-        if attributes.get('displayName'):
-            db_user.display_name = attributes.get('displayName')
+        if display_name:
+            db_user.display_name = display_name
 
     db.session.commit()
+    return db_user, None
+
+
+@bp.route('/oidc/login', methods=['GET'])
+def oidc_login():
+    """Redirect user to OIDC provider authorize endpoint (Azure Entra)."""
+    if not _is_oidc_enabled():
+        return jsonify({
+            'error': get_localized_message(request, 'oidc_unavailable'),
+            'message': get_localized_message(request, 'oidc_disabled')
+        }), 503
+
+    authorize_url = current_app.config.get('OIDC_AUTHORIZE_URL')
+    client_id = current_app.config.get('OIDC_CLIENT_ID')
+    redirect_uri = current_app.config.get('OIDC_REDIRECT_URI')
+    scope = current_app.config.get('OIDC_SCOPE', 'openid profile email')
+
+    if not authorize_url or not client_id or not redirect_uri:
+        return jsonify({
+            'error': get_localized_message(request, 'oidc_unavailable'),
+            'message': get_localized_message(request, 'oidc_missing_config')
+        }), 503
+
+    state = secrets.token_urlsafe(24)
+    session['oidc_state'] = state
+    query = urlencode({
+        'client_id': client_id,
+        'response_type': 'code',
+        'redirect_uri': redirect_uri,
+        'response_mode': 'query',
+        'scope': scope,
+        'state': state,
+    })
+    return redirect(f'{authorize_url}?{query}')
+
+
+@bp.route('/oidc/callback', methods=['GET'])
+def oidc_callback():
+    """Handle OIDC callback, validate code flow, then issue API JWT."""
+    if not _is_oidc_enabled():
+        return jsonify({
+            'error': get_localized_message(request, 'oidc_unavailable'),
+            'message': get_localized_message(request, 'oidc_disabled')
+        }), 503
+
+    error = request.args.get('error')
+    if error:
+        return jsonify({'error': get_localized_message(request, 'auth_failed')}), 401
+
+    code = request.args.get('code')
+    state = request.args.get('state')
+    expected_state = session.pop('oidc_state', None)
+    if not code or not state or state != expected_state:
+        return jsonify({'error': get_localized_message(request, 'invalid_oidc_state')}), 400
+
+    token_url = current_app.config.get('OIDC_TOKEN_URL')
+    redirect_uri = current_app.config.get('OIDC_REDIRECT_URI')
+    client_id = current_app.config.get('OIDC_CLIENT_ID')
+    client_secret = current_app.config.get('OIDC_CLIENT_SECRET')
+    userinfo_url = current_app.config.get('OIDC_USERINFO_URL')
+
+    if not token_url or not redirect_uri or not client_id or not userinfo_url:
+        return jsonify({
+            'error': get_localized_message(request, 'oidc_unavailable'),
+            'message': get_localized_message(request, 'oidc_missing_config')
+        }), 503
+
+    token_payload = {
+        'grant_type': 'authorization_code',
+        'code': code,
+        'redirect_uri': redirect_uri,
+        'client_id': client_id,
+    }
+    if client_secret:
+        token_payload['client_secret'] = client_secret
+
+    try:
+        token_resp = requests.post(token_url, data=token_payload, timeout=10)
+        if token_resp.status_code >= 400:
+            return jsonify({'error': get_localized_message(request, 'auth_failed')}), 401
+        token_data = token_resp.json()
+    except Exception:
+        return jsonify({'error': get_localized_message(request, 'oidc_provider_error')}), 502
+
+    access_token = token_data.get('access_token')
+    id_token = token_data.get('id_token')
+    if not access_token:
+        return jsonify({'error': get_localized_message(request, 'auth_failed')}), 401
+
+    claims = {}
+    try:
+        userinfo_resp = requests.get(
+            userinfo_url,
+            headers={'Authorization': f'Bearer {access_token}'},
+            timeout=10
+        )
+        if userinfo_resp.status_code < 400:
+            claims = userinfo_resp.json() or {}
+    except Exception:
+        claims = {}
+
+    # Fallback if userinfo isn't available: parse ID token claims (without signature verify).
+    if not claims and id_token:
+        try:
+            claims = pyjwt.decode(id_token, options={"verify_signature": False}) or {}
+        except Exception:
+            claims = {}
+
+    if not claims:
+        return jsonify({'error': get_localized_message(request, 'oidc_provider_error')}), 502
+
+    db_user, err = _upsert_user_from_oidc_claims(claims)
+    if err:
+        body, status = err
+        return jsonify(body), status
 
     token = create_access_token(identity=str(db_user.id))
     return jsonify({
-        'message': get_localized_message(request, 'cas_auth_success'),
+        'message': get_localized_message(request, 'oidc_auth_success'),
         'token': token,
         'user': db_user.to_dict(include_private=True)
     }), 200
+
+
+# Legacy CAS routes kept temporarily for compatibility with older frontend links.
+@bp.route('/cas/login', methods=['GET'])
+def cas_login_legacy_redirect():
+    if not _is_oidc_enabled():
+        return jsonify({
+            'error': get_localized_message(request, 'oidc_unavailable'),
+            'message': get_localized_message(request, 'oidc_disabled')
+        }), 503
+    return redirect('/api/auth/oidc/login')
+
+
+@bp.route('/cas/callback', methods=['GET'])
+def cas_callback_legacy_redirect():
+    if not _is_oidc_enabled():
+        return jsonify({
+            'error': get_localized_message(request, 'oidc_unavailable'),
+            'message': get_localized_message(request, 'oidc_disabled')
+        }), 503
+    query = request.query_string.decode('utf-8')
+    return redirect(f'/api/auth/oidc/callback?{query}' if query else '/api/auth/oidc/callback')
 
 
 @bp.route('/update-bio', methods=['PATCH'])

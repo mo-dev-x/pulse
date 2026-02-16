@@ -770,11 +770,11 @@ if hours_since > 24:
 ### **AD-027: CAS as Primary Institutional Authentication**
 
 **Date:** 2026-02-15  
-**Decision:** Integrate CAS endpoints while retaining password auth for backwards compatibility
+**Decision:** Integrate CAS endpoints while retaining password auth only for verified accounts
 
-**Rationale:** CAS is institution-backed identity proof; legacy users still require continuity until migration completes.
+**Rationale:** CAS is institution-backed identity proof; legacy users can continue through verified-password path during migration.
 
-**Implementation:** `/api/auth/cas/login` + `/api/auth/cas/callback`, with password auth still available.
+**Implementation:** `/api/auth/cas/login` + `/api/auth/cas/callback`; login enforces `is_verified=True`.
 
 ---
 
@@ -921,6 +921,28 @@ if hours_since > 24:
 
 ---
 
+### **AD-041: Explicit CAS Identity Collision Rejection**
+
+**Date:** 2026-02-15  
+**Decision:** Reject CAS callback when incoming `cas_username` is already linked to another account.
+
+**Rationale:** Prevents identity takeover/ambiguity and preserves one-to-one mapping between CAS IDUL and local account.
+
+**Implementation:** In `/api/auth/cas/callback`, detect existing owner of `cas_username`; return `409` with localized `cas_identity_conflict` message when owner differs from email-matched account.
+
+---
+
+### **AD-042: Lazy Migration Runbook for Existing Users**
+
+**Date:** 2026-02-15  
+**Decision:** Use lazy migration (link on first CAS login) instead of one-time bulk account rewrite.
+
+**Rationale:** Lower operational risk, no forced downtime, and straightforward rollback characteristics.
+
+**Implementation:** Documented in `backend/documentation/MIGRATION_GUIDE.md`; existing users can verify by email and later link CAS automatically by email match.
+
+---
+
 **📌 This document grows with the project. Every technical decision is recorded here.**
 
-**Last Updated:** Phase 5A in progress — Auth hardening, CAS, profiles, comments
+**Last Updated:** Phase 5A complete — Auth hardening, CAS, profiles, comments

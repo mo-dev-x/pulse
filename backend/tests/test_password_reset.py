@@ -52,7 +52,8 @@ class TestPasswordReset(Phase5BaseTestCase):
             'new_password': 'NewSecurePass123'
         })
         self.assertEqual(response.status_code, 400)
-        self.assertIn('expired', response.get_json()['error'].lower())
+        error_text = response.get_json()['error'].lower()
+        self.assertTrue('expired' in error_text or 'expire' in error_text)
 
     def test_reset_password_success_updates_credentials(self):
         self.register_user(email='reset4@ulaval.ca', username='reset4', password='OldSecurePass123')

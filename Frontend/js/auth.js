@@ -1,13 +1,24 @@
 console.log("auth.js loadeddd");
 
 export const API = "http://127.0.0.1:5000";
+const PERSISTENT_TOKEN_KEY = "pulse_token";
+const SESSION_TOKEN_KEY = "pulse_session_token";
 
-export function saveToken(token) {
-  localStorage.setItem("pulse_token", token);
+export function saveToken(token, rememberMe = true) {
+  if (rememberMe) {
+    localStorage.setItem(PERSISTENT_TOKEN_KEY, token);
+    sessionStorage.removeItem(SESSION_TOKEN_KEY);
+    return;
+  }
+  sessionStorage.setItem(SESSION_TOKEN_KEY, token);
+  localStorage.removeItem(PERSISTENT_TOKEN_KEY);
 }
 
 export function getToken() {
-  return localStorage.getItem("pulse_token");
+  return (
+    localStorage.getItem(PERSISTENT_TOKEN_KEY) ||
+    sessionStorage.getItem(SESSION_TOKEN_KEY)
+  );
 }
 
 export function isLoggedIn() {
@@ -15,7 +26,8 @@ export function isLoggedIn() {
 }
 
 export function logout() {
-  localStorage.removeItem("pulse_token");
+  localStorage.removeItem(PERSISTENT_TOKEN_KEY);
+  sessionStorage.removeItem(SESSION_TOKEN_KEY);
 }
 window.logout = logout;
 
@@ -58,4 +70,3 @@ function requireLogin() {
 export function redirectIfLoggedIn() {
   if (isLoggedIn()) window.location.href = "feed.html";
 }
-

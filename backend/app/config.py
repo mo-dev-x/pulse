@@ -67,9 +67,15 @@ class Config:
     SMTP_FROM = os.getenv('SMTP_FROM', 'noreply@pulse.ulaval.ca')
     SMTP_USE_TLS = os.getenv('SMTP_USE_TLS', 'true').lower() == 'true'
 
-    # CAS configuration
-    CAS_SERVER_URL = os.getenv('CAS_SERVER_URL', 'https://cas.ulaval.ca/cas/')
-    CAS_CALLBACK_URL = os.getenv('CAS_CALLBACK_URL', 'http://localhost:5000/api/auth/cas/callback')
+    # OIDC / Azure Entra configuration
+    ENABLE_OIDC_AUTH = os.getenv('ENABLE_OIDC_AUTH', 'false').lower() == 'true'
+    OIDC_AUTHORIZE_URL = os.getenv('OIDC_AUTHORIZE_URL')
+    OIDC_TOKEN_URL = os.getenv('OIDC_TOKEN_URL')
+    OIDC_USERINFO_URL = os.getenv('OIDC_USERINFO_URL')
+    OIDC_CLIENT_ID = os.getenv('OIDC_CLIENT_ID')
+    OIDC_CLIENT_SECRET = os.getenv('OIDC_CLIENT_SECRET')
+    OIDC_REDIRECT_URI = os.getenv('OIDC_REDIRECT_URI', 'http://127.0.0.1:5000/api/auth/oidc/callback')
+    OIDC_SCOPE = os.getenv('OIDC_SCOPE', 'openid profile email')
 
 
 class DevelopmentConfig(Config):

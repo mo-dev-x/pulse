@@ -2,9 +2,13 @@
 
 **Pulse Backend - Production Authentication & User Experience**
 
-**Status:** Planning Phase  
+**Status:** In Progress (Auth strategy updated)  
 **Priority:** High - Security & User Engagement  
 **Estimated Time:** 10-14 days
+
+> Update (2026-02-15): Universite Laval auth target is now **OIDC/OAuth2 via Microsoft Entra ID**.
+> CAS routes in code are legacy compatibility redirects only.
+> Update (2026-02-16): OIDC implementation is preserved but disabled by default (`ENABLE_OIDC_AUTH=false`) until university access is available. Active auth flow remains email verification.
 
 ---
 
@@ -119,6 +123,10 @@ Phase 2: Encourage CAS usage with benefits (verified badge)
 Phase 3: Require CAS for new accounts
 Phase 4: Migrate existing accounts or deprecate
 ```
+
+**Implemented Runbook:** [MIGRATION_GUIDE.md](Technical/MIGRATION_GUIDE.md) 
+- Existing accounts are linked lazily on first CAS login by email match.
+- CAS identity collisions are rejected explicitly (`409`) to avoid cross-account linking.
 
 **New Database Fields:**
 ```python

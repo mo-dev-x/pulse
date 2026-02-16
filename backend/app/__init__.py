@@ -32,6 +32,16 @@ def create_app(config_name='development'):
     
     # Load configuration
     app.config.from_object(config[config_name])
+
+    # Development visibility: make missing SMTP obvious early.
+    if config_name != 'testing':
+        smtp_host = app.config.get('SMTP_HOST')
+        smtp_from = app.config.get('SMTP_FROM')
+        if not smtp_host or not smtp_from:
+            app.logger.warning(
+                "SMTP not fully configured. Verification/reset emails will not be delivered. "
+                "Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM in backend/.env."
+            )
     
     # Initialize extensions with app
     db.init_app(app)

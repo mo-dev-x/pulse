@@ -31,6 +31,7 @@ form.addEventListener("submit", async (e) => {
 
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
+  const rememberMe = document.getElementById("rememberMe")?.checked ?? false;
 
   try {
     const data = await apiFetch("/api/auth/login", {
@@ -41,7 +42,7 @@ form.addEventListener("submit", async (e) => {
     const token = data.token || data.access_token; //selon backend
     if (!token) throw new Error("No token returned by backend");
 
-    saveToken(token);
+    saveToken(token, rememberMe);
     showMsg("Logged in successfullyyy");
     window.location.href = "feed.html";
   } catch (err) {

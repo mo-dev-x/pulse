@@ -62,7 +62,8 @@ class TestEmailVerification(Phase5BaseTestCase):
 
         response = self.client.get('/api/auth/verify-email/expired-token')
         self.assertEqual(response.status_code, 400)
-        self.assertIn('expired', response.get_json()['error'].lower())
+        error_text = response.get_json()['error'].lower()
+        self.assertTrue('expired' in error_text or 'expire' in error_text)
 
     def test_verification_required_for_post_creation(self):
         token, _ = self.register_user(email='verify4@ulaval.ca', username='verify4')

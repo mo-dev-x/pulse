@@ -41,6 +41,12 @@ def _send_html_email(recipient, subject, html_body):
     return True, None
 
 
+def _resolve_user_language(user):
+    """Return language for outbound user email templates."""
+    lang = (getattr(user, 'preferred_language', None) or '').lower()
+    return 'fr' if lang == 'fr' else 'en'
+
+
 def create_verification_token(user):
     """Create and persist a one-time verification token valid for 24 hours."""
     token = secrets.token_urlsafe(32)
@@ -64,24 +70,39 @@ def send_verification_email(user):
     token = create_verification_token(user)
     frontend_url = current_app.config.get('FRONTEND_URL', 'http://localhost:3000')
     verify_link = f'{frontend_url}/verify-email?token={token}'
+    greeting_name = user.display_name or user.username or 'there'
+    lang = _resolve_user_language(user)
 
-    html = f"""
-    <html>
-      <body>
-        <h2>Bienvenue sur Pulse / Welcome to Pulse</h2>
-        <p>Veuillez verifier votre adresse courriel @ulaval.ca.</p>
-        <p>Please verify your @ulaval.ca email address.</p>
-        <p><a href="{verify_link}">Verifier / Verify</a></p>
-        <p>Ce lien expire dans 24 heures / This link expires in 24 hours.</p>
-      </body>
-    </html>
-    """
+    if lang == 'fr':
+        subject = 'Bienvenue sur Pulse - Verifiez votre courriel'
+        html = f"""
+        <html>
+          <body>
+            <h2>Salut {greeting_name},</h2>
+            <p>Bienvenue sur Pulse, l'endroit ou vous pouvez vous exprimer librement.</p>
+            <p>Veuillez cliquer sur le lien ci-dessous pour verifier votre adresse courriel :</p>
+            <p><a href="{verify_link}">Verifier mon courriel</a></p>
+            <p>Ce lien expire dans 24 heures.</p>
+            <p>Bienvenue dans votre nouveau chez-vous.</p>
+          </body>
+        </html>
+        """
+    else:
+        subject = 'Welcome to Pulse - Verify your email'
+        html = f"""
+        <html>
+          <body>
+            <h2>Hi {greeting_name},</h2>
+            <p>Welcome to Pulse, the place where you can express yourself freely.</p>
+            <p>Please click the link below to verify your email address:</p>
+            <p><a href="{verify_link}">Verify my email</a></p>
+            <p>This link will expire in 24 hours.</p>
+            <p>Welcome to your new home.</p>
+          </body>
+        </html>
+        """
 
-    return _send_html_email(
-        recipient=user.email,
-        subject='Pulse - Verification de courriel / Email Verification',
-        html_body=html
-    )
+    return _send_html_email(recipient=user.email, subject=subject, html_body=html)
 
 
 def send_password_reset_email(user):
@@ -89,21 +110,31 @@ def send_password_reset_email(user):
     token = create_password_reset_token(user)
     frontend_url = current_app.config.get('FRONTEND_URL', 'http://localhost:3000')
     reset_link = f'{frontend_url}/reset-password?token={token}'
+    lang = _resolve_user_language(user)
 
-    html = f"""
-    <html>
-      <body>
-        <h2>Reinitialisation du mot de passe / Password Reset</h2>
-        <p>Pour reinitialiser votre mot de passe, cliquez sur le lien ci-dessous.</p>
-        <p>To reset your password, click the link below.</p>
-        <p><a href="{reset_link}">Reinitialiser / Reset</a></p>
-        <p>Ce lien expire dans 1 heure / This link expires in 1 hour.</p>
-      </body>
-    </html>
-    """
+    if lang == 'fr':
+        subject = 'Pulse - Reinitialisation du mot de passe'
+        html = f"""
+        <html>
+          <body>
+            <h2>Reinitialisation du mot de passe</h2>
+            <p>Pour reinitialiser votre mot de passe, cliquez sur le lien ci-dessous.</p>
+            <p><a href="{reset_link}">Reinitialiser mon mot de passe</a></p>
+            <p>Ce lien expire dans 1 heure.</p>
+          </body>
+        </html>
+        """
+    else:
+        subject = 'Pulse - Password reset'
+        html = f"""
+        <html>
+          <body>
+            <h2>Password reset</h2>
+            <p>To reset your password, click the link below.</p>
+            <p><a href="{reset_link}">Reset my password</a></p>
+            <p>This link expires in 1 hour.</p>
+          </body>
+        </html>
+        """
 
-    return _send_html_email(
-        recipient=user.email,
-        subject='Pulse - Reinitialisation du mot de passe / Password Reset',
-        html_body=html
-    )
+    return _send_html_email(recipient=user.email, subject=subject, html_body=html)

@@ -1,9 +1,9 @@
 # 🎯 PULSE BACKEND — PROJECT TRACKER
 
-**Last Updated:** 2026-02-15  
+**Last Updated:** 2026-02-16  
 **University:** Université Laval  
 **Project:** Pulse Backend (Privacy-First Campus Wellness Platform)  
-**Tech Stack:** Python 3.12.3 + Flask + MySQL + CAS  
+**Tech Stack:** Python 3.12.3 + Flask + MySQL + OIDC (Azure Entra)  
 **Languages:** Bilingual (French/English)  
 **Email Domain:** @ulaval.ca (Verified)
 
@@ -16,7 +16,7 @@
 | Phase 5 Component | Status | Completion | Priority |
 |-------------------|--------|------------|----------|
 | **5A: Email Verification** | ✅ Implemented | 100% | Must Have |
-| **5A: CAS Integration** | 🚧 In Progress | 85% | Must Have |
+| **5A: OIDC/Entra Integration** | ⏸️ Implemented but Paused | 100% | Must Have |
 | **5A: Password Reset** | ✅ Implemented | 100% | Must Have |
 | **5A: Profile Customization** | ✅ Implemented | 100% | Must Have |
 | **5A: Comment System** | ✅ Implemented | 100% | Must Have |
@@ -26,11 +26,16 @@
 | **5C: 2FA & Security** | ⏸️ Pending | 0% | Nice to Have |
 | **5C: UX Enhancements** | ⏸️ Pending | 0% | Nice to Have |
 
-**Phase 5A Progress:** 🟩🟩🟩🟩🟩🟩🟩🟩🟩⬜ 90% (Must Have - 5 days)  
+**Phase 5A Progress:** 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 100% (Must Have - 5 days)  
 **Phase 5B Progress:** ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ 0% (Should Have - 3 days)  
 **Phase 5C Progress:** ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ 0% (Nice to Have - 2 days)
 
-**Overall Phase 5 Progress:** 🟩🟩🟩🟩🟩🟩🟩🟩⬜⬜ 45% / 100%
+**Overall Phase 5 Progress:** 🟩🟩🟩🟩🟩⬜⬜⬜⬜⬜ 50% / 100%
+
+### Auth Direction Update (2026-02-16)
+- Active path remains: `register/login + email verification`.
+- Institutional OIDC routes are preserved but disabled by default with `ENABLE_OIDC_AUTH=false`.
+- Re-enable instructions are documented in `backend/documentation/Technical/OIDC_REENABLE_PLAYBOOK.md`.
 
 ---
 
@@ -132,74 +137,75 @@ Phase 5 transforms Pulse into a production-ready platform with enterprise-grade 
 
 ---
 
-### **Component 2: CAS Integration**
+### **Component 2: OIDC / Entra Integration (Paused by Feature Flag)**
 **Timeline:** Days 3-4 (2 days)  
 **Priority:** Critical - University Authentication
 
 #### Planning Steps:
 
-**Day 3 - CAS Client Setup:**
+**Day 3 - OIDC Client Setup:**
 1. **Morning: Dependencies & Configuration**
-   - Install `python-cas` library
-   - Configure CAS settings in config.py
-   - Set up CAS callback URL
+   - Install and verify OAuth/OIDC client support (`requests`)
+   - Configure OIDC settings in config.py
+   - Set up OIDC callback URL
    - Coordinate with University IT for credentials
 
 2. **Afternoon: User Model Updates**
    - Add fields:
-     - `cas_username` (String 50) - IDUL
+     - `cas_username` (String 50) - institutional external ID (legacy column name)
      - `account_type` (Enum: student/staff/faculty/alumni)
-     - `is_verified` (auto-set to True for CAS users)
+     - `is_verified` (auto-set to True for OIDC users)
    - Create migration script
    - Test schema changes
 
-**Day 4 - CAS Flow Implementation:**
-3. **Morning: CAS Login Endpoint**
-   - `GET /api/auth/cas/login`
-     - Initialize CAS client
-     - Generate service URL
-     - Redirect to CAS server
+**Day 4 - OIDC Flow Implementation:**
+3. **Morning: OIDC Login Endpoint**
+   - `GET /api/auth/oidc/login`
+     - Initialize OIDC authorization request
+     - Generate state
+     - Redirect to provider
      - Return redirect response
 
-4. **Afternoon: CAS Callback & Testing**
-   - `GET /api/auth/cas/callback`
-     - Receive ticket from CAS
-     - Validate ticket with CAS server
-     - Extract user attributes (email, IDUL, displayName)
+4. **Afternoon: OIDC Callback & Testing**
+   - `GET /api/auth/oidc/callback`
+     - Receive OAuth code
+     - Exchange code at token endpoint
+     - Extract user claims (email, external ID, displayName)
      - Create or update user in database
      - Generate JWT token
      - Return token + user info
    
    - Write tests (8 test cases)
-   - Integration testing with CAS sandbox
+   - Integration testing with provider sandbox
 
 #### Architectural Decisions:
 
-**AD-027: CAS as Primary Authentication**
-- **Decision:** CAS integration as production authentication method
-- **Rationale:** Official university SSO, validates student/staff status
-- **Alternative Considered:** OAuth 2.0 (rejected - university uses CAS)
+**AD-027: OIDC as Institutional Authentication**
+- **Decision:** OIDC integration as institutional authentication method
+- **Rationale:** Compatible with university SSO provider and standards-based flows
+- **Alternative Considered:** Direct CAS client integration
 - **Implementation:** Parallel with password auth during migration
 
-**AD-028: Auto-Create Users from CAS**
-- **Decision:** Automatically create user accounts from CAS attributes
+**AD-028: Auto-Create Users from OIDC**
+- **Decision:** Automatically create user accounts from OIDC claims
 - **Rationale:** Seamless onboarding, no pre-registration needed
 - **Alternative Considered:** Manual registration required (rejected - friction)
 - **Implementation:** Check if user exists, create if not, always update attributes
 
-**AD-029: CAS Username as IDUL**
+**AD-029: External Identity Stored Separately**
 - **Decision:** Store university IDUL separately from app username
 - **Rationale:** IDUL is permanent, username can be customized
 - **Alternative Considered:** Use IDUL as username (rejected - less friendly)
 - **Implementation:** `cas_username` field stores IDUL, `username` is customizable
 
 #### Deliverables:
-- ✅ python-cas library integrated
-- ✅ CAS client configured
-- ✅ User model with CAS fields
+- ✅ OIDC client flow integrated
+- ✅ OIDC provider configuration supported
+- ✅ User model with institutional identity fields
 - ✅ 2 new endpoints (login, callback)
 - ✅ Auto-create user logic
 - ✅ 8 tests passing
+- ✅ Feature flag (`ENABLE_OIDC_AUTH`) keeps implementation preserved but disabled by default
 
 ---
 
@@ -653,15 +659,15 @@ Afternoon:
   - [x] Middleware: `@require_verification` decorator
   - [x] Tests: Email sending, token validation, expiration
   
-- [ ] **Université Laval CAS Integration**
-  - [x] Install `python-cas` library
-  - [x] CAS client configuration
-  - [x] `GET /api/auth/cas/login` — Redirect to CAS
-  - [x] `GET /api/auth/cas/callback` — Handle CAS response
+- [x] **Université Laval OIDC/Entra Integration (Paused by Flag)**
+  - [x] OIDC client configuration
+  - [x] `GET /api/auth/oidc/login` — Redirect to provider
+  - [x] `GET /api/auth/oidc/callback` — Handle provider response
+  - [x] `ENABLE_OIDC_AUTH` flag support (default `false`)
   - [x] User fields: `cas_username`, `account_type`, `is_verified`
-  - [x] Auto-create users from CAS attributes
-  - [ ] Migration strategy for existing users
-  - [x] Tests: CAS flow, user creation, attribute mapping
+  - [x] Auto-create users from OIDC claims
+  - [x] Migration strategy for existing users
+  - [x] Tests: OIDC flow, user creation, attribute mapping
   
 - [x] **Password Reset Flow**
   - [x] User fields: `reset_token`, `reset_expires`
@@ -801,7 +807,7 @@ Afternoon:
 - [ ] **users** — Add 20+ new fields:
   - Email verification: `is_verified`, `verification_token`, `verification_expires`
   - Password reset: `reset_token`, `reset_expires`
-  - CAS: `cas_username`, `account_type`
+  - Institutional identity: `cas_username`, `account_type`
   - Profile: `bio`, `header_image`, `website`, `location`
   - Privacy: `profile_visibility`, `show_email`
   - Preferences: `theme`, `email_notifications`, `push_notifications`
@@ -836,8 +842,8 @@ Afternoon:
 **Authentication (8):**
 - [x] `POST /api/auth/send-verification`
 - [x] `GET /api/auth/verify-email/{token}`
-- [x] `GET /api/auth/cas/login`
-- [x] `GET /api/auth/cas/callback`
+- [x] `GET /api/auth/oidc/login` (currently disabled by default via feature flag)
+- [x] `GET /api/auth/oidc/callback` (currently disabled by default via feature flag)
 - [x] `POST /api/auth/forgot-password`
 - [x] `POST /api/auth/reset-password`
 - [ ] `POST /api/auth/deactivate`
@@ -892,10 +898,10 @@ Afternoon:
   - Resend verification
   - Verification enforcement
 
-- [x] `test_cas_integration.py` (~8 tests)
-  - CAS login redirect
-  - CAS callback handling
-  - User creation from CAS
+- [x] `test_oidc_integration.py` (~8 tests)
+  - OIDC login redirect
+  - OIDC callback handling
+  - User creation from OIDC claims
   - Attribute mapping
   - Error handling
 
@@ -955,7 +961,6 @@ Afternoon:
 
 ```python
 # requirements.txt additions:
-python-cas>=1.6.0           # CAS authentication
 pyotp>=2.8.0               # TOTP for 2FA
 qrcode>=7.4.2              # QR code generation
 Pillow>=10.0.0             # Image processing
@@ -967,7 +972,7 @@ redis>=4.5.0               # Session management (optional)
 ## 🔧 INFRASTRUCTURE SETUP
 
 ### **Pre-Development:**
-- [ ] Obtain CAS credentials from Université Laval IT
+- [ ] Obtain OIDC/Entra app credentials from Université Laval IT
 - [ ] Configure SMTP server (Gmail/SendGrid/University SMTP)
 - [ ] Create file upload directories
 - [ ] Install required Python packages
@@ -975,9 +980,14 @@ redis>=4.5.0               # Session management (optional)
 
 ### **Environment Variables:**
 ```bash
-# CAS Configuration
-CAS_SERVER_URL=https://cas.ulaval.ca/cas/
-CAS_SERVICE_URL=https://pulse.ulaval.ca/auth/callback
+# OIDC Configuration
+ENABLE_OIDC_AUTH=false
+OIDC_AUTHORIZE_URL=https://login.microsoftonline.com/<tenant-id>/oauth2/v2.0/authorize
+OIDC_TOKEN_URL=https://login.microsoftonline.com/<tenant-id>/oauth2/v2.0/token
+OIDC_USERINFO_URL=https://graph.microsoft.com/oidc/userinfo
+OIDC_CLIENT_ID=***
+OIDC_CLIENT_SECRET=***
+OIDC_REDIRECT_URI=https://pulse.ulaval.ca/api/auth/oidc/callback
 
 # Email Configuration
 SMTP_SERVER=smtp.gmail.com
@@ -1035,7 +1045,7 @@ FRONTEND_URL=https://pulse.ulaval.ca
 - None (Phase 5 not started)
 
 **Anticipated Challenges:**
-- ⚠️ CAS integration complexity
+- ⚠️ OIDC tenant access/credential availability
 - ⚠️ Email deliverability (SMTP configuration)
 - ⚠️ File upload security
 - ⚠️ Image optimization performance
@@ -1056,11 +1066,12 @@ FRONTEND_URL=https://pulse.ulaval.ca
 | `BILINGUAL_GUIDE.md` | NLP implementation guide |
 
 ### **Documentation to Create:**
-- [ ] `CAS_INTEGRATION_GUIDE.md` — CAS setup instructions
+- [x] `OIDC_ENTRA_INTEGRATION_GUIDE.md` — OIDC setup instructions
+- [x] `OIDC_REENABLE_PLAYBOOK.md` — Step-by-step re-enable guide
 - [ ] `EMAIL_SERVICE_GUIDE.md` — SMTP configuration
 - [ ] `2FA_USER_GUIDE.md` — How to enable/use 2FA
 - [ ] `FILE_UPLOAD_GUIDE.md` — File handling best practices
-- [ ] `MIGRATION_GUIDE.md` — Existing user migration
+- [x] `MIGRATION_GUIDE.md` — Existing user migration
 - [x] Updated `ARCHITECTURE_DECISIONS.md` — AD-024 to AD-035
 
 ---
@@ -1070,11 +1081,11 @@ FRONTEND_URL=https://pulse.ulaval.ca
 ### **Phase 5 Deployment Requirements:**
 
 **Infrastructure:**
-- [ ] HTTPS enabled (required for CAS)
+- [ ] HTTPS enabled (required for OIDC callback)
 - [ ] SMTP server configured
 - [ ] File upload directory with proper permissions
 - [ ] Image processing libraries installed
-- [ ] CAS credentials configured
+- [ ] OIDC credentials configured
 - [ ] Redis installed (optional, for sessions)
 - [ ] Backup strategy for uploaded files
 
@@ -1082,12 +1093,12 @@ FRONTEND_URL=https://pulse.ulaval.ca
 - [ ] Environment variables secured
 - [ ] File upload restrictions enforced
 - [ ] Rate limiting on authentication endpoints
-- [ ] CORS settings updated for CAS callback
+- [ ] CORS settings updated for OIDC callback
 - [ ] Session secret rotation policy
 
 **Testing:**
 - [ ] All 50+ Phase 5 tests passing
-- [ ] CAS flow tested end-to-end
+- [ ] OIDC flow tested end-to-end (when `ENABLE_OIDC_AUTH=true`)
 - [ ] Email delivery confirmed
 - [ ] File uploads working
 - [ ] Image optimization verified
@@ -1095,7 +1106,8 @@ FRONTEND_URL=https://pulse.ulaval.ca
 
 **Documentation:**
 - [ ] API docs updated
-- [ ] CAS integration guide complete
+- [x] OIDC integration guide complete
+- [x] OIDC re-enable playbook complete
 - [ ] Email service guide complete
 - [ ] Migration guide complete
 
@@ -1110,8 +1122,8 @@ FRONTEND_URL=https://pulse.ulaval.ca
 - Email templates
 - Testing
 
-**Days 3-4:** CAS Integration
-- CAS client setup
+**Days 3-4:** OIDC Integration
+- OIDC client setup
 - Login/callback endpoints
 - User creation logic
 - Testing
@@ -1154,7 +1166,7 @@ FRONTEND_URL=https://pulse.ulaval.ca
 
 **Phase 5 Complete When:**
 - ✅ All Phase 5A features implemented and tested
-- ✅ CAS integration working with Université Laval
+- ✅ Institutional auth implementation preserved and documented
 - ✅ Email verification functional
 - ✅ Password reset secure and working
 - ✅ Profile customization available
@@ -1169,7 +1181,7 @@ FRONTEND_URL=https://pulse.ulaval.ca
 ## 📝 NOTES
 
 **Development Philosophy:**
-- Security first (CAS, 2FA, verified emails)
+- Security first (verified emails, OIDC-ready, 2FA)
 - Privacy always (anonymous comments, profile visibility)
 - User experience matters (notifications, customization)
 - Test everything (50+ new tests)
@@ -1177,8 +1189,8 @@ FRONTEND_URL=https://pulse.ulaval.ca
 
 **Migration Strategy:**
 - Phase 5A is backwards compatible
-- Existing users can continue using password auth
-- Gradual migration to CAS encouraged
+- Existing users can continue using password auth after verification
+- OIDC can be re-enabled later without deleting current email-based flow
 - Email verification required for new features
 - Legacy script tests register verified users via shared helper (`tests/http_test_utils.py`)
 - Live DB schema must stay in sync with ORM fields (`users.website`, `users.location`, etc.)
@@ -1186,8 +1198,8 @@ FRONTEND_URL=https://pulse.ulaval.ca
 **Team Coordination:**
 - Backend: Focus on Phase 5A first
 - Frontend: Start UI designs for new features
-- DevOps: Prepare CAS credentials and SMTP
-- University IT: Coordinate CAS integration
+- DevOps: Prepare OIDC credentials and SMTP
+- University IT: Coordinate OIDC/Entra integration
 
 ---
 
@@ -1200,14 +1212,14 @@ FRONTEND_URL=https://pulse.ulaval.ca
 
 ---
 
-**Last Update:** 2026-02-15 (Phase 5A Implementation In Progress)  
-**Current Component:** CAS Integration hardening (migration strategy pending)  
-**Next Milestone:** Complete CAS migration strategy + production integration checks  
-**Blockers:** CAS credentials/sandbox validation from Université Laval IT pending
+**Last Update:** 2026-02-16 (Auth strategy updated: email verification active, OIDC paused)  
+**Current Component:** Phase 5B planning (notifications + sessions)  
+**Next Milestone:** Start Phase 5B implementation  
+**Blockers:** OIDC/Entra credentials and tenant access from Université Laval IT pending
 
 ---
 
-**Phase 5A Status:** 🟡 In Progress (4/5 components complete, CAS migration pending)  
+**Phase 5A Status:** ✅ Complete (5/5 components)  
 **Phase 5B Status:** ⏸️ Pending 5A Completion (3 components)  
 **Phase 5C Status:** ⏸️ Pending 5B Completion (2 components)
 

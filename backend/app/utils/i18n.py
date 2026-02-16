@@ -334,29 +334,45 @@ MESSAGES = {
         'en': 'Password reset successful',
         'fr': 'Mot de passe reinitialise avec succes'
     },
-    'cas_unavailable': {
-        'en': 'CAS unavailable',
-        'fr': 'CAS indisponible'
+    'oidc_unavailable': {
+        'en': 'OIDC provider unavailable',
+        'fr': 'Fournisseur OIDC indisponible'
     },
-    'python_cas_missing': {
-        'en': 'python-cas is not installed',
-        'fr': "python-cas n'est pas installe"
+    'oidc_missing_config': {
+        'en': 'OIDC is not configured on this server',
+        'fr': "OIDC n'est pas configure sur ce serveur"
     },
-    'missing_cas_ticket': {
-        'en': 'Missing CAS ticket',
-        'fr': 'Ticket CAS manquant'
+    'oidc_disabled': {
+        'en': 'Institutional login is temporarily disabled. Use email/password and verify your account by email.',
+        'fr': "La connexion institutionnelle est temporairement desactivee. Utilisez courriel/mot de passe puis verifiez votre compte par courriel."
+    },
+    'invalid_oidc_state': {
+        'en': 'Invalid OIDC state',
+        'fr': 'Etat OIDC invalide'
+    },
+    'oidc_provider_error': {
+        'en': 'OIDC provider request failed',
+        'fr': 'La requete au fournisseur OIDC a echoue'
     },
     'auth_failed': {
         'en': 'Authentication failed',
         'fr': "Echec de l'authentification"
     },
-    'cas_invalid_ulaval_email': {
-        'en': 'CAS did not return a valid @ulaval.ca email',
-        'fr': "CAS n'a pas retourne un courriel @ulaval.ca valide"
+    'oidc_invalid_ulaval_email': {
+        'en': 'OIDC did not return a valid @ulaval.ca email',
+        'fr': "OIDC n'a pas retourne un courriel @ulaval.ca valide"
     },
-    'cas_auth_success': {
-        'en': 'CAS authentication successful',
-        'fr': 'Authentification CAS reussie'
+    'oidc_missing_identity': {
+        'en': 'OIDC did not return a stable institutional identifier',
+        'fr': "OIDC n'a pas retourne d'identifiant institutionnel stable"
+    },
+    'oidc_auth_success': {
+        'en': 'Institutional authentication successful',
+        'fr': 'Authentification institutionnelle reussie'
+    },
+    'cas_identity_conflict': {
+        'en': 'This institutional identity is already linked to another account',
+        'fr': 'Cette identite institutionnelle est deja liee a un autre compte'
     },
     'no_file_uploaded': {
         'en': 'No file uploaded',

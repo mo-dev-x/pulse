@@ -13,7 +13,6 @@ cryptography==42.0.0
 
 # Security
 bcrypt==4.1.2
-python-cas==1.6.0
 
 # NLP - Production Bilingual Support (French/English)
 vaderSentiment==3.3.2          # English sentiment (social media optimized)
