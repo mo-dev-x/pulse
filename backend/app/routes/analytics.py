@@ -20,7 +20,7 @@ from app.services.aggregation_service import (
     compute_weekly_aggregate,
     get_campus_mood_overview
 )
-from app.utils.i18n import get_message, get_bilingual_message
+from app.utils.i18n import get_localized_message
 
 # Create blueprint
 bp = Blueprint('analytics', __name__)
@@ -46,8 +46,8 @@ def get_daily_analytics():
             target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         except ValueError:
             return jsonify({
-                'error': get_message('validation_error', 'en'),
-                'message': 'Invalid date format. Use YYYY-MM-DD.'
+                'error': get_localized_message(request, 'validation_error'),
+                'message': get_localized_message(request, 'invalid_date_format')
             }), 400
     else:
         target_date = date.today()
@@ -58,8 +58,8 @@ def get_daily_analytics():
         zone = CampusZone.get_by_id(zone_id)
         if not zone:
             return jsonify({
-                'error': get_message('validation_error', 'en'),
-                'message': get_bilingual_message('zone_not_found')
+                'error': get_localized_message(request, 'validation_error'),
+                'message': get_localized_message(request, 'zone_not_found')
             }), 404
 
     # Compute/fetch aggregate
@@ -69,7 +69,7 @@ def get_daily_analytics():
         'aggregate': aggregate.to_dict(enforce_threshold=True),
         'type': 'daily',
         'date': target_date.isoformat(),
-        'disclaimer': 'Sentiment analysis is automated and approximate. It shows campus trends, not individual diagnoses.'
+        'disclaimer': get_localized_message(request, 'analytics_disclaimer')
     }
     
     if zone_id is not None:
@@ -98,8 +98,8 @@ def get_weekly_analytics():
             week_start = datetime.strptime(week_start_str, '%Y-%m-%d').date()
         except ValueError:
             return jsonify({
-                'error': get_message('validation_error', 'en'),
-                'message': 'Invalid date format. Use YYYY-MM-DD.'
+                'error': get_localized_message(request, 'validation_error'),
+                'message': get_localized_message(request, 'invalid_date_format')
             }), 400
     else:
         # Default to current week's Monday
@@ -112,8 +112,8 @@ def get_weekly_analytics():
         zone = CampusZone.get_by_id(zone_id)
         if not zone:
             return jsonify({
-                'error': get_message('validation_error', 'en'),
-                'message': get_bilingual_message('zone_not_found')
+                'error': get_localized_message(request, 'validation_error'),
+                'message': get_localized_message(request, 'zone_not_found')
             }), 404
 
     # Compute/fetch aggregate
@@ -123,7 +123,7 @@ def get_weekly_analytics():
         'aggregate': aggregate.to_dict(enforce_threshold=True),
         'type': 'weekly',
         'week_start': week_start.isoformat(),
-        'disclaimer': 'Sentiment analysis is automated and approximate. It shows campus trends, not individual diagnoses.'
+        'disclaimer': get_localized_message(request, 'analytics_disclaimer')
     }
     
     if zone_id is not None:
@@ -151,8 +151,8 @@ def get_campus_overview():
             target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         except ValueError:
             return jsonify({
-                'error': get_message('validation_error', 'en'),
-                'message': 'Invalid date format. Use YYYY-MM-DD.'
+                'error': get_localized_message(request, 'validation_error'),
+                'message': get_localized_message(request, 'invalid_date_format')
             }), 400
     else:
         target_date = date.today()

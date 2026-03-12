@@ -63,7 +63,7 @@ export async function apiFetch(path, options = {}) {
   const res = await fetch(url, {
     method: options.method || "GET",
     body: options.body,
-    headers
+    headers,
   });
 
   let data = {};

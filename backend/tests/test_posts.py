@@ -7,11 +7,11 @@ Run with: python tests/test_posts.py
 import sys
 import json
 import requests
-from datetime import datetime
+from http_test_utils import register_verified_user
 
 # Configuration
 BASE_URL = "http://127.0.0.1:5000"
-TEST_USER_EMAIL = "student@ulaval.ca"
+TEST_USER_EMAIL = None
 TEST_USER_PASSWORD = "TestPass123!"
 
 # ANSI color codes
@@ -23,6 +23,20 @@ RESET = '\033[0m'
 
 tests_passed = 0
 tests_failed = 0
+
+def register_and_verify_user():
+    """Create a dedicated test user and mark it verified."""
+    token, username, error = register_verified_user(
+        base_url=BASE_URL,
+        username_prefix="posts_user",
+        display_name="Posts Test User",
+        password=TEST_USER_PASSWORD
+    )
+    if error:
+        print(f"{RED}❌ Failed to prepare posts test user: {error}{RESET}")
+        sys.exit(1)
+    return f"{username}@ulaval.ca"
+
 
 def print_header(title):
     print(f"\n{'='*70}")
@@ -41,6 +55,9 @@ def print_test(test_name, passed, details=""):
         print(f"   {details}")
 
 def login_and_get_token():
+    if not TEST_USER_EMAIL:
+        print(f"{RED}❌ Missing test user email{RESET}")
+        sys.exit(1)
     response = requests.post(f"{BASE_URL}/api/auth/login",
         json={"email": TEST_USER_EMAIL, "password": TEST_USER_PASSWORD})
     if response.status_code == 200:
@@ -50,7 +67,9 @@ def login_and_get_token():
         sys.exit(1)
 
 def main():
+    global TEST_USER_EMAIL
     print_header("PULSE POSTS API TEST SUITE")
+    TEST_USER_EMAIL = register_and_verify_user()
     token = login_and_get_token()
     
     # Test 1: Public English Post

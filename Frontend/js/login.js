@@ -34,9 +34,10 @@ form.addEventListener("submit", async (e) => {
   hideError();
   hideMsg();
 
+
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
-  const rememberMe = document.getElementById("rememberMe").checked;
+  const rememberMe = document.getElementById("rememberMe")?.checked ?? false;
 
   try {
     const data = await apiFetch("/api/auth/login", {
@@ -51,10 +52,21 @@ form.addEventListener("submit", async (e) => {
 
     saveToken(token, rememberMe);
     showMsg("Login successful - redirecting...");
-
     window.location.href = "feed.html";
   } catch (err) {
     console.error("Login failed:", err);
     showError(err.message || "Login failed");
   }
 });
+
+// //show/hide password mazelt
+// toggle.addEventListener("click", () => {
+//   if (pw.type === "password") {
+//     pw.type = "text";
+//     toggle.textContent = "Hide";
+//   } else {
+//     pw.type = "password";
+//     toggle.textContent = "Show";
+//   }
+// });
+

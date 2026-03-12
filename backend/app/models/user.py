@@ -31,13 +31,27 @@ class User(db.Model):
     
     # Authentication
     email = db.Column(db.String(255), unique=True, nullable=False, index=True)
-    password_hash = db.Column(db.String(255), nullable=False)
+    password_hash = db.Column(db.String(255), nullable=True)
+    is_verified = db.Column(db.Boolean, default=False, nullable=False)
+    verification_token = db.Column(db.String(255), nullable=True, index=True)
+    verification_expires = db.Column(db.DateTime, nullable=True)
+    reset_token = db.Column(db.String(255), nullable=True, index=True)
+    reset_expires = db.Column(db.DateTime, nullable=True)
+    cas_username = db.Column(db.String(50), nullable=True, unique=True, index=True)
+    account_type = db.Column(
+        db.Enum('student', 'staff', 'faculty', 'alumni', name='account_type_enum'),
+        default='student',
+        nullable=False
+    )
     
     # Public identity
     username = db.Column(db.String(50), unique=True, nullable=False, index=True)
     display_name = db.Column(db.String(100))
     bio = db.Column(db.Text)
     profile_picture = db.Column(db.String(500))
+    header_image = db.Column(db.String(500))
+    website = db.Column(db.String(255))
+    location = db.Column(db.String(100))
     
     # Anonymous identity (persistent pseudonym)
     pseudonym = db.Column(db.String(50), nullable=False, default='anonymous')
@@ -60,7 +74,7 @@ class User(db.Model):
     # followers = db.relationship('Follower', foreign_keys='Follower.following_id', backref='following', lazy='dynamic')
     # following = db.relationship('Follower', foreign_keys='Follower.follower_id', backref='follower', lazy='dynamic')
     
-    def __init__(self, email, password, username, display_name=None):
+    def __init__(self, email, password, username, display_name=None, is_verified=False, cas_username=None, account_type='student'):
         """
         Create a new user
         
@@ -73,7 +87,14 @@ class User(db.Model):
         self.email = email.lower().strip()
         self.username = username.lower().strip()
         self.display_name = display_name or username
-        self.set_password(password)
+        self.is_verified = is_verified
+        self.cas_username = cas_username
+        self.account_type = account_type
+
+        if password:
+            self.set_password(password)
+        else:
+            self.password_hash = None
     
     def set_password(self, password):
         """
@@ -107,6 +128,9 @@ class User(db.Model):
         Returns:
             bool: True if password matches, False otherwise
         """
+        if not self.password_hash:
+            return False
+
         password_bytes = password.encode('utf-8')
         hash_bytes = self.password_hash.encode('utf-8')
         return bcrypt.checkpw(password_bytes, hash_bytes)
@@ -230,6 +254,9 @@ class User(db.Model):
             'display_name': self.display_name,
             'bio': self.bio,
             'profile_picture': self.profile_picture,
+            'header_image': self.header_image,
+            'website': self.website,
+            'location': self.location,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
         
@@ -237,6 +264,9 @@ class User(db.Model):
             data['email'] = self.email
             data['pseudonym'] = self.pseudonym
             data['can_change_pseudonym'] = self.can_change_pseudonym()
+            data['is_verified'] = self.is_verified
+            data['cas_username'] = self.cas_username
+            data['account_type'] = self.account_type
         
         return data
     

@@ -20,7 +20,7 @@ Usage:
 
 import sys
 import requests
-from datetime import datetime
+from http_test_utils import register_verified_user
 
 # Configuration
 BASE_URL = "http://127.0.0.1:5000"
@@ -56,19 +56,16 @@ def print_test(test_name, passed, details=""):
 
 def register_user(suffix):
     """Register a new user and return (token, username)"""
-    timestamp = datetime.now().strftime('%Y%m%d%H%M%S%f')
-    username = f"react_{suffix}_{timestamp}"
-    user_data = {
-        'email': f'{username}@ulaval.ca',
-        'password': 'SecurePass123!',
-        'username': username,
-        'display_name': f'React {suffix.capitalize()}'
-    }
-    response = requests.post(f"{BASE_URL}/api/auth/register", json=user_data)
-    if response.status_code == 201:
-        return response.json()['token'], username
-    print(f"{RED}❌ Failed to register {suffix}: {response.status_code}{RESET}")
-    return None, None
+    token, username, error = register_verified_user(
+        base_url=BASE_URL,
+        username_prefix=f"react_{suffix}",
+        display_name=f"React {suffix.capitalize()}",
+        password='SecurePass123!'
+    )
+    if error:
+        print(f"{RED}❌ Failed to prepare {suffix}: {error}{RESET}")
+        return None, None
+    return token, username
 
 
 def main():

@@ -28,6 +28,7 @@ sentencepiece==0.1.99          # Tokenization
 
 # Utilities
 python-dotenv==1.0.0
+Pillow==10.1.0
 
 # Development (optional)
 requests==2.31.0

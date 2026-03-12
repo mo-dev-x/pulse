@@ -19,7 +19,7 @@ from app import db
 from app.models.user import User
 from app.models.follower import Follower
 from app.models.post import Post
-from app.utils.i18n import get_bilingual_message, get_message
+from app.utils.i18n import get_localized_message
 
 # Create blueprint
 bp = Blueprint('social', __name__)
@@ -42,22 +42,22 @@ def follow_user(username):
     target_user = User.query.filter_by(username=username.lower()).first()
     if not target_user:
         return jsonify({
-            'error': get_message('validation_error', 'en'),
-            'message': get_bilingual_message('user_not_found')
+            'error': get_localized_message(request, 'validation_error'),
+            'message': get_localized_message(request, 'user_not_found')
         }), 404
 
     # Can't follow self
     if target_user.id == current_user_id:
         return jsonify({
-            'error': get_message('validation_error', 'en'),
-            'message': get_bilingual_message('cannot_follow_self')
+            'error': get_localized_message(request, 'validation_error'),
+            'message': get_localized_message(request, 'cannot_follow_self')
         }), 400
 
     # Check if already following
     if Follower.is_following(current_user_id, target_user.id):
         return jsonify({
-            'error': get_message('validation_error', 'en'),
-            'message': get_bilingual_message('already_following')
+            'error': get_localized_message(request, 'validation_error'),
+            'message': get_localized_message(request, 'already_following')
         }), 400
 
     try:
@@ -69,7 +69,7 @@ def follow_user(username):
         db.session.commit()
 
         return jsonify({
-            'message': get_bilingual_message('follow_success'),
+            'message': get_localized_message(request, 'follow_success'),
             'following': {
                 'username': target_user.username,
                 'display_name': target_user.display_name
@@ -79,8 +79,8 @@ def follow_user(username):
     except Exception as e:
         db.session.rollback()
         return jsonify({
-            'error': get_message('server_error', 'en'),
-            'message': 'Failed to follow user'
+            'error': get_localized_message(request, 'server_error'),
+            'message': get_localized_message(request, 'server_error')
         }), 500
 
 
@@ -101,8 +101,8 @@ def unfollow_user(username):
     target_user = User.query.filter_by(username=username.lower()).first()
     if not target_user:
         return jsonify({
-            'error': get_message('validation_error', 'en'),
-            'message': get_bilingual_message('user_not_found')
+            'error': get_localized_message(request, 'validation_error'),
+            'message': get_localized_message(request, 'user_not_found')
         }), 404
 
     # Find the follow record
@@ -113,8 +113,8 @@ def unfollow_user(username):
 
     if not follow:
         return jsonify({
-            'error': get_message('validation_error', 'en'),
-            'message': get_bilingual_message('not_following')
+            'error': get_localized_message(request, 'validation_error'),
+            'message': get_localized_message(request, 'not_following')
         }), 400
 
     try:
@@ -122,7 +122,7 @@ def unfollow_user(username):
         db.session.commit()
 
         return jsonify({
-            'message': get_bilingual_message('unfollow_success'),
+            'message': get_localized_message(request, 'unfollow_success'),
             'unfollowed': {
                 'username': target_user.username,
                 'display_name': target_user.display_name
@@ -132,8 +132,8 @@ def unfollow_user(username):
     except Exception as e:
         db.session.rollback()
         return jsonify({
-            'error': get_message('server_error', 'en'),
-            'message': 'Failed to unfollow user'
+            'error': get_localized_message(request, 'server_error'),
+            'message': get_localized_message(request, 'server_error')
         }), 500
 
 
@@ -150,8 +150,8 @@ def get_followers(username):
     target_user = User.query.filter_by(username=username.lower()).first()
     if not target_user:
         return jsonify({
-            'error': get_message('validation_error', 'en'),
-            'message': get_bilingual_message('user_not_found')
+            'error': get_localized_message(request, 'validation_error'),
+            'message': get_localized_message(request, 'user_not_found')
         }), 404
 
     page = request.args.get('page', 1, type=int)
@@ -198,8 +198,8 @@ def get_following(username):
     target_user = User.query.filter_by(username=username.lower()).first()
     if not target_user:
         return jsonify({
-            'error': get_message('validation_error', 'en'),
-            'message': get_bilingual_message('user_not_found')
+            'error': get_localized_message(request, 'validation_error'),
+            'message': get_localized_message(request, 'user_not_found')
         }), 404
 
     page = request.args.get('page', 1, type=int)
@@ -273,8 +273,8 @@ def get_user_profile(username):
     user = User.query.filter_by(username=username.lower()).first()
     if not user:
         return jsonify({
-            'error': get_message('validation_error', 'en'),
-            'message': get_bilingual_message('user_not_found')
+            'error': get_localized_message(request, 'validation_error'),
+            'message': get_localized_message(request, 'user_not_found')
         }), 404
 
     # Get counts

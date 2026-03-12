@@ -15,7 +15,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
 from app.models.post import Post
 from app.models.reaction import Reaction
-from app.utils.i18n import get_bilingual_message, get_message
+from app.utils.i18n import get_localized_message
 
 # Create blueprint
 bp = Blueprint('reactions', __name__)
@@ -47,8 +47,8 @@ def add_reaction(post_id):
     # Validate request
     if not data or 'emoji' not in data:
         return jsonify({
-            'error': get_message('validation_error', 'en'),
-            'message': get_bilingual_message('emoji_required')
+            'error': get_localized_message(request, 'validation_error'),
+            'message': get_localized_message(request, 'emoji_required')
         }), 400
 
     emoji = data['emoji'].strip()
@@ -56,8 +56,8 @@ def add_reaction(post_id):
     # Validate emoji is allowed
     if emoji not in Reaction.ALLOWED_EMOJIS:
         return jsonify({
-            'error': get_message('validation_error', 'en'),
-            'message': get_bilingual_message('emoji_invalid'),
+            'error': get_localized_message(request, 'validation_error'),
+            'message': get_localized_message(request, 'emoji_invalid'),
             'allowed_emojis': list(Reaction.ALLOWED_EMOJIS)
         }), 400
 
@@ -65,8 +65,8 @@ def add_reaction(post_id):
     post = Post.query.get(post_id)
     if not post:
         return jsonify({
-            'error': get_message('validation_error', 'en'),
-            'message': get_bilingual_message('post_not_found')
+            'error': get_localized_message(request, 'validation_error'),
+            'message': get_localized_message(request, 'post_not_found')
         }), 404
 
     try:
@@ -89,7 +89,7 @@ def add_reaction(post_id):
             counts = Reaction.get_counts(post_id)
 
             return jsonify({
-                'message': get_bilingual_message('reaction_updated'),
+                'message': get_localized_message(request, 'reaction_updated'),
                 'reaction': {
                     'post_id': post_id,
                     'emoji': emoji,
@@ -108,7 +108,7 @@ def add_reaction(post_id):
             db.session.commit()
 
             return jsonify({
-                'message': get_bilingual_message('reaction_added'),
+                'message': get_localized_message(request, 'reaction_added'),
                 'reaction': {
                     'post_id': post_id,
                     'emoji': emoji
@@ -119,8 +119,8 @@ def add_reaction(post_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({
-            'error': get_message('server_error', 'en'),
-            'message': 'Failed to add reaction'
+            'error': get_localized_message(request, 'server_error'),
+            'message': get_localized_message(request, 'server_error')
         }), 500
 
 
@@ -140,8 +140,8 @@ def remove_reaction(post_id):
     post = Post.query.get(post_id)
     if not post:
         return jsonify({
-            'error': get_message('validation_error', 'en'),
-            'message': get_bilingual_message('post_not_found')
+            'error': get_localized_message(request, 'validation_error'),
+            'message': get_localized_message(request, 'post_not_found')
         }), 404
 
     # Find existing reaction
@@ -152,8 +152,8 @@ def remove_reaction(post_id):
 
     if not reaction:
         return jsonify({
-            'error': get_message('validation_error', 'en'),
-            'message': get_bilingual_message('no_reaction')
+            'error': get_localized_message(request, 'validation_error'),
+            'message': get_localized_message(request, 'no_reaction')
         }), 404
 
     try:
@@ -161,15 +161,15 @@ def remove_reaction(post_id):
         db.session.commit()
 
         return jsonify({
-            'message': get_bilingual_message('reaction_removed'),
+            'message': get_localized_message(request, 'reaction_removed'),
             'counts': Reaction.get_counts(post_id)
         }), 200
 
     except Exception as e:
         db.session.rollback()
         return jsonify({
-            'error': get_message('server_error', 'en'),
-            'message': 'Failed to remove reaction'
+            'error': get_localized_message(request, 'server_error'),
+            'message': get_localized_message(request, 'server_error')
         }), 500
 
 
@@ -194,8 +194,8 @@ def get_reactions(post_id):
     post = Post.query.get(post_id)
     if not post:
         return jsonify({
-            'error': get_message('validation_error', 'en'),
-            'message': get_bilingual_message('post_not_found')
+            'error': get_localized_message(request, 'validation_error'),
+            'message': get_localized_message(request, 'post_not_found')
         }), 404
 
     counts = Reaction.get_counts(post_id)

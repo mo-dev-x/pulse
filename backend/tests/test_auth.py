@@ -19,6 +19,7 @@ import json
 from datetime import datetime
 import sys
 import os
+from http_test_utils import mark_user_verified
 
 # Add parent directory to path so we can import from app if needed
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -77,6 +78,10 @@ def test_register():
         
         if response.status_code == 201:
             data = response.json()
+            ok, error = mark_user_verified(test_user['email'])
+            if not ok:
+                print_error(f"User created but verification bootstrap failed: {error}")
+                return None, None
             print_success(f"User registered successfully!")
             print(f"  User ID: {data['user']['id']}")
             print(f"  Username: {data['user']['username']}")
