@@ -1,5 +1,6 @@
-import { apiFetch, saveToken, isLoggedIn } from "./auth.js";
-console.log("Register page loadeddd");
+import { apiFetch, saveToken, redirectIfLoggedIn } from "./auth.js";
+
+console.log("register.js loaded");
 
 const form = document.getElementById("registerForm");
 const errorEl = document.getElementById("error");
@@ -14,8 +15,7 @@ function hideError() {
   errorEl.style.display = "none";
 }
 
-// si déjà connectée -> feed
-if (isLoggedIn()) window.location.href = "feed.html";
+redirectIfLoggedIn();
 
 function isUlaval(email) {
   return email.toLowerCase().endsWith("@ulaval.ca");
@@ -23,18 +23,14 @@ function isUlaval(email) {
 
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
-  console.log("submit firedddd");
   hideError();
 
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
   const username = document.getElementById("username").value.trim();
-  // const display_name = document.getElementById("display_name").value.trim();
 
   const display_name = username;
 
-
-  // validation frontend
   if (!isUlaval(email)) {
     showError("Email must end with @ulaval.ca");
     return;
@@ -47,14 +43,13 @@ form.addEventListener("submit", async (e) => {
     });
 
     const token = data.token || data.access_token;
-    if (!token) throw new Error("No token returned by backend");
+    if (!token) {
+      throw new Error("No token returned by backend");
+    }
 
-    saveToken(token);
+    saveToken(token, true);
     window.location.href = "feed.html";
   } catch (err) {
     showError(err.message || "Register failed");
   }
 });
-
-import { logout } from "./auth.js";
-window.logout = logout;

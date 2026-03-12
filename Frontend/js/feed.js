@@ -1,15 +1,10 @@
-/* requireAuth()/ apiFetch()/ logout()
-used here...
-*/
+import { requireAuth, apiFetch, logout } from "./auth.js";
 
-console.log("feed.js loadeddd");
+console.log("feed.js loaded");
 
 document.addEventListener("DOMContentLoaded", () => {
-  // 1) protect the page (if the function exists)
-  if (typeof requireAuth === "function") {
-    requireAuth();
-  }
-
+  // 1) protect the page (if the function exists...faskhtha)
+  requireAuth();
   // 2) setup small UI ths
   setupUserMenu();
   setupModal();
@@ -40,13 +35,10 @@ function setupUserMenu() {
   document.addEventListener("click", () => chip.classList.remove("open"));
 
   if (btnLogout) {
-    btnLogout.addEventListener("click", () => {
-      if (typeof logout === "function") {
-        logout();
-      } else {
-        localStorage.removeItem("token");
-        window.location.href = "login.html";
-      }
+    btnLogout.addEventListener("click", (e) => {
+      e.stopPropagation();
+      logout();
+      // window.location.href = "login.html";
     });
   }
 }
@@ -335,8 +327,11 @@ async function onCreatePostSubmit(e) {
   const anonymous = document.getElementById("anonymousToggle").checked;
   const zoneId = document.getElementById("zoneSelect").value;
 
-  const img = document.getElementById("imageFile").files[0];
-  const vid = document.getElementById("videoFile").files[0];
+  const imageInput = document.getElementById("imageFile");
+  const videoInput = document.getElementById("videoFile");
+
+  const img = imageInput ? imageInput.files[0] : null;
+  const vid = videoInput ? videoInput.files[0] : null;
 
   try {
     if (typeof apiFetch !== "function") throw new Error("apiFetch not found");
@@ -407,14 +402,13 @@ function renderStories() {
           </div>
         </div>
       </div>
-
       <div class="pulse-right">
-        <div class="emotile"><div class="emoji">😅</div><div class="label">Stress</div></div>
-        <div class="emotile"><div class="emoji">😄</div><div class="label">Joy</div></div>
-        <div class="emotile"><div class="emoji">😴</div><div class="label">Tired</div></div>
-        <div class="emotile"><div class="emoji">😌</div><div class="label">Calm</div></div>
-        <div class="emotile"><div class="emoji">🤝</div><div class="label">Connected</div></div>
-        <div class="emotile"><div class="emoji">😤</div><div class="label">Frustrated</div></div>
+          <div class="emotile stress"><div class="emoji">😅</div><div class="label">Stress</div></div>
+          <div class="emotile joy"><div class="emoji">😄</div><div class="label">Joy</div></div>
+          <div class="emotile tired"><div class="emoji">😴</div><div class="label">Tired</div></div>
+          <div class="emotile calm"><div class="emoji">😌</div><div class="label">Calm</div></div>
+          <div class="emotile connected"><div class="emoji">🤝</div><div class="label">Connected</div></div>
+          <div class="emotile frustrated"><div class="emoji">😤</div><div class="label">Frustrated</div></div>
       </div>
     </div>
   `;

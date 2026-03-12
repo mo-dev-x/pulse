@@ -1,62 +1,60 @@
-import { apiFetch,redirectIfLoggedIn, saveToken } from "./auth.js";
+import { apiFetch, saveToken, redirectIfLoggedIn } from "./auth.js";
 
-console.log("login.js loadeddd");
-redirectIfLoggedIn(); //if already logged ->go feed
-// if (isLoggedIn()) window.location.href = "feed.html";
+console.log("login.js loaded");
 
 const form = document.getElementById("loginForm");
 const errorEl = document.getElementById("error");
-const msgEl = document.getElementById("msg"); //ymkn na7eha
+const msgEl = document.getElementById("msg");
 
-function showError(text){
-  if (!errorEl) return;
-  errorEl.textContent = text;
+function showError(msg) {
+  errorEl.textContent = msg;
   errorEl.style.display = "block";
 }
 
-function hideError(){
-  if (!errorEl) return;
-  msgEl.style.display = "";
+function hideError() {
+  errorEl.textContent = "";
   errorEl.style.display = "none";
 }
 
-function showMsg(text){
-  if (!msgEl) return;
-  msgEl.textContent = text;
+function showMsg(msg) {
+  msgEl.textContent = msg;
   msgEl.style.display = "block";
 }
 
+function hideMsg() {
+  msgEl.textContent = "";
+  msgEl.style.display = "none";
+}
+
+// if already logged in, go to feed
+redirectIfLoggedIn();
+
 form.addEventListener("submit", async (e) => {
-  e.preventDefault();hideError();msgEl.style.display = "none";
+  e.preventDefault();
+  hideError();
+  hideMsg();
 
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value;
+  const rememberMe = document.getElementById("rememberMe").checked;
 
   try {
     const data = await apiFetch("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password })
     });
 
-    const token = data.token || data.access_token; //selon backend
-    if (!token) throw new Error("No token returned by backend");
+    const token = data.token || data.access_token;
+    if (!token) {
+      throw new Error("No token returned by backend");
+    }
 
-    saveToken(token);
-    showMsg("Logged in successfullyyy");
+    saveToken(token, rememberMe);
+    showMsg("Login successful - redirecting...");
+
     window.location.href = "feed.html";
   } catch (err) {
-    showError(err.message|| "Login failed");
+    console.error("Login failed:", err);
+    showError(err.message || "Login failed");
   }
-
-// //show/hide password mazelt
-// toggle.addEventListener("click", () => {
-//   if (pw.type === "password") {
-//     pw.type = "text";
-//     toggle.textContent = "Hide";
-//   } else {
-//     pw.type = "password";
-//     toggle.textContent = "Show";
-//   }
-// });
-
 });

@@ -1,61 +1,86 @@
-console.log("auth.js loadeddd");
+console.log("auth.js loaded");
 
 export const API = "http://127.0.0.1:5000";
 
-export function saveToken(token) {
-  localStorage.setItem("pulse_token", token);
+const PERSISTENT_TOKEN_KEY = "pulse_token";
+const SESSION_TOKEN_KEY = "pulse_session_token";
+
+export function saveToken(token, rememberMe = true) {
+  if (rememberMe) {
+    localStorage.setItem(PERSISTENT_TOKEN_KEY, token);
+    sessionStorage.removeItem(SESSION_TOKEN_KEY);
+  } else {
+    sessionStorage.setItem(SESSION_TOKEN_KEY, token);
+    localStorage.removeItem(PERSISTENT_TOKEN_KEY);
+  }
 }
 
 export function getToken() {
-  return localStorage.getItem("pulse_token");
+  return (
+    localStorage.getItem(PERSISTENT_TOKEN_KEY) ||
+    sessionStorage.getItem(SESSION_TOKEN_KEY)
+  );
 }
 
 export function isLoggedIn() {
-  return getToken() !== null; //true si t existe
+  return getToken() !== null;
 }
 
 export function logout() {
-  localStorage.removeItem("pulse_token");
+  localStorage.removeItem(PERSISTENT_TOKEN_KEY);
+  sessionStorage.removeItem(SESSION_TOKEN_KEY);
+  window.location.href = "login.html";
 }
-window.logout = logout;
 
-//appel backend
+export function requireAuth() {
+  if (!isLoggedIn()) {
+    window.location.href = "login.html";
+  }
+}
+
+export function redirectIfLoggedIn() {
+  if (isLoggedIn()) {
+    window.location.href = "feed.html";
+  }
+}
 
 export async function apiFetch(path, options = {}) {
   const url = API + path;
-  const headers = {};
-  headers["Content-Type"] = "application/json"; //on envoie du JSON
+
+  const headers = { ...(options.headers || {}) };
   const token = getToken();
-  if (token){
-    headers["Authorization"] = "Bearer " + token; //ajouter le token dans les headers ->connected
-  }
-  if (options.headers){
-    for (const key in options.headers){
-      headers[key] = options.headers[key]; //fusionner les headers
-    }
+
+  if (token) {
+    headers["Authorization"] = "Bearer " + token;
   }
 
-  const res = await fetch(url,options = {
+  const isFormData = options.body instanceof FormData;
+
+  if (!isFormData && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
+
+  const res = await fetch(url, {
     method: options.method || "GET",
     body: options.body,
-    headers: headers
+    headers
   });
 
-  const data = await res.json(); //lire la reponse mlbackend
-  if (res.ok === false){
-    throw new Error(data.message|| data.error || "API error");
+  let data = {};
+  const contentType = res.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    data = await res.json();
+  } else {
+    data = await res.text();
   }
+
+  if (!res.ok) {
+    if (typeof data === "object") {
+      throw new Error(data.message || data.error || "API error");
+    }
+    throw new Error(data || "API error");
+  }
+
   return data;
 }
-
-
-//use on feed page
-function requireLogin() {
-  if (!isLoggedIn()) window.location.href = "login.html";
-}
-
-// //use on login/register pages
-export function redirectIfLoggedIn() {
-  if (isLoggedIn()) window.location.href = "feed.html";
-}
-
