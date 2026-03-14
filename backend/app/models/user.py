@@ -52,6 +52,37 @@ class User(db.Model):
     header_image = db.Column(db.String(500))
     website = db.Column(db.String(255))
     location = db.Column(db.String(100))
+
+    # Privacy settings
+    profile_visibility = db.Column(
+        db.Enum('public', 'followers', 'private', name='profile_visibility_enum'),
+        default='public',
+        nullable=False
+    )
+    show_email = db.Column(db.Boolean, default=False, nullable=False)
+
+    # Preferences
+    theme = db.Column(
+        db.Enum('light', 'dark', 'auto', name='theme_enum'),
+        default='auto',
+        nullable=False
+    )
+    email_notifications = db.Column(db.Boolean, default=True, nullable=False)
+    push_notifications = db.Column(db.Boolean, default=True, nullable=False)
+
+    # Two-factor authentication
+    totp_secret = db.Column(db.String(32), nullable=True)
+    totp_enabled = db.Column(db.Boolean, default=False, nullable=False)
+    backup_codes = db.Column(db.JSON, nullable=True)
+
+    # Account status and profile pinning
+    is_deactivated = db.Column(db.Boolean, default=False, nullable=False)
+    deactivated_at = db.Column(db.DateTime, nullable=True)
+    pinned_post_id = db.Column(
+        db.Integer,
+        db.ForeignKey('posts.id', use_alter=True, name='fk_user_pinned_post'),
+        nullable=True
+    )
     
     # Anonymous identity (persistent pseudonym)
     pseudonym = db.Column(db.String(50), nullable=False, default='anonymous')
@@ -267,7 +298,16 @@ class User(db.Model):
             data['is_verified'] = self.is_verified
             data['cas_username'] = self.cas_username
             data['account_type'] = self.account_type
-        
+            data['profile_visibility'] = self.profile_visibility
+            data['show_email'] = self.show_email
+            data['theme'] = self.theme
+            data['email_notifications'] = self.email_notifications
+            data['push_notifications'] = self.push_notifications
+            data['totp_enabled'] = self.totp_enabled
+            data['is_deactivated'] = self.is_deactivated
+            data['deactivated_at'] = self.deactivated_at.isoformat() if self.deactivated_at else None
+            data['pinned_post_id'] = self.pinned_post_id
+
         return data
     
     def can_change_pseudonym(self):

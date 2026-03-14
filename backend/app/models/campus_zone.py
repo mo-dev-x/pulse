@@ -31,7 +31,8 @@ class CampusZone(db.Model):
             'id': self.id,
             'name': self.name,
             'description': self.description,
-            'type': self.zone_type
+            'type': self.zone_type,
+            'zone_type': self.zone_type,
         }
     
     @staticmethod

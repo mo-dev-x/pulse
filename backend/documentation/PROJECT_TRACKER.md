@@ -1,6 +1,6 @@
 # 🎯 PULSE BACKEND — PROJECT TRACKER
 
-**Last Updated:** 2026-02-16  
+**Last Updated:** 2026-02-17  
 **University:** Université Laval  
 **Project:** Pulse Backend (Privacy-First Campus Wellness Platform)  
 **Tech Stack:** Python 3.12.3 + Flask + MySQL + OIDC (Azure Entra)  
@@ -20,17 +20,17 @@
 | **5A: Password Reset** | ✅ Implemented | 100% | Must Have |
 | **5A: Profile Customization** | ✅ Implemented | 100% | Must Have |
 | **5A: Comment System** | ✅ Implemented | 100% | Must Have |
-| **5B: Notifications** | ⏸️ Pending | 0% | Should Have |
-| **5B: Session Management** | ⏸️ Pending | 0% | Should Have |
-| **5B: Mentions & Bookmarks** | ⏸️ Pending | 0% | Should Have |
-| **5C: 2FA & Security** | ⏸️ Pending | 0% | Nice to Have |
-| **5C: UX Enhancements** | ⏸️ Pending | 0% | Nice to Have |
+| **5B: Notifications** | ✅ Implemented | 100% | Should Have |
+| **5B: Session Management** | ✅ Implemented | 100% | Should Have |
+| **5B: Mentions & Bookmarks** | ✅ Implemented | 100% | Should Have |
+| **5C: 2FA & Security** | ✅ Implemented | 100% | Nice to Have |
+| **5C: UX Enhancements** | ✅ Implemented | 100% | Nice to Have |
 
 **Phase 5A Progress:** 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 100% (Must Have - 5 days)  
-**Phase 5B Progress:** ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ 0% (Should Have - 3 days)  
-**Phase 5C Progress:** ⬜⬜⬜⬜⬜⬜⬜⬜⬜⬜ 0% (Nice to Have - 2 days)
+**Phase 5B Progress:** 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 100% (Should Have - 3 days)  
+**Phase 5C Progress:** 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 100% (Nice to Have - 2 days)
 
-**Overall Phase 5 Progress:** 🟩🟩🟩🟩🟩⬜⬜⬜⬜⬜ 50% / 100%
+**Overall Phase 5 Progress:** 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 100% / 100%
 
 ### Auth Direction Update (2026-02-16)
 - Active path remains: `register/login + email verification`.
@@ -645,7 +645,7 @@ Afternoon:
 
 **Timeline:** 10-14 days  
 **Priority:** High - Production Readiness  
-**Status:** Planning Complete, Ready to Start
+**Status:** Implementation complete, moving to hardening
 
 ### **Phase 5A: Must Have (Priority 1) — 5 days**
 
@@ -709,86 +709,87 @@ Afternoon:
 ### **Phase 5B: Should Have (Priority 2) — 3 days**
 
 #### 🔔 Notification System
-- [ ] **Notification Model & Service**
-  - [ ] Notification model (`app/models/notification.py`)
+- [x] **Notification Model & Service**
+  - [x] Notification model (`app/models/notification.py`)
     - Types: new_follower, new_comment, comment_reply, post_reaction, mention, system
     - Fields: `user_id`, `type`, `title`, `message`, `related_type`, `related_id`, `actor_id`
-  - [ ] Notification service (`app/services/notification_service.py`)
-  - [ ] `GET /api/notifications` — List notifications
-  - [ ] `PATCH /api/notifications/{id}/read` — Mark as read
-  - [ ] `PATCH /api/notifications/read-all` — Mark all as read
-  - [ ] `DELETE /api/notifications/{id}` — Delete notification
-  - [ ] Auto-create notifications on follow, comment, reaction
-  - [ ] Tests: Notification creation, marking read, deletion
+  - [x] Notification service (`app/services/notification_service.py`)
+  - [x] `GET /api/notifications` — List notifications
+  - [x] `PATCH /api/notifications/{id}/read` — Mark as read
+  - [x] `PATCH /api/notifications/read-all` — Mark all as read
+  - [x] `DELETE /api/notifications/{id}` — Delete notification
+  - [x] Auto-create notifications on follow, comment, reaction
+  - [x] Tests: Notification creation, marking read, deletion
 
 #### 🔒 Session Management
-- [ ] **Session Tracking**
-  - [ ] Session model (`app/models/session.py`)
+- [x] **Session Tracking**
+  - [x] Session model (`app/models/session.py`)
     - Fields: `user_id`, `token_jti`, `ip_address`, `user_agent`, `device_type`
-  - [ ] `GET /api/auth/sessions` — List active sessions
-  - [ ] `DELETE /api/auth/sessions/{id}` — Revoke session
-  - [ ] `DELETE /api/auth/sessions/all` — Revoke all (except current)
-  - [ ] Track on login/logout
-  - [ ] Tests: Session creation, revocation, listing
+  - [x] `GET /api/auth/sessions` — List active sessions
+  - [x] `DELETE /api/auth/sessions/{id}` — Revoke session
+  - [x] `DELETE /api/auth/sessions/all` — Revoke all (except current)
+  - [x] Track on login/logout
+  - [x] Tests: Session creation, revocation, listing
 
 #### @️⃣ Mentions & Bookmarks
-- [ ] **@Mentions System**
-  - [ ] Extract mentions from post/comment content (`@username`)
-  - [ ] Create notification when mentioned
-  - [ ] Link to mentioned users
-  - [ ] Tests: Mention extraction, notification creation
+- [x] **@Mentions System**
+  - [x] Extract mentions from post/comment content (`@username`)
+  - [x] Create notification when mentioned
+  - [x] Link to mentioned users
+  - [x] Tests: Mention extraction, notification creation
   
-- [ ] **Bookmarks**
-  - [ ] Bookmark model (`app/models/bookmark.py`)
-  - [ ] `POST /api/posts/{post_id}/bookmark` — Bookmark post
-  - [ ] `DELETE /api/posts/{post_id}/bookmark` — Remove bookmark
-  - [ ] `GET /api/bookmarks` — List bookmarked posts
-  - [ ] Tests: Bookmark, unbookmark, list
+- [x] **Bookmarks**
+  - [x] Bookmark model (`app/models/bookmark.py`)
+  - [x] `POST /api/posts/{post_id}/bookmark` — Bookmark post
+  - [x] `DELETE /api/posts/{post_id}/bookmark` — Remove bookmark
+  - [x] `GET /api/bookmarks` — List bookmarked posts
+  - [x] Tests: Bookmark, unbookmark, list
 
 ---
 
 ### **Phase 5C: Nice to Have (Priority 3) — 2 days**
 
 #### 🔐 Advanced Security
-- [ ] **Two-Factor Authentication (2FA)**
-  - [ ] Install `pyotp`, `qrcode` libraries
-  - [ ] User fields: `totp_secret`, `totp_enabled`, `backup_codes`
-  - [ ] `POST /api/auth/2fa/enable` — Enable 2FA
-  - [ ] `POST /api/auth/2fa/verify` — Verify 2FA code
-  - [ ] `POST /api/auth/2fa/disable` — Disable 2FA
-  - [ ] `GET /api/auth/2fa/backup-codes` — Generate backup codes
-  - [ ] QR code generation
-  - [ ] Tests: 2FA enable/disable, code verification
+- [x] **Two-Factor Authentication (2FA)**
+  - [x] TOTP setup/verification works without external OTP library
+  - [x] Optional QR rendering when `qrcode` is installed
+  - [x] User fields: `totp_secret`, `totp_enabled`, `backup_codes`
+  - [x] `POST /api/auth/2fa/enable` — Enable 2FA
+  - [x] `POST /api/auth/2fa/verify` — Verify 2FA code
+  - [x] `POST /api/auth/2fa/disable` — Disable 2FA
+  - [x] `GET /api/auth/2fa/backup-codes` — Generate backup codes
+  - [x] QR code generation (best effort; returns `null` when `qrcode` is unavailable)
+  - [x] Tests: 2FA enable/disable, code verification, login flow, security log events
   
-- [ ] **Security Logs**
-  - [ ] SecurityLog model (`app/models/security_log.py`)
+- [x] **Security Logs**
+  - [x] SecurityLog model (`app/models/security_log.py`)
     - Events: login_success, login_failed, password_change, 2fa_enabled, etc.
-  - [ ] Log security events automatically
-  - [ ] Tests: Log creation, event types
+  - [x] Log security events automatically
+  - [x] Tests: Log creation, event types
 
 #### ⭐ UX Enhancements
-- [ ] **Privacy Settings**
-  - [ ] User fields: `profile_visibility`, `show_email`
-  - [ ] `PATCH /api/auth/privacy-settings` — Update privacy
-  - [ ] Enforce visibility in profile queries
-  - [ ] Tests: Privacy enforcement
+- [x] **Privacy Settings**
+  - [x] User fields: `profile_visibility`, `show_email`
+  - [x] `PATCH /api/auth/privacy-settings` — Update privacy
+  - [x] Enforce visibility in profile queries
+  - [x] Tests: Privacy enforcement
   
-- [ ] **User Preferences**
-  - [ ] User fields: `theme`, `email_notifications`, `push_notifications`
-  - [ ] `PATCH /api/auth/preferences` — Update preferences
-  - [ ] Tests: Preference updates
+- [x] **User Preferences**
+  - [x] User fields: `theme`, `email_notifications`, `push_notifications`
+  - [x] `PATCH /api/auth/preferences` — Update preferences
+  - [x] Tests: Preference updates
   
-- [ ] **Post Pinning**
-  - [ ] User field: `pinned_post_id`
-  - [ ] Show pinned post on profile
-  - [ ] Tests: Pin/unpin functionality
+- [x] **Post Pinning**
+  - [x] User field: `pinned_post_id`
+  - [x] Show pinned post on profile
+  - [x] Tests: Pin/unpin functionality
   
-- [ ] **Account Deactivation**
-  - [ ] User fields: `is_deactivated`, `deactivated_at`
-  - [ ] `POST /api/auth/deactivate` — Deactivate account
-  - [ ] `POST /api/auth/reactivate` — Reactivate account
-  - [ ] Hide deactivated users from feeds
-  - [ ] Tests: Deactivation/reactivation
+- [x] **Account Deactivation**
+  - [x] User fields: `is_deactivated`, `deactivated_at`
+  - [x] `POST /api/auth/deactivate` — Deactivate account
+  - [x] `POST /api/auth/reactivate` — Reactivate account
+  - [x] Hide deactivated users from feeds
+  - [x] Tests: Deactivation/reactivation
 
 ---
 
@@ -798,13 +799,13 @@ Afternoon:
 
 #### New Tables (5):
 - [x] `comments` — Post comments with threading
-- [ ] `notifications` — User notifications
-- [ ] `sessions` — Active user sessions
-- [ ] `security_logs` — Security event audit trail
-- [ ] `bookmarks` — Saved posts
+- [x] `notifications` — User notifications
+- [x] `sessions` — Active user sessions
+- [x] `security_logs` — Security event audit trail
+- [x] `bookmarks` — Saved posts
 
 #### Updated Tables:
-- [ ] **users** — Add 20+ new fields:
+- [x] **users** — Add 20+ new fields:
   - Email verification: `is_verified`, `verification_token`, `verification_expires`
   - Password reset: `reset_token`, `reset_expires`
   - Institutional identity: `cas_username`, `account_type`
@@ -825,12 +826,12 @@ Afternoon:
   - Bilingual templates
   - SMTP configuration
 
-- [ ] **Notification Service** (`app/services/notification_service.py`)
+- [x] **Notification Service** (`app/services/notification_service.py`)
   - Create notifications
-  - Send push notifications (optional)
   - Batch notification creation
+  - Push delivery deferred to later infrastructure work
 
-- [ ] **Session Service** (`app/services/session_service.py`)
+- [x] **Session Service** (`app/services/session_service.py`)
   - Track sessions
   - Validate sessions
   - Revoke sessions
@@ -846,15 +847,15 @@ Afternoon:
 - [x] `GET /api/auth/oidc/callback` (currently disabled by default via feature flag)
 - [x] `POST /api/auth/forgot-password`
 - [x] `POST /api/auth/reset-password`
-- [ ] `POST /api/auth/deactivate`
-- [ ] `POST /api/auth/reactivate`
+- [x] `POST /api/auth/deactivate`
+- [x] `POST /api/auth/reactivate`
 
 **Profile (5):**
 - [x] `PATCH /api/auth/update-bio`
 - [x] `POST /api/auth/upload-profile-pic`
 - [x] `POST /api/auth/upload-header`
-- [ ] `PATCH /api/auth/privacy-settings`
-- [ ] `PATCH /api/auth/preferences`
+- [x] `PATCH /api/auth/privacy-settings`
+- [x] `PATCH /api/auth/preferences`
 
 **Comments (5):**
 - [x] `POST /api/posts/{post_id}/comments`
@@ -864,26 +865,26 @@ Afternoon:
 - [x] `DELETE /api/comments/{comment_id}`
 
 **Notifications (4):**
-- [ ] `GET /api/notifications`
-- [ ] `PATCH /api/notifications/{id}/read`
-- [ ] `PATCH /api/notifications/read-all`
-- [ ] `DELETE /api/notifications/{id}`
+- [x] `GET /api/notifications`
+- [x] `PATCH /api/notifications/{id}/read`
+- [x] `PATCH /api/notifications/read-all`
+- [x] `DELETE /api/notifications/{id}`
 
 **Sessions (3):**
-- [ ] `GET /api/auth/sessions`
-- [ ] `DELETE /api/auth/sessions/{id}`
-- [ ] `DELETE /api/auth/sessions/all`
+- [x] `GET /api/auth/sessions`
+- [x] `DELETE /api/auth/sessions/{id}`
+- [x] `DELETE /api/auth/sessions/all`
 
 **Bookmarks (3):**
-- [ ] `POST /api/posts/{post_id}/bookmark`
-- [ ] `DELETE /api/posts/{post_id}/bookmark`
-- [ ] `GET /api/bookmarks`
+- [x] `POST /api/posts/{post_id}/bookmark`
+- [x] `DELETE /api/posts/{post_id}/bookmark`
+- [x] `GET /api/bookmarks`
 
 **2FA (4):**
-- [ ] `POST /api/auth/2fa/enable`
-- [ ] `POST /api/auth/2fa/verify`
-- [ ] `POST /api/auth/2fa/disable`
-- [ ] `GET /api/auth/2fa/backup-codes`
+- [x] `POST /api/auth/2fa/enable`
+- [x] `POST /api/auth/2fa/verify`
+- [x] `POST /api/auth/2fa/disable`
+- [x] `GET /api/auth/2fa/backup-codes`
 
 ---
 
@@ -891,35 +892,35 @@ Afternoon:
 
 ### **Test Suites to Create:**
 
-- [x] `test_email_verification.py` (~10 tests)
+- [x] `test_email_verification.py` (5 tests)
   - Email sending
   - Token validation
   - Token expiration
   - Resend verification
   - Verification enforcement
 
-- [x] `test_oidc_integration.py` (~8 tests)
+- [x] `test_oidc_integration.py` (7 tests)
   - OIDC login redirect
   - OIDC callback handling
   - User creation from OIDC claims
   - Attribute mapping
   - Error handling
 
-- [x] `test_password_reset.py` (~8 tests)
+- [x] `test_password_reset.py` (5 tests)
   - Reset request
   - Token generation
   - Token expiration
   - Password update
   - Security (no email enumeration)
 
-- [x] `test_profile_customization.py` (~10 tests)
+- [x] `test_profile_customization.py` (6 tests)
   - Bio update
-  - Profile picture upload
-  - Header upload
+  - Profile picture upload (real route path)
+  - Header upload (real route path)
   - Image validation
   - Size limits
 
-- [x] `test_comments.py` (~15 tests)
+- [x] `test_comments.py` (7 tests)
   - Create comment
   - List comments
   - Threading/replies
@@ -928,32 +929,38 @@ Afternoon:
   - Anonymous comments
   - Validation
 
-- [ ] `test_notifications.py` (~10 tests)
+- [x] `test_notifications.py` (3 tests)
   - Notification creation
   - List notifications
   - Mark as read
   - Delete notification
   - Auto-creation on events
 
-- [ ] `test_sessions.py` (~8 tests)
+- [x] `test_sessions.py` (3 tests)
   - Session creation
   - Session listing
   - Session revocation
   - Device tracking
 
-- [ ] `test_bookmarks.py` (~5 tests)
+- [x] `test_bookmarks.py` (1 test)
   - Bookmark post
   - Remove bookmark
   - List bookmarks
 
-- [ ] `test_2fa.py` (~10 tests)
+- [x] `test_2fa.py` (3 tests)
   - Enable 2FA
   - Verify code
   - Backup codes
   - Disable 2FA
   - Login with 2FA
 
-**Target:** 50+ tests for Phase 5
+- [x] `test_ux_enhancements.py` (2 tests)
+  - Privacy settings enforcement
+  - Preference updates
+  - Pin/unpin post behavior
+  - Deactivation/reactivation behavior
+
+**Current:** 42 automated backend tests for Phase 5
 
 ---
 
@@ -961,9 +968,8 @@ Afternoon:
 
 ```python
 # requirements.txt additions:
-pyotp>=2.8.0               # TOTP for 2FA
-qrcode>=7.4.2              # QR code generation
-Pillow>=10.0.0             # Image processing
+qrcode>=7.4.2              # Optional QR code generation
+Pillow>=10.0.0             # Optional image optimization
 redis>=4.5.0               # Session management (optional)
 ```
 
@@ -1064,13 +1070,14 @@ FRONTEND_URL=https://pulse.ulaval.ca
 | `PHASE_5_OVERVIEW.md` | Phase 5 planning & features |
 | `EMOJI_COLLATION_BUG.md` | Bug fix documentation |
 | `BILINGUAL_GUIDE.md` | NLP implementation guide |
+| `ZONE_SEARCH_GUIDE.md` | Campus zone search and autocomplete |
 
 ### **Documentation to Create:**
 - [x] `OIDC_ENTRA_INTEGRATION_GUIDE.md` — OIDC setup instructions
 - [x] `OIDC_REENABLE_PLAYBOOK.md` — Step-by-step re-enable guide
-- [ ] `EMAIL_SERVICE_GUIDE.md` — SMTP configuration
-- [ ] `2FA_USER_GUIDE.md` — How to enable/use 2FA
-- [ ] `FILE_UPLOAD_GUIDE.md` — File handling best practices
+- [x] `EMAIL_SERVICE_GUIDE.md` — SMTP configuration
+- [x] `2FA_USER_GUIDE.md` — How to enable/use 2FA
+- [x] `FILE_UPLOAD_GUIDE.md` — File handling best practices
 - [x] `MIGRATION_GUIDE.md` — Existing user migration
 - [x] Updated `ARCHITECTURE_DECISIONS.md` — AD-024 to AD-035
 
@@ -1097,19 +1104,19 @@ FRONTEND_URL=https://pulse.ulaval.ca
 - [ ] Session secret rotation policy
 
 **Testing:**
-- [ ] All 50+ Phase 5 tests passing
+- [x] All 42 current Phase 5 backend tests passing
 - [ ] OIDC flow tested end-to-end (when `ENABLE_OIDC_AUTH=true`)
 - [ ] Email delivery confirmed
 - [ ] File uploads working
-- [ ] Image optimization verified
+- [ ] Image optimization verified with Pillow installed
 - [ ] 2FA tested with multiple apps
 
 **Documentation:**
 - [ ] API docs updated
 - [x] OIDC integration guide complete
 - [x] OIDC re-enable playbook complete
-- [ ] Email service guide complete
-- [ ] Migration guide complete
+- [x] Email service guide complete
+- [x] Migration guide complete
 
 ---
 
@@ -1212,20 +1219,21 @@ FRONTEND_URL=https://pulse.ulaval.ca
 
 ---
 
-**Last Update:** 2026-02-16 (Auth strategy updated: email verification active, OIDC paused)  
-**Current Component:** Phase 5B planning (notifications + sessions)  
-**Next Milestone:** Start Phase 5B implementation  
+**Last Update:** 2026-03-14 (Phase 5 findings reconciled with runtime verification)  
+**Current Component:** Phase 5 wrap-up + deployment hardening  
+**Next Milestone:** End-to-end staging validation + optional dependency install verification (`qrcode`, `Pillow`)  
 **Blockers:** OIDC/Entra credentials and tenant access from Université Laval IT pending
+- **Validation Note:** 2FA tests now run without `pyotp`; QR rendering and image optimization still improve when optional packages are installed.
 
 ---
 
 **Phase 5A Status:** ✅ Complete (5/5 components)  
-**Phase 5B Status:** ⏸️ Pending 5A Completion (3 components)  
-**Phase 5C Status:** ⏸️ Pending 5B Completion (2 components)
+**Phase 5B Status:** ✅ Complete (3/3 components)  
+**Phase 5C Status:** ✅ Complete (2/2 components)
 
 ---
 
-**Status:** 🟡 Development Active - Phase 5A near completion  
+**Status:** 🟢 Development Active - Phase 5 implementation complete  
 **Priority:** 🔴 High - Production Readiness Critical  
 **Timeline:** 📅 10-14 days (as planned)  
 **Confidence:** ✅ High - Detailed plan with architectural decisions

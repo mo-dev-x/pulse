@@ -37,7 +37,11 @@ class Post(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    author = db.relationship('User', backref='posts', lazy=True)
+    author = db.relationship(
+        'User',
+        foreign_keys=[user_id],
+        backref=db.backref('posts', lazy=True, foreign_keys='Post.user_id')
+    )
     zone = db.relationship('CampusZone', backref='posts', lazy=True)
     
     def __repr__(self):

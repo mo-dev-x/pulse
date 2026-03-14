@@ -138,3 +138,10 @@ def send_password_reset_email(user):
         """
 
     return _send_html_email(recipient=user.email, subject=subject, html_body=html)
+
+
+def send_notification_email(user, subject, body_html):
+    """Send a notification-style email when email notifications are enabled."""
+    if not getattr(user, 'email_notifications', True):
+        return False, 'Email notifications disabled'
+    return _send_html_email(recipient=user.email, subject=subject, html_body=body_html)

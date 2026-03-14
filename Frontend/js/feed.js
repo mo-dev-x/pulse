@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupUserMenu();
   setupModal();
   setupCharCounter();
+  setupZonePicker();
 
   // 3) show top parts
   renderStories();
@@ -17,6 +18,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // 4) load posts
   loadFeed();
 });
+
+let zoneAutocomplete = null;
 
 /* --------------- USER MENU (avatar dropdown) -------------- */
 
@@ -86,8 +89,19 @@ function setupModal() {
     modal.setAttribute("aria-hidden", "true");
     hideCreateError();
     form.reset();
+    if (zoneAutocomplete) zoneAutocomplete.clearSelection();
+    const hiddenZoneId = document.getElementById("zoneId");
+    if (hiddenZoneId) hiddenZoneId.value = "";
     updateCharCount();
   }
+}
+
+function setupZonePicker() {
+  if (typeof window.initZoneAutocomplete !== "function") return;
+  zoneAutocomplete = window.initZoneAutocomplete("zoneSearch", "zoneResults", (zone) => {
+    const zoneIdInput = document.getElementById("zoneId");
+    if (zoneIdInput) zoneIdInput.value = String(zone.id);
+  });
 }
 
 /* --------------- COUNTER ---------------- */
@@ -325,28 +339,25 @@ async function onCreatePostSubmit(e) {
   }
 
   const anonymous = document.getElementById("anonymousToggle").checked;
-  const zoneId = document.getElementById("zoneSelect").value;
-
+  const zoneId = document.getElementById("zoneId").value;
   const imageInput = document.getElementById("imageFile");
-  const videoInput = document.getElementById("videoFile");
-
   const img = imageInput ? imageInput.files[0] : null;
-  const vid = videoInput ? videoInput.files[0] : null;
 
   try {
     if (typeof apiFetch !== "function") throw new Error("apiFetch not found");
 
     const fd = new FormData();
-    fd.append("text", text);
-    fd.append("anonymous", String(anonymous));
+    fd.append("content", text);
+    fd.append("is_anonymous", String(anonymous));
     if (zoneId) fd.append("zone_id", zoneId);
     if (img) fd.append("image", img);
-    if (vid) fd.append("video", vid);
 
     await apiFetch("/api/posts", { method: "POST", body: fd });
 
     //close modal
     document.getElementById("createModal").classList.remove("open");
+    if (zoneAutocomplete) zoneAutocomplete.clearSelection();
+    document.getElementById("zoneId").value = "";
 
     // refresh
     loadFeed();

@@ -19,6 +19,7 @@ from app import db
 from app.models.user import User
 from app.models.follower import Follower
 from app.models.post import Post
+from app.services.notification_service import create_notification
 from app.utils.i18n import get_localized_message
 
 # Create blueprint
@@ -61,11 +62,21 @@ def follow_user(username):
         }), 400
 
     try:
+        actor = User.query.get(current_user_id)
         new_follow = Follower(
             follower_id=current_user_id,
             following_id=target_user.id
         )
         db.session.add(new_follow)
+        create_notification(
+            user_id=target_user.id,
+            notification_type='new_follower',
+            title='New follower',
+            message=f"{actor.display_name if actor else 'Someone'} started following you.",
+            related_type='user',
+            related_id=current_user_id,
+            actor_id=current_user_id,
+        )
         db.session.commit()
 
         return jsonify({
@@ -276,6 +287,23 @@ def get_user_profile(username):
             'error': get_localized_message(request, 'validation_error'),
             'message': get_localized_message(request, 'user_not_found')
         }), 404
+    if user.is_deactivated and user.id != current_user_id:
+        return jsonify({
+            'error': get_localized_message(request, 'validation_error'),
+            'message': get_localized_message(request, 'user_not_found')
+        }), 404
+
+    if user.profile_visibility == 'private' and user.id != current_user_id:
+        return jsonify({
+            'error': get_localized_message(request, 'forbidden'),
+            'message': get_localized_message(request, 'forbidden')
+        }), 403
+    if user.profile_visibility == 'followers' and user.id != current_user_id:
+        if not Follower.is_following(current_user_id, user.id):
+            return jsonify({
+                'error': get_localized_message(request, 'forbidden'),
+                'message': get_localized_message(request, 'forbidden')
+            }), 403
 
     # Get counts
     follower_count = Follower.get_follower_count(user.id)
@@ -289,6 +317,12 @@ def get_user_profile(username):
         is_anonymous=False
     ).order_by(Post.created_at.desc()).limit(10).all()
 
+    pinned_post = None
+    if user.pinned_post_id:
+        pinned = Post.query.filter_by(id=user.pinned_post_id, user_id=user.id, is_anonymous=False).first()
+        if pinned:
+            pinned_post = pinned.to_dict(current_user_id=current_user_id)
+
     return jsonify({
         'user': {
             'id': user.id,
@@ -296,6 +330,10 @@ def get_user_profile(username):
             'display_name': user.display_name,
             'bio': user.bio,
             'profile_picture': user.profile_picture,
+            'website': user.website,
+            'location': user.location,
+            'email': user.email if user.show_email or user.id == current_user_id else None,
+            'profile_visibility': user.profile_visibility,
             'created_at': user.created_at.isoformat() if user.created_at else None,
             'follower_count': follower_count,
             'following_count': following_count,
@@ -303,5 +341,6 @@ def get_user_profile(username):
             'is_friend': is_friend,
             'is_you': (user.id == current_user_id)
         },
+        'pinned_post': pinned_post,
         'recent_posts': [post.to_dict(current_user_id=current_user_id) for post in recent_posts]
     }), 200

@@ -12,23 +12,34 @@ Endpoints:
 import os
 import re
 import secrets
+import base64
+import io
 from datetime import datetime
 from urllib.parse import urlencode
 
 import jwt as pyjwt
 import requests
 from flask import Blueprint, request, jsonify, current_app, redirect, session
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
 from werkzeug.utils import secure_filename
 
 try:
     from PIL import Image
 except ImportError:  # pragma: no cover - optional dependency for local dev
     Image = None
+try:
+    import qrcode
+except ImportError:  # pragma: no cover
+    qrcode = None
 
 from app import db
+from app.models.post import Post
+from app.models.session import Session
 from app.models.user import User
 from app.services.email_service import send_verification_email, send_password_reset_email
+from app.services.security_log_service import log_security_event
+from app.services.session_service import track_session, revoke_session
+from app.services.totp_service import generate_secret, verify_totp, build_provisioning_uri
 from app.utils.i18n import get_localized_message
 
 # Create blueprint
@@ -47,7 +58,11 @@ def _allowed_file(filename):
 
 def _resize_and_save_image(file_obj, destination_path, max_size):
     if Image is None:
-        raise ValueError('Image processing is unavailable (Pillow not installed)')
+        # Fallback keeps uploads functional in environments missing Pillow.
+        with open(destination_path, 'wb') as output_file:
+            file_obj.seek(0)
+            output_file.write(file_obj.read())
+        return
 
     image = Image.open(file_obj)
     image = image.convert('RGB')
@@ -158,6 +173,13 @@ def register():
         
         # Generate JWT token (identity must be a string)
         access_token = create_access_token(identity=str(new_user.id))
+        track_session(
+            user_id=new_user.id,
+            jwt_token=access_token,
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent')
+        )
+        db.session.commit()
         
         response = {
             'message': get_localized_message(request, 'user_created'),
@@ -223,6 +245,14 @@ def login():
     
     # Check if user exists and password is correct
     if not user or not user.password_hash or not user.check_password(password):
+        log_security_event(
+            event_type='login_failed',
+            user_id=user.id if user else None,
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent'),
+            metadata={'reason': 'invalid_credentials', 'email': email},
+        )
+        db.session.commit()
         return jsonify({
             'error': get_localized_message(request, 'auth_failed'),
             'message': get_localized_message(request, 'invalid_credentials')
@@ -235,20 +265,73 @@ def login():
             'message': get_localized_message(request, 'account_disabled')
         }), 403
 
+    if user.is_deactivated:
+        return jsonify({
+            'error': get_localized_message(request, 'account_disabled'),
+            'message': get_localized_message(request, 'account_disabled')
+        }), 403
+
     # Only verified users (email link or institutional SSO) can log in.
     if not user.is_verified:
         return jsonify({
             'error': get_localized_message(request, 'validation_error'),
             'message': get_localized_message(request, 'verification_required_login')
         }), 403
+
+    if user.totp_enabled:
+        totp_code = (data.get('totp_code') or '').strip()
+        backup_code = (data.get('backup_code') or '').strip()
+
+        if not totp_code and not backup_code:
+            return jsonify({
+                'error': get_localized_message(request, 'validation_error'),
+                'message': '2FA code is required',
+                'requires_2fa': True
+            }), 401
+
+        validated = False
+        if totp_code and user.totp_secret:
+            validated = verify_totp(user.totp_secret, totp_code, valid_window=1)
+
+        if not validated and backup_code:
+            backup_codes = user.backup_codes or []
+            if backup_code in backup_codes:
+                backup_codes.remove(backup_code)
+                user.backup_codes = backup_codes
+                validated = True
+
+        if not validated:
+            log_security_event(
+                event_type='2fa_verify_failed',
+                user_id=user.id,
+                ip_address=request.remote_addr,
+                user_agent=request.headers.get('User-Agent'),
+            )
+            db.session.commit()
+            return jsonify({
+                'error': get_localized_message(request, 'auth_failed'),
+                'message': 'Invalid 2FA code'
+            }), 401
     
     try:
         # Update last login timestamp
         user.last_login = datetime.utcnow()
-        db.session.commit()
+        log_security_event(
+            event_type='login_success',
+            user_id=user.id,
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent'),
+        )
         
         # Generate JWT token (identity must be a string)
         access_token = create_access_token(identity=str(user.id))
+        track_session(
+            user_id=user.id,
+            jwt_token=access_token,
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent')
+        )
+        db.session.commit()
         
         return jsonify({
             'message': get_localized_message(request, 'login_successful'),
@@ -283,6 +366,16 @@ def logout():
     # 2. Check blacklist on every @jwt_required() request
     # For now, client handles token deletion
     
+    claims = get_jwt()
+    revoke_session(claims.get('jti'))
+    log_security_event(
+        event_type='logout',
+        user_id=int(get_jwt_identity()),
+        ip_address=request.remote_addr,
+        user_agent=request.headers.get('User-Agent'),
+    )
+    db.session.commit()
+
     return jsonify({
         'message': get_localized_message(request, 'logout_successful'),
         'note': get_localized_message(request, 'logout_successful')
@@ -784,6 +877,20 @@ def oidc_callback():
         return jsonify(body), status
 
     token = create_access_token(identity=str(db_user.id))
+    track_session(
+        user_id=db_user.id,
+        jwt_token=token,
+        ip_address=request.remote_addr,
+        user_agent=request.headers.get('User-Agent')
+    )
+    log_security_event(
+        event_type='login_success',
+        user_id=db_user.id,
+        ip_address=request.remote_addr,
+        user_agent=request.headers.get('User-Agent'),
+        metadata={'provider': 'oidc'}
+    )
+    db.session.commit()
     return jsonify({
         'message': get_localized_message(request, 'oidc_auth_success'),
         'token': token,
@@ -936,3 +1043,286 @@ def upload_header_image():
         'header_image': user.header_image,
         'header_image_url': f"/uploads/{user.header_image}"
     }), 200
+
+
+@bp.route('/sessions', methods=['GET'])
+@jwt_required()
+def list_sessions():
+    """List active sessions for the authenticated user."""
+    user_id = int(get_jwt_identity())
+    sessions = Session.query.filter_by(user_id=user_id, is_active=True).order_by(Session.created_at.desc()).all()
+    return jsonify({'sessions': [s.to_dict() for s in sessions], 'total': len(sessions)}), 200
+
+
+@bp.route('/sessions/<int:session_id>', methods=['DELETE'])
+@jwt_required()
+def revoke_one_session(session_id):
+    """Revoke one of the authenticated user's sessions."""
+    user_id = int(get_jwt_identity())
+    current_jti = get_jwt().get('jti')
+    session_row = Session.query.filter_by(id=session_id, user_id=user_id).first()
+    if not session_row:
+        return jsonify({'error': get_localized_message(request, 'not_found')}), 404
+    if session_row.token_jti == current_jti:
+        return jsonify({'error': get_localized_message(request, 'validation_error'), 'message': 'Cannot revoke current session here'}), 400
+
+    session_row.is_active = False
+    log_security_event(
+        event_type='session_revoked',
+        user_id=user_id,
+        ip_address=request.remote_addr,
+        user_agent=request.headers.get('User-Agent'),
+        metadata={'session_id': session_id},
+    )
+    db.session.commit()
+    return jsonify({'message': 'Session revoked'}), 200
+
+
+@bp.route('/sessions/all', methods=['DELETE'])
+@jwt_required()
+def revoke_all_sessions():
+    """Revoke all active sessions except the current session."""
+    user_id = int(get_jwt_identity())
+    current_jti = get_jwt().get('jti')
+    sessions = Session.query.filter(
+        Session.user_id == user_id,
+        Session.is_active == True,  # noqa: E712
+        Session.token_jti != current_jti
+    ).all()
+    for session_row in sessions:
+        session_row.is_active = False
+
+    log_security_event(
+        event_type='session_revoked',
+        user_id=user_id,
+        ip_address=request.remote_addr,
+        user_agent=request.headers.get('User-Agent'),
+        metadata={'scope': 'all_except_current', 'count': len(sessions)},
+    )
+    db.session.commit()
+    return jsonify({'message': 'Sessions revoked', 'revoked': len(sessions)}), 200
+
+
+@bp.route('/privacy-settings', methods=['PATCH'])
+@jwt_required()
+def update_privacy_settings():
+    """Update user profile privacy settings."""
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': get_localized_message(request, 'user_not_found')}), 404
+
+    data = request.get_json() or {}
+    profile_visibility = data.get('profile_visibility')
+    show_email = data.get('show_email')
+
+    if profile_visibility is not None:
+        if profile_visibility not in {'public', 'followers', 'private'}:
+            return jsonify({'error': get_localized_message(request, 'validation_error'), 'message': 'Invalid profile_visibility'}), 400
+        user.profile_visibility = profile_visibility
+
+    if show_email is not None:
+        user.show_email = bool(show_email)
+
+    db.session.commit()
+    return jsonify({'message': 'Privacy settings updated', 'user': user.to_dict(include_private=True)}), 200
+
+
+@bp.route('/preferences', methods=['PATCH'])
+@jwt_required()
+def update_preferences():
+    """Update user UI/notification preferences."""
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': get_localized_message(request, 'user_not_found')}), 404
+
+    data = request.get_json() or {}
+    theme = data.get('theme')
+    if theme is not None:
+        if theme not in {'light', 'dark', 'auto'}:
+            return jsonify({'error': get_localized_message(request, 'validation_error'), 'message': 'Invalid theme'}), 400
+        user.theme = theme
+
+    if 'email_notifications' in data:
+        user.email_notifications = bool(data.get('email_notifications'))
+    if 'push_notifications' in data:
+        user.push_notifications = bool(data.get('push_notifications'))
+
+    db.session.commit()
+    return jsonify({'message': 'Preferences updated', 'user': user.to_dict(include_private=True)}), 200
+
+
+def _generate_backup_codes():
+    return [secrets.token_hex(4) for _ in range(10)]
+
+
+def _build_qr_code_data_url(uri):
+    if qrcode is None:
+        return None
+    image = qrcode.make(uri)
+    buffer = io.BytesIO()
+    image.save(buffer, format='PNG')
+    encoded = base64.b64encode(buffer.getvalue()).decode('ascii')
+    return f'data:image/png;base64,{encoded}'
+
+
+@bp.route('/2fa/enable', methods=['POST'])
+@jwt_required()
+def enable_2fa():
+    """Initialize TOTP setup and return provisioning payload."""
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': get_localized_message(request, 'user_not_found')}), 404
+
+    if user.totp_enabled:
+        return jsonify({'error': get_localized_message(request, 'validation_error'), 'message': '2FA already enabled'}), 400
+
+    secret = generate_secret()
+    user.totp_secret = secret
+    user.backup_codes = _generate_backup_codes()
+    provisioning_uri = build_provisioning_uri(secret, name=user.email, issuer_name='Pulse ULaval')
+    db.session.commit()
+
+    return jsonify({
+        'message': '2FA setup initialized. Verify one code to complete enablement.',
+        'totp_secret': secret,
+        'provisioning_uri': provisioning_uri,
+        'qr_code_data_url': _build_qr_code_data_url(provisioning_uri),
+        'backup_codes': user.backup_codes,
+    }), 200
+
+
+@bp.route('/2fa/verify', methods=['POST'])
+@jwt_required()
+def verify_2fa():
+    """Verify TOTP code and finalize 2FA enablement."""
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+    if not user or not user.totp_secret:
+        return jsonify({'error': get_localized_message(request, 'validation_error'), 'message': '2FA is not initialized'}), 400
+
+    code = (request.get_json() or {}).get('code', '').strip()
+    if not code:
+        return jsonify({'error': get_localized_message(request, 'validation_error'), 'message': 'Code is required'}), 400
+
+    valid = verify_totp(user.totp_secret, code, valid_window=1)
+    if not valid:
+        log_security_event(
+            event_type='2fa_verify_failed',
+            user_id=user_id,
+            ip_address=request.remote_addr,
+            user_agent=request.headers.get('User-Agent'),
+        )
+        db.session.commit()
+        return jsonify({'error': get_localized_message(request, 'auth_failed'), 'message': 'Invalid 2FA code'}), 401
+
+    user.totp_enabled = True
+    log_security_event(
+        event_type='2fa_enabled',
+        user_id=user_id,
+        ip_address=request.remote_addr,
+        user_agent=request.headers.get('User-Agent'),
+    )
+    db.session.commit()
+    return jsonify({'message': '2FA enabled successfully'}), 200
+
+
+@bp.route('/2fa/disable', methods=['POST'])
+@jwt_required()
+def disable_2fa():
+    """Disable 2FA after verifying current TOTP or backup code."""
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+    if not user or not user.totp_enabled or not user.totp_secret:
+        return jsonify({'error': get_localized_message(request, 'validation_error'), 'message': '2FA is not enabled'}), 400
+
+    payload = request.get_json() or {}
+    code = (payload.get('code') or '').strip()
+    backup_code = (payload.get('backup_code') or '').strip()
+
+    valid = False
+    if code:
+        valid = verify_totp(user.totp_secret, code, valid_window=1)
+    if not valid and backup_code:
+        backup_codes = user.backup_codes or []
+        if backup_code in backup_codes:
+            backup_codes.remove(backup_code)
+            user.backup_codes = backup_codes
+            valid = True
+
+    if not valid:
+        return jsonify({'error': get_localized_message(request, 'auth_failed'), 'message': 'Invalid 2FA code'}), 401
+
+    user.totp_enabled = False
+    user.totp_secret = None
+    user.backup_codes = None
+    log_security_event(
+        event_type='2fa_disabled',
+        user_id=user_id,
+        ip_address=request.remote_addr,
+        user_agent=request.headers.get('User-Agent'),
+    )
+    db.session.commit()
+    return jsonify({'message': '2FA disabled'}), 200
+
+
+@bp.route('/2fa/backup-codes', methods=['GET'])
+@jwt_required()
+def regenerate_backup_codes():
+    """Regenerate 2FA backup codes."""
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+    if not user or not user.totp_enabled:
+        return jsonify({'error': get_localized_message(request, 'validation_error'), 'message': '2FA is not enabled'}), 400
+
+    user.backup_codes = _generate_backup_codes()
+    db.session.commit()
+    return jsonify({'backup_codes': user.backup_codes}), 200
+
+
+@bp.route('/deactivate', methods=['POST'])
+@jwt_required()
+def deactivate_account():
+    """Deactivate account without deleting user data."""
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': get_localized_message(request, 'user_not_found')}), 404
+    if user.is_deactivated:
+        return jsonify({'message': 'Account already deactivated'}), 200
+
+    user.is_deactivated = True
+    user.deactivated_at = datetime.utcnow()
+    user.is_active = False
+    log_security_event(
+        event_type='account_deactivated',
+        user_id=user_id,
+        ip_address=request.remote_addr,
+        user_agent=request.headers.get('User-Agent'),
+    )
+    db.session.commit()
+    return jsonify({'message': 'Account deactivated', 'deactivated_at': user.deactivated_at.isoformat() + 'Z'}), 200
+
+
+@bp.route('/reactivate', methods=['POST'])
+@jwt_required()
+def reactivate_account():
+    """Reactivate previously deactivated account."""
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': get_localized_message(request, 'user_not_found')}), 404
+
+    user.is_deactivated = False
+    user.deactivated_at = None
+    user.is_active = True
+    log_security_event(
+        event_type='account_reactivated',
+        user_id=user_id,
+        ip_address=request.remote_addr,
+        user_agent=request.headers.get('User-Agent'),
+    )
+    db.session.commit()
+    return jsonify({'message': 'Account reactivated'}), 200

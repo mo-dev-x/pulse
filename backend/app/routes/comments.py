@@ -9,6 +9,8 @@ from app import db
 from app.middleware import require_verification
 from app.models.comment import Comment
 from app.models.post import Post
+from app.models.user import User
+from app.services.notification_service import create_notification, create_mention_notifications
 from app.utils.i18n import get_localized_message
 
 bp = Blueprint('comments', __name__)
@@ -68,6 +70,36 @@ def create_comment(post_id):
         is_anonymous=is_anonymous
     )
     db.session.add(comment)
+    db.session.flush()
+
+    actor = User.query.get(user_id)
+    if parent_id is not None and parent.user_id != user_id:
+        create_notification(
+            user_id=parent.user_id,
+            notification_type='comment_reply',
+            title='New reply',
+            message=f"{actor.display_name if actor else 'Someone'} replied to your comment.",
+            related_type='comment',
+            related_id=comment.id,
+            actor_id=user_id,
+        )
+    elif post.user_id != user_id:
+        create_notification(
+            user_id=post.user_id,
+            notification_type='new_comment',
+            title='New comment',
+            message=f"{actor.display_name if actor else 'Someone'} commented on your post.",
+            related_type='post',
+            related_id=post_id,
+            actor_id=user_id,
+        )
+
+    create_mention_notifications(
+        content=content,
+        actor_id=user_id,
+        related_type='comment',
+        related_id=comment.id
+    )
     db.session.commit()
 
     return jsonify({

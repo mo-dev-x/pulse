@@ -943,6 +943,94 @@ if hours_since > 24:
 
 ---
 
+### **AD-043: REST Polling Notifications (No WebSocket in Phase 5)**
+
+**Date:** 2026-02-17  
+**Decision:** Implement notifications as REST endpoints with polling compatibility.
+
+**Rationale:** Faster delivery for Phase 5 scope with no persistent connection infrastructure.
+
+**Implementation:** `GET /api/notifications`, mark-read/read-all/delete endpoints + `Notification` model.
+
+---
+
+### **AD-044: Notification Fan-Out via Domain Events in Routes**
+
+**Date:** 2026-02-17  
+**Decision:** Trigger notification creation directly from follow/comment/reaction/post-comment code paths via shared service.
+
+**Rationale:** Keeps event logic explicit and minimizes coupling before introducing an async event bus.
+
+**Implementation:** `app/services/notification_service.py` used in `social.py`, `comments.py`, `reactions.py`, and `posts.py`.
+
+---
+
+### **AD-045: Database-Tracked JWT Sessions with Revocation Gate**
+
+**Date:** 2026-02-17  
+**Decision:** Persist JWT `jti` sessions in database and enforce revocation through JWT blocklist callback.
+
+**Rationale:** Enables user-visible session management without adding Redis in Phase 5.
+
+**Implementation:** `Session` model + `/api/auth/sessions*` endpoints + `@jwt.token_in_blocklist_loader`.
+
+---
+
+### **AD-046: Mention Extraction Pattern `@(\\w+)`**
+
+**Date:** 2026-02-17  
+**Decision:** Use a simple regex mention parser and deduplicate usernames.
+
+**Rationale:** Low complexity and predictable behavior aligned with Phase 5 docs.
+
+**Implementation:** `extract_mentions()` in `notification_service.py`, invoked during post/comment creation.
+
+---
+
+### **AD-047: Optional TOTP 2FA with Setup Verification Step**
+
+**Date:** 2026-02-17  
+**Decision:** 2FA setup is two-step: initialize secret/QR then verify code before enabling.
+
+**Rationale:** Prevents partially configured accounts from being flagged as 2FA-protected.
+
+**Implementation:** `/api/auth/2fa/enable` stores secret + backup codes, `/api/auth/2fa/verify` sets `totp_enabled=True`.
+
+---
+
+### **AD-048: Backup Codes Treated as One-Time Credentials**
+
+**Date:** 2026-02-17  
+**Decision:** Backup codes are consumed on use and can be regenerated.
+
+**Rationale:** Matches expected 2FA recovery model and limits replay risk.
+
+**Implementation:** Backup code removal in login/disable flows + regeneration endpoint `/api/auth/2fa/backup-codes`.
+
+---
+
+### **AD-049: Profile Visibility Enforcement in Backend**
+
+**Date:** 2026-02-17  
+**Decision:** Enforce `public/followers/private` profile visibility in profile route logic.
+
+**Rationale:** Privacy controls must be authoritative server-side, not only UI-driven.
+
+**Implementation:** `/api/users/@<username>` checks requester relationship before returning profile.
+
+---
+
+### **AD-050: Deactivation as Soft-Disable (Not Deletion)**
+
+**Date:** 2026-02-17  
+**Decision:** Deactivation toggles account flags and hides user in discovery/feed views while retaining data.
+
+**Rationale:** Supports reversible account status and auditability.
+
+**Implementation:** `is_deactivated`, `deactivated_at`, `is_active` updates via `/api/auth/deactivate` and `/api/auth/reactivate`.
+
+---
+
 **📌 This document grows with the project. Every technical decision is recorded here.**
 
-**Last Updated:** Phase 5A complete — Auth hardening, CAS, profiles, comments
+**Last Updated:** Phase 5C complete — Notifications, sessions, mentions/bookmarks, 2FA/security, UX controls

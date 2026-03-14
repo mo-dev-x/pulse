@@ -40,6 +40,25 @@ CREATE TABLE users (
     header_image VARCHAR(500),
     website VARCHAR(255),
     location VARCHAR(100),
+
+    -- Privacy settings
+    profile_visibility ENUM('public', 'followers', 'private') NOT NULL DEFAULT 'public',
+    show_email BOOLEAN NOT NULL DEFAULT FALSE,
+
+    -- Preferences
+    theme ENUM('light', 'dark', 'auto') NOT NULL DEFAULT 'auto',
+    email_notifications BOOLEAN NOT NULL DEFAULT TRUE,
+    push_notifications BOOLEAN NOT NULL DEFAULT TRUE,
+
+    -- 2FA
+    totp_secret VARCHAR(32) NULL,
+    totp_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    backup_codes JSON NULL,
+
+    -- Account lifecycle
+    is_deactivated BOOLEAN NOT NULL DEFAULT FALSE,
+    deactivated_at TIMESTAMP NULL,
+    pinned_post_id INT NULL,
     
     -- Language preference (UniversitÃ© Laval bilingual community)
     preferred_language ENUM('en', 'fr') DEFAULT 'fr' NOT NULL,
@@ -166,6 +185,83 @@ CREATE TABLE comments (
     INDEX idx_comment_user (user_id),
 
     CONSTRAINT chk_comment_length CHECK (CHAR_LENGTH(content) >= 1 AND CHAR_LENGTH(content) <= 500)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+CREATE TABLE notifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    type ENUM('new_follower', 'new_comment', 'comment_reply', 'post_reaction', 'mention', 'system') NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    related_type ENUM('post', 'comment', 'user') NULL,
+    related_id INT NULL,
+    actor_id INT NULL,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (actor_id) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_notification_user_created (user_id, created_at DESC),
+    INDEX idx_notification_unread (user_id, is_read)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+CREATE TABLE sessions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    token_jti VARCHAR(255) NOT NULL UNIQUE,
+    ip_address VARCHAR(45) NULL,
+    user_agent VARCHAR(512) NULL,
+    device_type ENUM('web', 'mobile', 'desktop', 'unknown') NOT NULL DEFAULT 'unknown',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_session_user_active (user_id, is_active),
+    INDEX idx_session_jti (token_jti)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+CREATE TABLE security_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NULL,
+    event_type ENUM(
+        'login_success',
+        'login_failed',
+        'logout',
+        'password_change',
+        'password_reset',
+        '2fa_enabled',
+        '2fa_disabled',
+        '2fa_verify_failed',
+        'account_deactivated',
+        'account_reactivated',
+        'session_revoked'
+    ) NOT NULL,
+    ip_address VARCHAR(45) NULL,
+    user_agent VARCHAR(512) NULL,
+    metadata_json JSON NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_security_log_user_created (user_id, created_at DESC),
+    INDEX idx_security_log_event (event_type, created_at DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+CREATE TABLE bookmarks (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    post_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_user_bookmark (user_id, post_id),
+    INDEX idx_bookmark_user_created (user_id, created_at DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
@@ -297,16 +393,48 @@ CREATE TABLE events (
 -- ============================================
 
 INSERT INTO campus_zones (name, description, zone_type) VALUES
-('Library', 'Main campus library and study spaces', 'academic'),
-('Engineering Building', 'Engineering classrooms and labs', 'academic'),
-('Student Center', 'Common area, cafeteria, student services', 'social'),
-('Residence Hall A', 'Main residential building', 'residence'),
-('Residence Hall B', 'Second residential building', 'residence'),
-('Gym & Recreation Center', 'Fitness facilities and sports courts', 'sports'),
-('Cafeteria', 'Main dining hall', 'dining'),
-('Outdoor Commons', 'Lawn areas, benches, outdoor seating', 'social'),
-('Computer Lab', 'Computer science and tech labs', 'academic'),
-('Arts Building', 'Music, theater, visual arts spaces', 'academic');
+('Pavillon Alphonse-Desjardins', 'Administration, sciences sociales (ADJ)', 'academic'),
+('Pavillon Charles-De Koninck', 'Philosophie (DKN)', 'academic'),
+('Pavillon Félix-Antoine-Savard', 'Lettres et sciences humaines (FAS)', 'academic'),
+('Pavillon Jean-Charles-Bonenfant', 'Bibliothèque des sciences humaines et sociales (BNF)', 'academic'),
+('Pavillon Louis-Jacques-Casault', 'Sciences de l''éducation (CSL)', 'academic'),
+('Pavillon Jeanne-Lapointe', 'Littérature, langues (JLA)', 'academic'),
+('Pavillon Adrien-Pouliot', 'Génie (PLT)', 'academic'),
+('Pavillon Alexandre-Vachon', 'Sciences et génie, mathématiques (VCH)', 'academic'),
+('Pavillon Abitibi-Price', 'Foresterie, géographie (ABP)', 'academic'),
+('Pavillon Gene-H. Kruger', 'Sciences forestières (GHK)', 'academic'),
+('Pavillon Paul-Comtois', 'Sciences de l''agriculture et de l''alimentation (CMT)', 'academic'),
+('Pavillon de l''Envirotron', 'Sciences de l''environnement (EVT)', 'academic'),
+('Pavillon Charles-Eugène-Marchand', 'Chimie (CHM)', 'academic'),
+('Pavillon d''Optique-photonique', 'Optique, photonique, physique (COP)', 'academic'),
+('Pavillon Ferdinand-Vandry', 'Sciences de la santé, médecine (VND)', 'academic'),
+('Pavillon de la Médecine dentaire', 'Dentisterie (MDE)', 'academic'),
+('Pavillon Maurice-Pollack', 'Pharmacie (POL)', 'academic'),
+('Pavillon Agathe-Lacerte', 'Nutrition, sciences infirmières (LCT)', 'academic'),
+('Pavillon Palasis-Prince', 'Sciences de l''administration (PAP)', 'academic'),
+('Pavillon des Services', 'Services aux étudiants, registrariat (PSA)', 'social'),
+('Place de l''Université', 'Cœur du campus, espaces de rencontre', 'social'),
+('Pavillon Alphonse-Marie-Parent', 'Services aux étudiants (PRN)', 'social'),
+('PEPS - Zone sociale', 'Cafétéria, espaces communs PEPS', 'social'),
+('PEPS - Pavillon principal', 'Centre sportif principal (PEPS)', 'sports'),
+('PEPS - Arénas', 'Patinoires et sports sur glace', 'sports'),
+('PEPS - Gymnases', 'Salles d''entraînement et sports collectifs', 'sports'),
+('PEPS - Piscine', 'Centre aquatique', 'sports'),
+('Stade TELUS-Université Laval', 'Stade de football (SSI)', 'sports'),
+('Terrain extérieur PEPS', 'Terrains sportifs extérieurs', 'sports'),
+('Café de la Terrasse', 'Café étudiant, espace détente', 'dining'),
+('Café Desjardins', 'Cafétéria Pavillon Alphonse-Desjardins', 'dining'),
+('Café PEPS', 'Restauration au complexe sportif', 'dining'),
+('Café Pollack', 'Cafétéria Pavillon Maurice-Pollack', 'dining'),
+('Résidences universitaires - Zone Nord', 'Résidences étudiantes secteur nord', 'residence'),
+('Résidences universitaires - Zone Sud', 'Résidences étudiantes secteur sud', 'residence'),
+('Pavillon Ernest-Lemieux', 'Résidence (LEM)', 'residence'),
+('Jardin Roger-Van den Hende', 'Jardin botanique, espaces verts', 'other'),
+('Boulevard Hochelaga', 'Artère principale du campus', 'other'),
+('Avenue de la Médecine', 'Secteur sciences de la santé', 'other'),
+('Rue de l''Université', 'Axe central du campus', 'other'),
+('Stationnements campus', 'Aires de stationnement', 'other'),
+('Pavillon de l''Est', 'Installations diverses (PVE)', 'other');
 
 
 -- ============================================

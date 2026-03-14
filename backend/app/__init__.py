@@ -47,6 +47,22 @@ def create_app(config_name='development'):
     db.init_app(app)
     jwt.init_app(app)
     CORS(app)
+
+    @jwt.token_in_blocklist_loader
+    def is_token_revoked(jwt_header, jwt_payload):
+        from datetime import datetime
+        from app.models.session import Session
+        jti = jwt_payload.get('jti')
+        if not jti:
+            return False
+        session = Session.query.filter_by(token_jti=jti).first()
+        if not session:
+            return False
+        if not session.is_active:
+            return True
+        if session.expires_at and session.expires_at < datetime.utcnow():
+            return True
+        return False
     
     # Register blueprints
     register_blueprints(app)
@@ -71,7 +87,7 @@ def register_blueprints(app):
     """
     Register all Flask blueprints
     """
-    from app.routes import auth, posts, social, reactions, analytics, comments
+    from app.routes import auth, posts, social, reactions, analytics, comments, notifications, bookmarks, zones
     
     app.register_blueprint(auth.bp, url_prefix='/api/auth')
     app.register_blueprint(posts.bp, url_prefix='/api/posts')
@@ -79,6 +95,9 @@ def register_blueprints(app):
     app.register_blueprint(reactions.bp, url_prefix='/api/posts')
     app.register_blueprint(analytics.bp, url_prefix='/api/analytics')
     app.register_blueprint(comments.bp, url_prefix='/api')
+    app.register_blueprint(notifications.bp, url_prefix='/api')
+    app.register_blueprint(bookmarks.bp, url_prefix='/api')
+    app.register_blueprint(zones.bp, url_prefix='/api')
 
 
 def register_error_handlers(app):

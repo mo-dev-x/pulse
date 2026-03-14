@@ -760,8 +760,7 @@ GET    /api/auth/2fa/backup-codes        # Generate backup codes
 
 #### **Enable 2FA:**
 ```python
-import pyotp
-import qrcode
+from app.services.totp_service import generate_secret, build_provisioning_uri
 
 @bp.route('/2fa/enable', methods=['POST'])
 @jwt_required()
@@ -774,19 +773,18 @@ def enable_2fa():
         return jsonify({'error': '2FA already enabled'}), 400
     
     # Generate TOTP secret
-    secret = pyotp.random_base32()
+    secret = generate_secret()
     user.totp_secret = secret
     
-    # Generate QR code
-    totp = pyotp.TOTP(secret)
-    provisioning_uri = totp.provisioning_uri(
+    # Generate provisioning URI; QR rendering is optional.
+    provisioning_uri = build_provisioning_uri(
+        secret=secret,
         name=user.email,
-        issuer_name='Pulse - UniversitÃ© Laval'
+        issuer_name='Pulse - Universite Laval'
     )
     
-    # Create QR code image
-    qr = qrcode.make(provisioning_uri)
-    # ... save QR code and return URL
+    # If qrcode is installed, return a QR image data URL.
+    qr_code_data_url = maybe_build_qr_code(provisioning_uri)
     
     # Generate backup codes
     backup_codes = [secrets.token_hex(4) for _ in range(10)]
@@ -796,7 +794,8 @@ def enable_2fa():
     
     return jsonify({
         'secret': secret,
-        'qr_code_url': qr_url,
+        'provisioning_uri': provisioning_uri,
+        'qr_code_data_url': qr_code_data_url,
         'backup_codes': backup_codes,
         'message': 'Scan QR code with authenticator app'
     }), 200
@@ -807,6 +806,28 @@ def enable_2fa():
 ### **8. Session Management**
 
 **Track active sessions and allow users to manage them**
+
+---
+
+### **9. Campus Zone Search & Autocomplete**
+
+**Make campus posting locations searchable instead of requiring numeric zone IDs**
+
+#### **Backend Endpoints:**
+```
+GET    /api/zones/search?q=peps
+GET    /api/zones/suggest?q=biblio
+GET    /api/zones
+GET    /api/zones/{id}
+GET    /api/zones/types
+```
+
+#### **Implemented Behavior:**
+- Search by partial name or description
+- Alias expansion for common terms (`biblio`, `sport`, `genie`, `cafe`)
+- Type-filtered results
+- Frontend autocomplete integrated in create-post modal
+- Real Université Laval campus zone seed dataset replaces placeholder zones
 
 #### **Session Model:**
 ```python
@@ -1129,23 +1150,23 @@ ADD COLUMN pinned_post_id INT;
 
 ### **Infrastructure:**
 - [ ] SMTP server configured (email sending)
-- [ ] CAS credentials obtained from UniversitÃ© Laval
+- [ ] OIDC/Entra credentials obtained from Universite Laval
 - [ ] File upload directory configured
-- [ ] Image processing library installed (Pillow)
+- [ ] Optional image processing library installed (Pillow) for optimized resizing
 - [ ] Redis for session management (optional)
-- [ ] Push notification service (Firebase/OneSignal)
+- [ ] Push notification service (Firebase/OneSignal) if real-time delivery is needed
 
 ### **Security:**
-- [ ] HTTPS enabled (required for CAS)
+- [ ] HTTPS enabled (required for OIDC callback)
 - [ ] Rate limiting configured
 - [ ] CORS settings updated
 - [ ] File upload restrictions enforced
 
 ### **Testing:**
 - [ ] Email delivery working
-- [ ] CAS callback working
+- [ ] OIDC callback working
 - [ ] File uploads working
-- [ ] 2FA tested
+- [ ] 2FA tested with authenticator apps
 - [ ] All endpoints tested
 
 ---
@@ -1153,7 +1174,7 @@ ADD COLUMN pinned_post_id INT;
 ## ✨ PHASE 5 DELIVERABLES
 
 **Security & Authentication:**
-- ✅ CAS integration with UniversitÃ© Laval
+- ✅ OIDC/Entra integration with Universite Laval behind feature flag
 - ✅ Email verification system
 - ✅ Secure password reset
 - ✅ Two-factor authentication (optional)
@@ -1172,8 +1193,8 @@ ADD COLUMN pinned_post_id INT;
 **Infrastructure:**
 - ✅ Email service integration
 - ✅ File upload system
-- ✅ Image processing
-- ✅ Push notifications
+- ✅ Image upload fallback without Pillow
+- ⏸ Push notifications deferred
 
 **Testing & Docs:**
 - ✅ Comprehensive test coverage
@@ -1186,14 +1207,14 @@ ADD COLUMN pinned_post_id INT;
 ## 📞 HANDOFF NOTES
 
 ### **For Backend Developer:**
-1. Obtain CAS credentials from UniversitÃ© Laval IT
+1. Obtain OIDC/Entra credentials from Universite Laval IT
 2. Configure SMTP server for email
 3. Set up file upload directory structure
-4. Install required packages (pyotp, qrcode, Pillow)
+4. Install optional packages (`qrcode`, `Pillow`) in environments that need QR rendering and optimized resizing
 5. Review and implement priority features first
 
 ### **For Frontend Developer:**
-1. Design CAS login flow UI
+1. Design OIDC login flow UI
 2. Build profile customization interface
 3. Create comment component
 4. Implement notification center
@@ -1202,7 +1223,7 @@ ADD COLUMN pinned_post_id INT;
 ### **For DevOps:**
 1. Configure SMTP relay
 2. Set up file storage (S3 or local)
-3. Configure CAS redirect URLs
+3. Configure OIDC redirect URLs
 4. Set up push notification service
 5. Configure Redis for sessions
 

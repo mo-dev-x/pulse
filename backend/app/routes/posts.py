@@ -26,7 +26,9 @@ from app.models import Post, CampusZone, User
 from app.models.follower import Follower
 from app.models.media import Media
 from app.models.reaction import Reaction
+from app.models.bookmark import Bookmark
 from app.services import analyze_sentiment
+from app.services.notification_service import create_mention_notifications
 from app.utils.i18n import get_localized_message
 
 # Create blueprint
@@ -135,6 +137,12 @@ def create_post():
 
         db.session.add(new_post)
         db.session.flush()  # Get the post ID before committing
+        create_mention_notifications(
+            content=content,
+            actor_id=user_id,
+            related_type='post',
+            related_id=new_post.id
+        )
 
         # Handle file upload
         if uploaded_file and uploaded_file.filename:
@@ -191,6 +199,45 @@ def create_post():
         }), 500
 
 
+@bp.route('/<int:post_id>/bookmark', methods=['POST'])
+@jwt_required()
+def bookmark_post(post_id):
+    """Bookmark a post for the authenticated user."""
+    current_user_id = int(get_jwt_identity())
+    post = Post.query.get(post_id)
+    if not post:
+        return jsonify({
+            'error': get_localized_message(request, 'validation_error'),
+            'message': get_localized_message(request, 'post_not_found')
+        }), 404
+
+    existing = Bookmark.query.filter_by(user_id=current_user_id, post_id=post_id).first()
+    if existing:
+        return jsonify({'message': 'Post already bookmarked', 'bookmark': existing.to_dict(current_user_id=current_user_id)}), 200
+
+    bookmark = Bookmark(user_id=current_user_id, post_id=post_id)
+    db.session.add(bookmark)
+    db.session.commit()
+    return jsonify({'message': 'Post bookmarked', 'bookmark': bookmark.to_dict(current_user_id=current_user_id)}), 201
+
+
+@bp.route('/<int:post_id>/bookmark', methods=['DELETE'])
+@jwt_required()
+def remove_bookmark(post_id):
+    """Remove bookmark for the authenticated user."""
+    current_user_id = int(get_jwt_identity())
+    bookmark = Bookmark.query.filter_by(user_id=current_user_id, post_id=post_id).first()
+    if not bookmark:
+        return jsonify({
+            'error': get_localized_message(request, 'not_found'),
+            'message': get_localized_message(request, 'not_found')
+        }), 404
+
+    db.session.delete(bookmark)
+    db.session.commit()
+    return jsonify({'message': 'Bookmark removed'}), 200
+
+
 @bp.route('/feed', methods=['GET'])
 @jwt_required()
 def get_feed():
@@ -226,6 +273,8 @@ def get_feed():
     feed_query = Post.query.filter(
         Post.user_id.in_(following_ids),
         Post.is_anonymous == False  # noqa: E712 — SQLAlchemy requires ==
+    ).join(User, User.id == Post.user_id).filter(
+        User.is_deactivated == False  # noqa: E712
     ).order_by(Post.created_at.desc())
 
     paginated = feed_query.paginate(page=page, per_page=per_page, error_out=False)
@@ -327,6 +376,11 @@ def get_user_posts(username):
 
     user = User.query.filter_by(username=username.lower()).first()
     if not user:
+        return jsonify({
+            'error': get_localized_message(request, 'validation_error'),
+            'message': get_localized_message(request, 'user_not_found')
+        }), 404
+    if user.is_deactivated:
         return jsonify({
             'error': get_localized_message(request, 'validation_error'),
             'message': get_localized_message(request, 'user_not_found')
@@ -450,3 +504,31 @@ def delete_post(post_id):
             'error': get_localized_message(request, 'server_error'),
             'message': get_localized_message(request, 'server_error')
         }), 500
+
+
+@bp.route('/<int:post_id>/pin', methods=['PATCH'])
+@jwt_required()
+def pin_post(post_id):
+    """Pin one of the current user's own posts to profile."""
+    current_user_id = int(get_jwt_identity())
+    post = Post.query.get(post_id)
+    if not post:
+        return jsonify({'error': get_localized_message(request, 'validation_error'), 'message': get_localized_message(request, 'post_not_found')}), 404
+    if post.user_id != current_user_id:
+        return jsonify({'error': get_localized_message(request, 'forbidden'), 'message': get_localized_message(request, 'forbidden')}), 403
+
+    user = User.query.get(current_user_id)
+    user.pinned_post_id = post_id
+    db.session.commit()
+    return jsonify({'message': 'Post pinned', 'pinned_post_id': post_id}), 200
+
+
+@bp.route('/pin', methods=['DELETE'])
+@jwt_required()
+def unpin_post():
+    """Remove profile pinned post."""
+    current_user_id = int(get_jwt_identity())
+    user = User.query.get(current_user_id)
+    user.pinned_post_id = None
+    db.session.commit()
+    return jsonify({'message': 'Pinned post removed'}), 200

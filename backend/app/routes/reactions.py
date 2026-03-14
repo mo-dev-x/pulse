@@ -15,6 +15,8 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
 from app.models.post import Post
 from app.models.reaction import Reaction
+from app.models.user import User
+from app.services.notification_service import create_notification
 from app.utils.i18n import get_localized_message
 
 # Create blueprint
@@ -80,6 +82,16 @@ def add_reaction(post_id):
             # Update existing reaction
             old_emoji = existing.emoji
             existing.emoji = emoji
+            actor = User.query.get(current_user_id)
+            create_notification(
+                user_id=post.user_id,
+                notification_type='post_reaction',
+                title='Reaction updated',
+                message=f"{actor.display_name if actor else 'Someone'} reacted to your post.",
+                related_type='post',
+                related_id=post_id,
+                actor_id=current_user_id,
+            )
             db.session.commit()
 
             # Remove session to force completely fresh queries
@@ -105,6 +117,16 @@ def add_reaction(post_id):
                 emoji=emoji
             )
             db.session.add(new_reaction)
+            actor = User.query.get(current_user_id)
+            create_notification(
+                user_id=post.user_id,
+                notification_type='post_reaction',
+                title='New reaction',
+                message=f"{actor.display_name if actor else 'Someone'} reacted to your post.",
+                related_type='post',
+                related_id=post_id,
+                actor_id=current_user_id,
+            )
             db.session.commit()
 
             return jsonify({

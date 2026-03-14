@@ -13,9 +13,14 @@ from app.models.reaction import Reaction
 from app.models.media import Media
 from app.models.aggregate import DailyAggregate, WeeklyAggregate
 from app.models.comment import Comment
+from app.models.notification import Notification
+from app.models.session import Session
+from app.models.bookmark import Bookmark
+from app.models.security_log import SecurityLog
 
 __all__ = [
     'User', 'Post', 'CampusZone',
     'Follower', 'Reaction', 'Media',
-    'DailyAggregate', 'WeeklyAggregate', 'Comment'
+    'DailyAggregate', 'WeeklyAggregate', 'Comment',
+    'Notification', 'Session', 'Bookmark', 'SecurityLog'
 ]
