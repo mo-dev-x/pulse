@@ -2,7 +2,7 @@
 
 **Privacy-First Campus Wellness Platform for Université Laval**
 
-A full-stack application enabling students to share their emotional states anonymously while providing aggregated campus mood insights.
+A full-stack application enabling students to share their emotional states publicly or anonymously while providing privacy-safe campus mood insights.
 
 **Repository:** Monorepo (Frontend + Backend)  
 **University:** Université Laval  
@@ -69,8 +69,16 @@ Pulse is a campus wellness platform with three core features:
 3. **Collective Insights**
    - Campus-wide mood trends
    - Zone-based sentiment analysis
+   - Discovery and trending feeds
    - Privacy-safe aggregation (≥10 posts required)
    - Daily and weekly analytics
+
+4. **Platform Systems**
+   - Unified search across posts, users, and zones
+   - Moderation and reporting workflow
+   - Direct messaging between users
+   - Push-ready notification infrastructure
+   - Caching and optional Redis/RQ background jobs
 
 ### Core Principle
 
@@ -83,7 +91,8 @@ Pulse is a campus wellness platform with three core features:
 ### Prerequisites
 - **Backend:** Python 3.12+, MySQL 8.0+, Virtual environment
 - **Frontend:** Any modern browser, Python 3 (for HTTP server)
-- **SMTP server** (for email verification - Phase 5)
+- **SMTP server** (for email verification / password reset)
+- **Redis** (optional for production rate limiting + background jobs)
 - **OIDC (Azure Entra) app credentials** (optional for future re-enable)
 
 ---
@@ -137,9 +146,9 @@ python3 -m http.server 8000
 | **Phase 3:** Feed UI | 🟡 In Progress | 60% |
 | **Phase 4:** Feed API Integration | 🟠 Next | 0% |
 | **Phase 5:** UX Polish | 🔵 Later | 0% |
-| **Phase 6:** Analytics UI | 🔵 Later | 0% |
+| **Phase 6:** Advanced UI integrations | 🔵 Later | 0% |
 
-**Current:** Building feed page (sidebar ✅, navbar ✅, posts section in progress)
+**Current:** Frontend is still catching up to the newer backend platform features.
 
 **See [Frontend/QUICKSTART.md](Frontend/QUICKSTART.md) for detailed frontend documentation.**
 
@@ -226,10 +235,12 @@ API responses use JSON (shape varies by endpoint):
 ## 🗂️ BACKEND ARCHITECTURE
 
 **Tech Stack:**
-- **Backend:** Python 3.12.3 + Flask
+- **Backend:** Python 3.12 + Flask
 - **Database:** MySQL 8.0
 - **Authentication:** JWT tokens + email verification (OIDC/Entra currently feature-flagged off)
-- **Security:** bcrypt password hashing, optional 2FA (Phase 5)
+- **Security:** bcrypt, optional 2FA, session tracking, security logs, rate limiting
+- **Search & Discovery:** unified search, trending, zone discovery
+- **Infra:** Flask-Caching, optional Redis/RQ background jobs
 - **NLP:** VADER (English) + CamemBERT (French) sentiment analysis
 - **API:** RESTful JSON endpoints
 
@@ -238,8 +249,9 @@ API responses use JSON (shape varies by endpoint):
 backend/app/
 ├── models/          # SQLAlchemy database models
 ├── routes/          # API endpoint blueprints
-├── services/        # Business logic (NLP, aggregation, email)
-├── middleware/      # Auth, rate limiting, validation
+├── services/        # Business logic (NLP, aggregation, email, jobs)
+├── middleware/      # Auth, verification, admin checks
+├── tasks/           # Background job entrypoints
 └── utils/           # Helper functions, i18n
 ```
 
@@ -247,21 +259,24 @@ backend/app/
 
 ## 📊 DATABASE SCHEMA
 
-**14 Core Tables:**
+**Current Major Tables:**
 - `users` - User accounts with public and anonymous identities
 - `followers` - Social graph (one-way follows)
 - `posts` - Content with sentiment analysis
-- `comments` - Post comments with threading (Phase 5)
+- `comments` - Post comments with threading
 - `campus_zones` - Campus locations
 - `media` - Uploaded images
 - `reactions` - Emoji reactions
-- `notifications` - User notifications (Phase 5)
-- `sessions` - Active user sessions (Phase 5)
-- `bookmarks` - Saved posts (Phase 5)
+- `notifications` - In-app notifications
+- `sessions` - Active user sessions
+- `bookmarks` - Saved posts
+- `reports` - Moderation reporting pipeline
+- `conversations` - Direct message threads
+- `messages` - Direct message content
+- `push_subscriptions` - Push delivery registrations
 - `daily_aggregates` - Daily mood statistics
 - `weekly_aggregates` - Weekly mood statistics
-- `security_logs` - Security event audit trail (Phase 5)
-- `events` - Campus events (future)
+- `security_logs` - Security and moderation audit trail
 
 **Key Privacy Feature:**
 Anonymous posts store `user_id` in database but API **never** exposes it.
@@ -270,28 +285,36 @@ Anonymous posts store `user_id` in database but API **never** exposes it.
 
 ## 📡 API ENDPOINTS
 
-### Authentication (Phase 2 - Working)
+### Authentication & Account Security
 ```
 POST   /api/auth/register              # Create account ✅
 POST   /api/auth/login                 # Get JWT token ✅
-POST   /api/auth/logout                # Invalidate token
+POST   /api/auth/logout                # Logout / revoke session tracking
 GET    /api/auth/me                    # Get current user ✅
 PATCH  /api/auth/update-profile        # Update profile
 PATCH  /api/auth/update-pseudonym      # Change pseudonym
+POST   /api/auth/send-verification     # Send verification email
+GET    /api/auth/verify-email/{token}  # Verify email
+POST   /api/auth/forgot-password       # Request password reset
+POST   /api/auth/reset-password        # Reset password
 ```
 
-### Posts (Phase 3 - Backend Complete)
+### Posts, Discovery & Search
 ```
 POST   /api/posts                      # Create post
-GET    /api/posts/feed                 # Timeline (friends' posts) 🔜 Frontend next
+GET    /api/posts/feed                 # Timeline (friends' posts)
+GET    /api/posts/discover             # Campus-wide discovery feed
+GET    /api/posts/trending             # Trending posts
 GET    /api/posts/@{username}          # User's public posts
 GET    /api/posts/me                   # My public posts
 GET    /api/posts/me/anonymous         # My anonymous posts
 GET    /api/posts/zone/{zone_id}       # Zone feed
 DELETE /api/posts/{post_id}            # Delete post (24h window)
+GET    /api/search                     # Unified search
+GET    /api/search/users               # Mention autocomplete
 ```
 
-### Social (Phase 3 - Backend Complete)
+### Social, Messaging & Notifications
 ```
 POST   /api/follow/@{username}         # Follow user
 DELETE /api/unfollow/@{username}       # Unfollow
@@ -299,38 +322,35 @@ GET    /api/users/@{username}/followers
 GET    /api/users/@{username}/following
 GET    /api/users/me/friends           # Mutual follows
 GET    /api/users/@{username}          # User profile
+GET    /api/messages/conversations     # DM conversations
+POST   /api/messages/conversations     # Create/reuse DM conversation
+GET    /api/notifications              # List notifications
 ```
 
-### Reactions (Phase 3 - Backend Complete)
+### Reactions, Comments & Moderation
 ```
 POST   /api/posts/{post_id}/react      # Add emoji reaction
 DELETE /api/posts/{post_id}/react      # Remove reaction
 GET    /api/posts/{post_id}/reactions  # Get reaction counts
+POST   /api/posts/{post_id}/comments   # Add comment
+GET    /api/posts/{post_id}/comments   # List comments
+POST   /api/reports                    # Report post/comment/user
+GET    /api/admin/reports              # Moderation queue
+PATCH  /api/admin/reports/{id}         # Admin moderation action
+GET    /api/admin/flagged              # Auto-flagged content
 ```
 
-### Analytics (Phase 4 - Backend Complete)
+### Analytics, Zones & Infra
 ```
 GET    /api/analytics/daily?date=YYYY-MM-DD&zone_id=X
 GET    /api/analytics/weekly?week_start=YYYY-MM-DD&zone_id=X
 GET    /api/analytics/campus?date=YYYY-MM-DD
+GET    /api/zones/trending             # Most active zones
+POST   /api/push/subscribe             # Register push subscription
+DELETE /api/push/subscribe/{id}        # Deactivate push subscription
 ```
 
-### Phase 5 Endpoints (In Development)
-```
-POST   /api/auth/send-verification     # Send verification email
-GET    /api/auth/verify-email/{token}  # Verify email
-POST   /api/auth/forgot-password       # Request password reset
-POST   /api/auth/reset-password        # Reset password
-POST   /api/auth/upload-profile-pic    # Upload profile picture
-POST   /api/posts/{post_id}/comments   # Add comment
-GET    /api/posts/{post_id}/comments   # List comments
-GET    /api/notifications              # List notifications
-POST   /api/posts/{post_id}/bookmark   # Bookmark post
-GET    /api/auth/oidc/login            # OIDC SSO login (disabled by default)
-GET    /api/auth/oidc/callback         # OIDC callback (disabled by default)
-```
-
-**Total:** 55+ endpoints (25 complete, 30+ in Phase 5)
+**Note:** The backend now spans auth, privacy, social, messaging, moderation, search, analytics, caching, and optional background-job infrastructure. See backend docs for the complete API surface.
 
 ---
 
@@ -340,27 +360,31 @@ GET    /api/auth/oidc/callback         # OIDC callback (disabled by default)
 - ✅ JWT tokens with 24-hour expiration
 - ✅ bcrypt password hashing (cost factor 12)
 - ✅ @ulaval.ca email validation
-- ✅ Email verification for new accounts (Phase 5)
+- ✅ Email verification for new accounts
 - ⏸️ Université Laval OIDC / Entra integration (implemented, disabled pending university access)
-- ✅ Secure password reset flow (Phase 5)
-- 🚧 Optional 2FA (TOTP) (Phase 5)
-- 🚧 Session management and tracking (Phase 5)
+- ✅ Secure password reset flow
+- ✅ Optional 2FA (TOTP)
+- ✅ Session management and tracking
+- ✅ Admin authorization for moderation routes
 
 ### Privacy Protection
 - ✅ Anonymous posting with persistent pseudonyms
 - ✅ User ID never exposed for anonymous posts
 - ✅ Reaction privacy (only aggregates shown)
 - ✅ Privacy threshold (≥10 posts) for analytics
-- 🚧 Profile visibility controls (Phase 5)
-- 🚧 Account deactivation (Phase 5)
+- ✅ Profile visibility controls
+- ✅ Account deactivation
+- ✅ Search privacy filters for anonymous/private/deactivated content
 
 ### Data Protection
 - ✅ SQL injection prevention (SQLAlchemy ORM)
 - ✅ XSS protection (input sanitization)
 - ✅ CORS configuration
 - ✅ File upload restrictions
-- 🚧 Rate limiting (Phase 5)
-- 🚧 Security audit logs (Phase 5)
+- ✅ Rate limiting
+- ✅ Security audit logs
+- ✅ Moderation action logging
+- ✅ Optional Redis-backed background jobs
 
 ---
 
@@ -401,9 +425,7 @@ python tests/test_analytics.py     # Analytics (30 tests) ✅
 python tests/test_social.py        # Social features ✅
 ```
 
-**Backend Status:** 71/71 tests passing ✅
-
-**Phase 5 Target:** 120+ tests (adding email, OIDC-ready, comment tests)
+**Backend Status:** Phase 6 backend regression suites passing
 
 ### Frontend Testing
 
@@ -424,20 +446,25 @@ Currently manual testing via browser:
 - **[Frontend/QUICKSTART.md](Frontend/QUICKSTART.md)** - Frontend-specific guide (by Principessa)
 - **[backend/QUICKSTART.md](backend/QUICKSTART.md)** - Backend setup guide
 - **[backend/documentation/ARCHITECTURE_DECISIONS.md](backend/documentation/ARCHITECTURE_DECISIONS.md)** - Technical decisions
-- **[backend/documentation/PROJECT_TRACKER.md](backend/documentation/PROJECT_TRACKER.md)** - Backend development (Phase 5)
 - **[backend/documentation/Phases/INITIAL_PHASES_TRACKER.md](backend/documentation/Phases/INITIAL_PHASES_TRACKER.md)** - Phases 1-4 history
+- **[backend/documentation/PHASE_6_OVERVIEW.md](backend/documentation/PHASE_6_OVERVIEW.md)** - Phase 6 roadmap and completion tracker
 
 ### Phase Documentation
 - **[backend/documentation/Phases/PHASE_1_OVERVIEW.md](backend/documentation/Phases/PHASE_1_OVERVIEW.md)** - Foundation (Complete)
 - **[backend/documentation/Phases/PHASE_2_OVERVIEW.md](backend/documentation/Phases/PHASE_2_OVERVIEW.md)** - Posts & NLP (Complete)
 - **[backend/documentation/Phases/PHASE_3_OVERVIEW.md](backend/documentation/Phases/PHASE_3_OVERVIEW.md)** - Social Features (Complete)
 - **[backend/documentation/Phases/PHASE_4_OVERVIEW.md](backend/documentation/Phases/PHASE_4_OVERVIEW.md)** - Analytics (Complete)
-- **[backend/documentation/PHASE_5_OVERVIEW.md](backend/documentation/PHASE_5_OVERVIEW.md)** - Production Auth & UX (In Progress)
+- **[backend/documentation/Phases/PHASE_5_OVERVIEW.md](backend/documentation/Phases/PHASE_5_OVERVIEW.md)** - Production Auth & UX
+- **[backend/documentation/PHASE_6_OVERVIEW.md](backend/documentation/PHASE_6_OVERVIEW.md)** - Scale, search, moderation, messaging, infra
 
 ### Technical Guides
 - **[backend/documentation/Technical/BILINGUAL_GUIDE.md](backend/documentation/Technical/BILINGUAL_GUIDE.md)** - Bilingual NLP implementation
 - **[backend/documentation/Technical/EMOJI_COLLATION_BUG.md](backend/documentation/Technical/EMOJI_COLLATION_BUG.md)** - Critical bug fix documentation
 - **[backend/documentation/Technical/MIGRATION_GUIDE.md](backend/documentation/Technical/MIGRATION_GUIDE.md)** - Migration runbook
+- **[backend/documentation/Technical/SEARCH_API_GUIDE.md](backend/documentation/Technical/SEARCH_API_GUIDE.md)** - Unified search behavior
+- **[backend/documentation/Technical/MESSAGING_GUIDE.md](backend/documentation/Technical/MESSAGING_GUIDE.md)** - Direct messaging system
+- **[backend/documentation/Technical/MODERATION_GUIDE.md](backend/documentation/Technical/MODERATION_GUIDE.md)** - Reporting and admin workflow
+- **[backend/documentation/Technical/RATE_LIMITING_GUIDE.md](backend/documentation/Technical/RATE_LIMITING_GUIDE.md)** - Abuse prevention and Redis notes
 - **[backend/documentation/Technical/OIDC_ENTRA_INTEGRATION_GUIDE.md](backend/documentation/Technical/OIDC_ENTRA_INTEGRATION_GUIDE.md)** - OIDC integration details
 - **[backend/documentation/Technical/OIDC_REENABLE_PLAYBOOK.md](backend/documentation/Technical/OIDC_REENABLE_PLAYBOOK.md)** - Step-by-step re-enable checklist
 
@@ -452,20 +479,16 @@ Currently manual testing via browser:
 - ✅ **Phase 2:** Posts & NLP - Sentiment Analysis (8/8 tests)
 - ✅ **Phase 3:** Social Features - Follows, Reactions, Feeds (26/26 tests)
 - ✅ **Phase 4:** Analytics - Mood Insights, Privacy Thresholds (30/30 tests)
+- ✅ **Phase 5:** Production Auth & UX
+- ✅ **Phase 6:** Search, moderation, messaging, push, caching, background jobs
 
-**Current Phase:**
-- 🚧 **Phase 5:** Production Auth & UX (In Progress)
-  - Email verification system (active)
-  - Université Laval OIDC / Entra integration (paused behind feature flag)
-  - Password reset flow (active)
-  - Profile customization (bio, pictures)
-  - Comment system with threading
-  - Notification system
-  - Session management
-  - 2FA (optional)
-
-**Timeline:** 10-14 days for Phase 5  
-**Priority:** High - Production Readiness
+**Current Backend State:**
+- unified search across posts, users, and zones
+- discovery and trending feeds
+- moderation/reporting pipeline with admin actions
+- direct messaging and unread tracking
+- push subscription infrastructure
+- response caching and optional Redis/RQ background jobs
 
 ### Frontend Progress
 
@@ -477,7 +500,7 @@ Currently manual testing via browser:
 | Feed Posts | 🟠 Next | Will use `GET /api/posts/feed` |
 | Post Creation | 🔵 Planned | Phase 4 |
 | User Profiles | 🔵 Planned | Phase 4 |
-| Analytics Dashboard | 🔵 Planned | Phase 6 |
+| Analytics Dashboard | 🔵 Planned | Uses existing backend analytics APIs |
 
 **Overall Progress:** ~65%
 
@@ -517,13 +540,17 @@ python3 -m http.server 8000
 
 ```bash
 # Backend (.env)
-MYSQL_HOST=localhost
-MYSQL_PORT=3306
-MYSQL_USER=pulse_user
-MYSQL_PASSWORD=***
-MYSQL_DATABASE=pulse_db
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=pulse_user
+DB_PASSWORD=***
+DB_NAME=pulse_db
 JWT_SECRET_KEY=***
 FRONTEND_URL=http://127.0.0.1:8000
+SMTP_HOST=smtp.gmail.com
+SMTP_FROM=Pulse <pulse.ulaval@gmail.com>
+REDIS_URL=redis://localhost:6379/0
+BACKGROUND_JOBS_ENABLED=false
 
 # Frontend (hardcoded in auth.js)
 BACKEND_URL=http://127.0.0.1:5000
@@ -540,12 +567,14 @@ JWT_STORAGE_KEY=pulse_token
 - [ ] HTTPS enabled
 - [ ] Environment variables secured
 - [ ] SMTP server configured
+- [ ] Redis configured if using background jobs or shared rate-limit storage
 - [ ] OIDC app credentials obtained (only needed when re-enabling institutional login)
 - [ ] File upload directory configured
 - [ ] Database backups scheduled
 - [ ] Rate limiting enabled
+- [ ] Background worker running if Redis-backed jobs are enabled
 - [ ] Logging configured
-- [ ] All tests passing (120+)
+- [ ] Backend regression suites passing
 
 **Frontend:**
 - [ ] Update API base URL to production backend
@@ -575,9 +604,10 @@ JWT_STORAGE_KEY=pulse_token
 ## 🐛 KNOWN ISSUES
 
 ### Backend
-- ✅ Emoji collation bug - FIXED (Feb 14, 2026)
-- ✅ Analytics response structure - FIXED (Feb 14, 2026)
-- 🚧 Phase 5 features in development
+- ✅ Phase 6 backend systems implemented
+- ✅ Email verification and password reset active
+- ✅ Search, moderation, messaging, push, caching, and background jobs available
+- ⏸️ OIDC/Entra remains feature-flagged off until university rollout
 
 ### Frontend
 - ✅ ES modules working via HTTP server
@@ -619,12 +649,12 @@ For questions or issues, please contact the development team or open an issue in
 **Documentation:**
 - Frontend Guide: [Frontend/QUICKSTART.md](Frontend/QUICKSTART.md)
 - Backend Guide: [backend/QUICKSTART.md](backend/QUICKSTART.md)
-- Backend Tracker: [backend/documentation/PROJECT_TRACKER.md](backend/documentation/PROJECT_TRACKER.md)
+- Phase 6 Overview: [backend/documentation/PHASE_6_OVERVIEW.md](backend/documentation/PHASE_6_OVERVIEW.md)
 
 ---
 
-**Last Updated:** February 14, 2026  
-**Backend Status:** Phase 4 Complete (71/71 tests ✅), Phase 5 In Progress (90% planned)  
+**Last Updated:** March 15, 2026  
+**Backend Status:** Phase 6 Complete  
 **Frontend Status:** Phase 2 Complete (90%), Phase 3 In Progress (60%)  
 **Repository:** [github.com/mo-dev-x/pulse](https://github.com/mo-dev-x/pulse)
 
@@ -632,13 +662,12 @@ For questions or issues, please contact the development team or open an issue in
 
 ## 🎉 MILESTONE ACHIEVEMENTS
 
-**February 2026:**
-- ✅ Backend Phases 1-4 Complete (71/71 tests passing)
+**March 2026:**
+- ✅ Backend Phases 1-6 complete
 - ✅ Frontend Auth Integration Complete (login + register working)
 - ✅ JWT authentication working end-to-end
-- ✅ Emoji collation bug resolved
-- ✅ Analytics endpoints operational
-- 🚧 Backend Phase 5 in development
+- ✅ Search, moderation, messaging, push, caching, and background jobs added
+- ✅ Architecture docs and technical guides updated
 - 🚧 Frontend feed UI in progress
 
-**Next Major Milestone:** Feed API integration + Backend Phase 5 completion 🚀
+**Next Major Milestone:** Frontend integration catch-up for the completed backend platform 🚀

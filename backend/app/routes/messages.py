@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
+from sqlalchemy import func
 
 from app import db, limiter, rate_limit_key_user, rate_limit_value
 from app.models import Conversation, Message, User
@@ -73,6 +74,8 @@ def create_conversation():
     target_user = User.query.filter_by(username=username).first()
 
     if not target_user:
+        return jsonify({'error': get_localized_message(request, 'validation_error'), 'message': get_localized_message(request, 'user_not_found')}), 404
+    if target_user.is_deactivated:
         return jsonify({'error': get_localized_message(request, 'validation_error'), 'message': get_localized_message(request, 'user_not_found')}), 404
     if target_user.id == current_user_id:
         return jsonify({'error': get_localized_message(request, 'validation_error'), 'message': 'You cannot message yourself'}), 400
@@ -172,20 +175,23 @@ def mark_conversation_read(conversation_id):
 def unread_count():
     """Return unread conversation and message totals for the current user."""
     current_user_id = int(get_jwt_identity())
-    conversations = Conversation.query.filter(
-        (Conversation.participant_a == current_user_id) | (Conversation.participant_b == current_user_id)
-    ).all()
-
-    unread_conversations = 0
-    unread_messages = 0
-    for conversation in conversations:
-        count = conversation.messages.filter(
+    unread_counts = (
+        db.session.query(
+            Message.conversation_id,
+            func.count(Message.id).label('unread_count'),
+        )
+        .join(Conversation, Conversation.id == Message.conversation_id)
+        .filter(
+            ((Conversation.participant_a == current_user_id) | (Conversation.participant_b == current_user_id)),
             Message.sender_id != current_user_id,
-            Message.is_read == False  # noqa: E712
-        ).count()
-        if count:
-            unread_conversations += 1
-            unread_messages += count
+            Message.is_read == False,  # noqa: E712
+        )
+        .group_by(Message.conversation_id)
+        .all()
+    )
+
+    unread_conversations = len(unread_counts)
+    unread_messages = sum(row.unread_count for row in unread_counts)
 
     return jsonify({
         'unread_conversations': unread_conversations,

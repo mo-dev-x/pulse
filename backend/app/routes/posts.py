@@ -157,6 +157,14 @@ def _filtered_public_posts(zone_id=None, sentiment=None, window=None):
     return query.order_by(Post.created_at.desc()).all()
 
 
+def _trending_cache_key():
+    """Cache trending responses per user because payload includes my_reaction."""
+    current_user_id = get_jwt_identity() or 'anonymous'
+    query_items = sorted(request.args.items(multi=True))
+    query_string = '&'.join(f'{key}={value}' for key, value in query_items)
+    return f"trending_posts:{current_user_id}:{query_string}"
+
+
 @bp.route('', methods=['POST'])
 @jwt_required()
 @limiter.limit(rate_limit_value('POST_CREATE_RATE_LIMIT', '15 per hour'), key_func=rate_limit_key_user)
@@ -436,7 +444,7 @@ def discover_posts():
 
 @bp.route('/trending', methods=['GET'])
 @jwt_required()
-@cache.cached(timeout=120, query_string=True)
+@cache.cached(timeout=120, make_cache_key=_trending_cache_key)
 def trending_posts():
     """Return trending public posts and zone activity for a time window."""
     current_user_id = int(get_jwt_identity())

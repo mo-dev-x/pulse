@@ -20,6 +20,7 @@ Document the Phase 6 direct messaging system and its backend rules.
 
 ## Behavioral Rules
 - Users cannot message themselves
+- Deactivated accounts are not messageable
 - Non-participants cannot read or write in a conversation
 - Creating the same conversation twice returns the existing thread
 - Messages support unread counts and read receipts
@@ -34,6 +35,7 @@ Document the Phase 6 direct messaging system and its backend rules.
   - `backend/app/models/message.py`
 - Routes:
   - `backend/app/routes/messages.py`
+- `/api/messages/unread-count` uses one grouped aggregate query instead of one count query per conversation
 
 ## Validation
 1. Create a conversation between two verified users.

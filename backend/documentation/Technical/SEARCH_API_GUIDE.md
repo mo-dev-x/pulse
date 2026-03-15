@@ -35,6 +35,15 @@ Document the Phase 6 unified search endpoints, query parameters, and privacy gua
 }
 ```
 
+### Production Indexes
+Search is intended to run with MySQL `FULLTEXT` indexes in production:
+
+```sql
+ALTER TABLE posts ADD FULLTEXT INDEX ft_posts_content (content);
+ALTER TABLE users ADD FULLTEXT INDEX ft_users_identity (username, display_name, bio);
+ALTER TABLE campus_zones ADD FULLTEXT INDEX ft_zones_search (name, description);
+```
+
 ## `GET /api/search/users`
 
 ### Query Params
@@ -55,6 +64,7 @@ Used by `@mention` autocomplete in post and comment composition.
 - Route file: `backend/app/routes/search.py`
 - Search supports posts, users, and zones from one endpoint
 - Zone search works alongside the dedicated zone search/suggest endpoints
+- Post search should narrow results in SQL before Python-side match scoring
 
 ## Validation
 1. Search with `type=posts` and confirm anonymous content is excluded.

@@ -44,24 +44,24 @@ def _paginate(items, page, per_page):
 
 
 def _search_posts(query, zone_id=None):
-    posts = (
+    search_pattern = f"%{query}%"
+    post_query = (
         Post.query
         .join(User, Post.user_id == User.id)
         .filter(Post.is_anonymous == False)  # noqa: E712
         .filter(Post.hidden_by_mod == False)  # noqa: E712
         .filter(User.is_deactivated == False)  # noqa: E712
+        .filter(Post.content.ilike(search_pattern))
         .order_by(Post.created_at.desc())
-        .all()
     )
+
+    if zone_id:
+        post_query = post_query.filter(Post.zone_id == zone_id)
+
+    posts = post_query.all()
 
     results = []
     for post in posts:
-        if zone_id and post.zone_id != zone_id:
-            continue
-
-        if not _contains(post.content, query):
-            continue
-
         post_dict = post.to_dict()
         post_dict['match_score'] = _score_text_match(
             query,
@@ -180,9 +180,6 @@ def search_users():
 
     if not query:
         return jsonify({'error': 'Missing search query', 'message': 'Please provide ?q=...'}), 400
-
-    if len(query) < 1:
-        return jsonify({'error': 'Query too short', 'message': 'Please enter at least 1 character'}), 400
 
     matches = _search_users(query)[:limit]
     users = [

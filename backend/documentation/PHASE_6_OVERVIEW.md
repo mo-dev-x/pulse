@@ -76,6 +76,8 @@ ALTER TABLE users ADD FULLTEXT INDEX ft_users_identity (username, display_name, 
 ALTER TABLE campus_zones ADD FULLTEXT INDEX ft_zones_search (name, description);
 ```
 
+> These indexes are required before production-scale search traffic. Search should narrow result sets in SQL first and only rank the smaller candidate set in Python.
+
 > **AD-051** — See Architecture Decisions section below.
 
 #### Endpoints to Build
@@ -712,6 +714,8 @@ Usage:
 def get_all_zones():
     ...
 ```
+
+If a cached endpoint includes user-specific fields such as `my_reaction`, the cache key must include the authenticated user identity rather than only the URL/query string.
 
 ---
 

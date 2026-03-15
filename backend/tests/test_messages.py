@@ -6,7 +6,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app import db
-from app.models import Conversation, Message
+from app.models import Conversation, Message, User
 from tests.phase5_test_utils import Phase5BaseTestCase
 
 
@@ -57,6 +57,16 @@ class TestMessages(Phase5BaseTestCase):
         token_a, user_a = self._verified_user('dm_self@ulaval.ca', 'dm_self')
         response = self.client.post('/api/messages/conversations', json={'username': user_a['username']}, headers=self.auth_headers(token_a))
         self.assertEqual(response.status_code, 400)
+
+    def test_cannot_start_conversation_with_deactivated_user(self):
+        token_a, _ = self._verified_user('dm_deact_a@ulaval.ca', 'dm_deact_a')
+        _, user_b = self._verified_user('dm_deact_b@ulaval.ca', 'dm_deact_b')
+        db_user = db.session.get(User, user_b['id'])
+        db_user.is_deactivated = True
+        db.session.commit()
+
+        response = self.client.post('/api/messages/conversations', json={'username': user_b['username']}, headers=self.auth_headers(token_a))
+        self.assertEqual(response.status_code, 404, response.get_json())
 
     def test_can_send_a_message(self):
         token_a, _ = self._verified_user('dm_send_a@ulaval.ca', 'dm_send_a')
