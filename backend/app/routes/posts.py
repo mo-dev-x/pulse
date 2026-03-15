@@ -15,7 +15,7 @@ Endpoints:
 
 import os
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from werkzeug.utils import secure_filename
@@ -28,6 +28,7 @@ from app.models.media import Media
 from app.models.reaction import Reaction
 from app.models.bookmark import Bookmark
 from app.services import analyze_sentiment
+from app.services.job_queue_service import enqueue_task
 from app.services.notification_service import create_mention_notifications
 from app.utils.i18n import get_localized_message
 
@@ -82,7 +83,7 @@ def _public_posts_query():
 
 
 def _post_engagement_metrics(post, now=None):
-    now = now or datetime.utcnow()
+    now = now or datetime.now(timezone.utc).replace(tzinfo=None)
     reaction_count = Reaction.get_total_count(post.id)
     comment_count = post.comments.count()
     hours_since = max((now - post.created_at).total_seconds() / 3600, 1 / 60)
@@ -102,7 +103,7 @@ def _sentiment_bucket(avg_score):
 
 def _serialize_ranked_posts(posts, current_user_id):
     ranked = []
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     for post in posts:
         post_dict = post.to_dict(current_user_id=current_user_id)
         post_dict = _enrich_post_dict(post_dict, post, current_user_id)
@@ -152,7 +153,7 @@ def _filtered_public_posts(zone_id=None, sentiment=None, window=None):
     if sentiment:
         query = query.filter(Post.sentiment_label == sentiment)
     if window:
-        query = query.filter(Post.created_at >= datetime.utcnow() - window)
+        query = query.filter(Post.created_at >= datetime.now(timezone.utc).replace(tzinfo=None) - window)
     return query.order_by(Post.created_at.desc()).all()
 
 
@@ -275,6 +276,12 @@ def create_post():
 
         db.session.commit()
 
+        enqueue_task(
+            'app.tasks.aggregation_tasks.refresh_post_aggregates',
+            new_post.id,
+            queue_name='analytics',
+        )
+
         # Return post (privacy-aware serialization)
         post_dict = new_post.to_dict(current_user_id=user_id)
         post_dict = _enrich_post_dict(post_dict, new_post, user_id)
@@ -304,7 +311,7 @@ def create_post():
 def bookmark_post(post_id):
     """Bookmark a post for the authenticated user."""
     current_user_id = int(get_jwt_identity())
-    post = Post.query.get(post_id)
+    post = db.session.get(Post, post_id)
     if not post:
         return jsonify({
             'error': get_localized_message(request, 'validation_error'),
@@ -639,7 +646,7 @@ def delete_post(post_id):
     """
     current_user_id = int(get_jwt_identity())
 
-    post = Post.query.get(post_id)
+    post = db.session.get(Post, post_id)
     if not post:
         return jsonify({
             'error': get_localized_message(request, 'validation_error'),
@@ -655,7 +662,7 @@ def delete_post(post_id):
 
     # Time restriction: within 24 hours
     if post.created_at:
-        hours_since = (datetime.utcnow() - post.created_at).total_seconds() / 3600
+        hours_since = (datetime.now(timezone.utc).replace(tzinfo=None) - post.created_at).total_seconds() / 3600
         if hours_since > 24:
             return jsonify({
                 'error': get_localized_message(request, 'validation_error'),
@@ -684,13 +691,13 @@ def delete_post(post_id):
 def pin_post(post_id):
     """Pin one of the current user's own posts to profile."""
     current_user_id = int(get_jwt_identity())
-    post = Post.query.get(post_id)
+    post = db.session.get(Post, post_id)
     if not post:
         return jsonify({'error': get_localized_message(request, 'validation_error'), 'message': get_localized_message(request, 'post_not_found')}), 404
     if post.user_id != current_user_id:
         return jsonify({'error': get_localized_message(request, 'forbidden'), 'message': get_localized_message(request, 'forbidden')}), 403
 
-    user = User.query.get(current_user_id)
+    user = db.session.get(User, current_user_id)
     user.pinned_post_id = post_id
     db.session.commit()
     return jsonify({'message': 'Post pinned', 'pinned_post_id': post_id}), 200
@@ -701,7 +708,7 @@ def pin_post(post_id):
 def unpin_post():
     """Remove profile pinned post."""
     current_user_id = int(get_jwt_identity())
-    user = User.query.get(current_user_id)
+    user = db.session.get(User, current_user_id)
     user.pinned_post_id = None
     db.session.commit()
     return jsonify({'message': 'Pinned post removed'}), 200

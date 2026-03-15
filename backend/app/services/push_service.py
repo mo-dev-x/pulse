@@ -1,6 +1,6 @@
 """Push notification delivery helpers."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from flask import current_app
 
@@ -18,7 +18,7 @@ def send_push_notification(user_id: int, title: str, body: str, data: dict = Non
 
     subscriptions = PushSubscription.query.filter_by(user_id=user_id, is_active=True).all()
     sent = 0
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     for subscription in subscriptions:
         subscription.last_used_at = now
         sent += 1

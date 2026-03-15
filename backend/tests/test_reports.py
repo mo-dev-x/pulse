@@ -92,7 +92,7 @@ class TestReports(Phase5BaseTestCase):
             headers=self.auth_headers(admin_token),
         )
         self.assertEqual(action.status_code, 200, action.get_json())
-        post = Post.query.get(post_id)
+        post = db.session.get(Post, post_id)
         self.assertTrue(post.hidden_by_mod)
         self.assertTrue(post.is_flagged)
         self.assertIsNotNone(SecurityLog.query.filter_by(event_type='content_hidden_by_admin').first())
@@ -113,7 +113,7 @@ class TestReports(Phase5BaseTestCase):
             headers=self.auth_headers(admin_token),
         )
         self.assertEqual(action.status_code, 200, action.get_json())
-        db_user = User.query.get(owner['id'])
+        db_user = db.session.get(User, owner['id'])
         self.assertTrue(db_user.is_deactivated)
         self.assertIsNotNone(SecurityLog.query.filter_by(event_type='user_deactivated_by_admin').first())
 
@@ -144,5 +144,4 @@ class TestReports(Phase5BaseTestCase):
 
         response = self.client.delete(f'/api/admin/posts/{post_id}', headers=self.auth_headers(admin_token))
         self.assertEqual(response.status_code, 200, response.get_json())
-        self.assertIsNone(Post.query.get(post_id))
-
+        self.assertIsNone(db.session.get(Post, post_id))

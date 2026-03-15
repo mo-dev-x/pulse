@@ -43,4 +43,4 @@ class CampusZone(db.Model):
     @staticmethod
     def get_by_id(zone_id):
         """Get zone by ID"""
-        return CampusZone.query.get(zone_id)
+        return db.session.get(CampusZone, zone_id)

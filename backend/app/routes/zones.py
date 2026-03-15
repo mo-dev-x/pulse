@@ -1,6 +1,6 @@
 """Campus zone discovery, search, and trending routes."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from flask import Blueprint, jsonify, request
 from sqlalchemy import func, or_
 
@@ -173,7 +173,7 @@ def get_all_zones():
 @bp.route('/zones/<int:zone_id>', methods=['GET'])
 def get_zone(zone_id):
     """Return one zone by ID."""
-    zone = CampusZone.query.get(zone_id)
+    zone = db.session.get(CampusZone, zone_id)
     if not zone:
         return jsonify({
             'error': 'Zone not found',
@@ -210,7 +210,7 @@ def get_trending_zones():
     if not window:
         return jsonify({'error': 'Invalid window', 'message': 'window must be one of 1h, 6h, 24h, or 7d'}), 400
 
-    cutoff = datetime.utcnow() - window
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - window
     posts = (
         Post.query
         .join(User, User.id == Post.user_id)
@@ -265,14 +265,14 @@ def get_trending_zones():
 @bp.route('/zones/<int:zone_id>/activity', methods=['GET'])
 def get_zone_activity(zone_id):
     """Return zone activity summary and recent public posts."""
-    zone = CampusZone.query.get(zone_id)
+    zone = db.session.get(CampusZone, zone_id)
     if not zone:
         return jsonify({
             'error': 'Zone not found',
             'message': f'No zone found with ID {zone_id}'
         }), 404
 
-    cutoff = datetime.utcnow() - timedelta(hours=24)
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=24)
     posts = (
         Post.query
         .join(User, User.id == Post.user_id)

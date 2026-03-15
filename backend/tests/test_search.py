@@ -1,6 +1,6 @@
 """Automated tests for Phase 6 unified search endpoints."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import sys
 
@@ -43,25 +43,25 @@ class TestSearch(Phase5BaseTestCase):
             self.public_user,
             'I study every day in the bibliotheque and love the calm atmosphere.',
             zone=self.zone_library,
-            created_at=datetime.utcnow() - timedelta(minutes=5),
+            created_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=5),
         )
         self._make_post(
             self.public_user,
             'PEPS training before class keeps my energy up.',
             zone=self.zone_peps,
-            created_at=datetime.utcnow() - timedelta(minutes=4),
+            created_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=4),
         )
         self._make_post(
             self.public_user,
             'bibliotheque page 1',
             zone=self.zone_library,
-            created_at=datetime.utcnow() - timedelta(minutes=3),
+            created_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=3),
         )
         self._make_post(
             self.public_user,
             'bibliotheque page 2',
             zone=self.zone_library,
-            created_at=datetime.utcnow() - timedelta(minutes=2),
+            created_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=2),
         )
         self._make_post(
             self.private_user,
@@ -170,4 +170,3 @@ class TestSearch(Phase5BaseTestCase):
         users = response.get_json()['users']
         self.assertEqual(len(users), 1)
         self.assertEqual(users[0]['username'], 'bibliofan')
-

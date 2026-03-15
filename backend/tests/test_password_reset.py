@@ -1,6 +1,6 @@
 """Automated tests for Phase 5A password reset flow."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import sys
 
@@ -44,7 +44,7 @@ class TestPasswordReset(Phase5BaseTestCase):
         self.register_user(email='reset3@ulaval.ca', username='reset3')
         user = User.query.filter_by(email='reset3@ulaval.ca').first()
         user.reset_token = 'expired-reset-token'
-        user.reset_expires = datetime.utcnow() - timedelta(minutes=2)
+        user.reset_expires = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=2)
         db.session.commit()
 
         response = self.client.post('/api/auth/reset-password', json={

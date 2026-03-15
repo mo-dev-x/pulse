@@ -5,6 +5,8 @@ Creates and configures the Flask application with all extensions,
 blueprints, and error handlers.
 """
 
+from datetime import datetime, timezone
+
 from flask import Flask, jsonify, request
 from flask_caching import Cache
 from flask_sqlalchemy import SQLAlchemy
@@ -84,7 +86,6 @@ def create_app(config_name='development'):
 
     @jwt.token_in_blocklist_loader
     def is_token_revoked(jwt_header, jwt_payload):
-        from datetime import datetime
         from app.models.session import Session
         jti = jwt_payload.get('jti')
         if not jti:
@@ -94,7 +95,7 @@ def create_app(config_name='development'):
             return False
         if not session.is_active:
             return True
-        if session.expires_at and session.expires_at < datetime.utcnow():
+        if session.expires_at and session.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
             return True
         return False
     

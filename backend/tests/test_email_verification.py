@@ -1,6 +1,6 @@
 """Automated tests for Phase 5A email verification features."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import sys
 
@@ -57,7 +57,7 @@ class TestEmailVerification(Phase5BaseTestCase):
         )
         user = User.query.filter_by(email=user_payload['email']).first()
         user.verification_token = 'expired-token'
-        user.verification_expires = datetime.utcnow() - timedelta(minutes=1)
+        user.verification_expires = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=1)
         db.session.commit()
 
         response = self.client.get('/api/auth/verify-email/expired-token')

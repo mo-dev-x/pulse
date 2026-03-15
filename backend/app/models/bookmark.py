@@ -1,6 +1,6 @@
 """Bookmark model for private saved posts."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app import db
 
@@ -11,7 +11,7 @@ class Bookmark(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id', ondelete='CASCADE'), nullable=False, index=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     __table_args__ = (
         db.UniqueConstraint('user_id', 'post_id', name='unique_user_bookmark'),

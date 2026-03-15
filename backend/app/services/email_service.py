@@ -2,13 +2,14 @@
 
 import secrets
 import smtplib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 from flask import current_app
 
 from app import db
+from app.services.job_queue_service import enqueue_task
 
 
 def _send_html_email(recipient, subject, html_body):
@@ -51,7 +52,7 @@ def create_verification_token(user):
     """Create and persist a one-time verification token valid for 24 hours."""
     token = secrets.token_urlsafe(32)
     user.verification_token = token
-    user.verification_expires = datetime.utcnow() + timedelta(hours=24)
+    user.verification_expires = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=24)
     db.session.commit()
     return token
 
@@ -60,14 +61,12 @@ def create_password_reset_token(user):
     """Create and persist a one-time reset token valid for 1 hour."""
     token = secrets.token_urlsafe(32)
     user.reset_token = token
-    user.reset_expires = datetime.utcnow() + timedelta(hours=1)
+    user.reset_expires = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=1)
     db.session.commit()
     return token
 
 
-def send_verification_email(user):
-    """Send account verification email."""
-    token = create_verification_token(user)
+def _build_verification_email(user, token):
     frontend_url = current_app.config.get('FRONTEND_URL', 'http://localhost:3000')
     verify_link = f'{frontend_url}/verify-email?token={token}'
     greeting_name = user.display_name or user.username or 'there'
@@ -102,12 +101,10 @@ def send_verification_email(user):
         </html>
         """
 
-    return _send_html_email(recipient=user.email, subject=subject, html_body=html)
+    return subject, html
 
 
-def send_password_reset_email(user):
-    """Send password reset email."""
-    token = create_password_reset_token(user)
+def _build_password_reset_email(user, token):
     frontend_url = current_app.config.get('FRONTEND_URL', 'http://localhost:3000')
     reset_link = f'{frontend_url}/reset-password?token={token}'
     lang = _resolve_user_language(user)
@@ -137,7 +134,39 @@ def send_password_reset_email(user):
         </html>
         """
 
-    return _send_html_email(recipient=user.email, subject=subject, html_body=html)
+    return subject, html
+
+
+def send_verification_email(user):
+    """Send account verification email."""
+    token = create_verification_token(user)
+    subject, html = _build_verification_email(user, token)
+    dispatch = enqueue_task(
+        'app.tasks.email_tasks.deliver_email',
+        user.email,
+        subject,
+        html,
+        queue_name='email',
+    )
+    if dispatch.mode in {'eager', 'inline'}:
+        return dispatch.result
+    return True, None
+
+
+def send_password_reset_email(user):
+    """Send password reset email."""
+    token = create_password_reset_token(user)
+    subject, html = _build_password_reset_email(user, token)
+    dispatch = enqueue_task(
+        'app.tasks.email_tasks.deliver_email',
+        user.email,
+        subject,
+        html,
+        queue_name='email',
+    )
+    if dispatch.mode in {'eager', 'inline'}:
+        return dispatch.result
+    return True, None
 
 
 def send_notification_email(user, subject, body_html):

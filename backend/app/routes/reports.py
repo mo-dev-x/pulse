@@ -1,6 +1,6 @@
 """Moderation reports and admin review routes."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
@@ -8,23 +8,22 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 from app import db
 from app.middleware import require_admin
 from app.models import Comment, Post, Report, User
+from app.services.job_queue_service import enqueue_task
 from app.services.security_log_service import log_security_event
 from app.utils.i18n import get_localized_message
 
 bp = Blueprint('reports', __name__)
 
 REPORTABLE_REASONS = {'spam', 'harassment', 'self_harm', 'misinformation', 'inappropriate', 'other'}
-AUTO_FLAG_THRESHOLD = 5
-AUTO_FLAG_WINDOW = timedelta(hours=24)
 
 
 def _resolve_target(target_type, target_id):
     if target_type == 'post':
-        return Post.query.get(target_id)
+        return db.session.get(Post, target_id)
     if target_type == 'comment':
-        return Comment.query.get(target_id)
+        return db.session.get(Comment, target_id)
     if target_type == 'user':
-        return User.query.get(target_id)
+        return db.session.get(User, target_id)
     return None
 
 
@@ -44,22 +43,6 @@ def _target_preview(target_type, target):
     if target_type == 'user':
         return {'username': target.username, 'display_name': target.display_name, 'is_deactivated': target.is_deactivated}
     return None
-
-
-def _maybe_auto_flag_post(post_id):
-    cutoff = datetime.utcnow() - AUTO_FLAG_WINDOW
-    recent_count = Report.query.filter(
-        Report.target_type == 'post',
-        Report.target_id == post_id,
-        Report.created_at >= cutoff
-    ).count()
-
-    post = Post.query.get(post_id)
-    if post and recent_count >= AUTO_FLAG_THRESHOLD:
-        post.is_flagged = True
-        post.flagged_at = datetime.utcnow()
-        post.hidden_by_mod = True
-
 
 @bp.route('/reports', methods=['POST'])
 @jwt_required()
@@ -108,9 +91,6 @@ def create_report():
     db.session.add(report)
     db.session.flush()
 
-    if target_type == 'post':
-        _maybe_auto_flag_post(target_id)
-
     log_security_event(
         event_type='report_submitted',
         user_id=reporter_id,
@@ -119,6 +99,13 @@ def create_report():
         metadata={'report_id': report.id, 'target_type': target_type, 'target_id': target_id, 'reason': reason},
     )
     db.session.commit()
+
+    if target_type == 'post':
+        enqueue_task(
+            'app.tasks.moderation_tasks.evaluate_auto_flag_post',
+            target_id,
+            queue_name='moderation',
+        )
 
     return jsonify({
         'message': 'Report submitted. Our team will review it.',
@@ -166,7 +153,7 @@ def act_on_report(report_id):
     admin_id = int(get_jwt_identity())
     data = request.get_json() or {}
     action = (data.get('action') or '').strip()
-    report = Report.query.get(report_id)
+    report = db.session.get(Report, report_id)
 
     if not report:
         return jsonify({'error': get_localized_message(request, 'not_found'), 'message': 'Report not found'}), 404
@@ -178,9 +165,9 @@ def act_on_report(report_id):
     if not target:
         return jsonify({'error': get_localized_message(request, 'not_found'), 'message': 'Report target not found'}), 404
 
-    target_user = target if report.target_type == 'user' else User.query.get(target.user_id)
+    target_user = target if report.target_type == 'user' else db.session.get(User, target.user_id)
     report.reviewed_by = admin_id
-    report.reviewed_at = datetime.utcnow()
+    report.reviewed_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     if action == 'dismiss':
         report.status = 'dismissed'
@@ -189,7 +176,7 @@ def act_on_report(report_id):
             return jsonify({'error': get_localized_message(request, 'validation_error'), 'message': 'hide_content is only supported for posts'}), 400
         target.hidden_by_mod = True
         target.is_flagged = True
-        target.flagged_at = target.flagged_at or datetime.utcnow()
+        target.flagged_at = target.flagged_at or datetime.now(timezone.utc).replace(tzinfo=None)
         report.status = 'actioned'
         log_security_event(
             event_type='content_hidden_by_admin',
@@ -211,7 +198,7 @@ def act_on_report(report_id):
         if not target_user:
             return jsonify({'error': get_localized_message(request, 'not_found'), 'message': 'Target user not found'}), 404
         target_user.is_deactivated = True
-        target_user.deactivated_at = datetime.utcnow()
+        target_user.deactivated_at = datetime.now(timezone.utc).replace(tzinfo=None)
         report.status = 'actioned'
         log_security_event(
             event_type='user_deactivated_by_admin',
@@ -242,7 +229,7 @@ def act_on_report(report_id):
 def admin_delete_post(post_id):
     """Hard-delete a post as an admin moderation action."""
     admin_id = int(get_jwt_identity())
-    post = Post.query.get(post_id)
+    post = db.session.get(Post, post_id)
     if not post:
         return jsonify({'error': get_localized_message(request, 'not_found'), 'message': 'Post not found'}), 404
 

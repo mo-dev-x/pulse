@@ -100,7 +100,7 @@ def follow_user(username):
         }), 400
 
     try:
-        actor = User.query.get(current_user_id)
+        actor = db.session.get(User, current_user_id)
         new_follow = Follower(
             follower_id=current_user_id,
             following_id=target_user.id
@@ -214,7 +214,7 @@ def get_followers(username):
 
     followers_list = []
     for follow in paginated.items:
-        user = User.query.get(follow.follower_id)
+        user = db.session.get(User, follow.follower_id)
         if user:
             followers_list.append({
                 'id': user.id,
@@ -262,7 +262,7 @@ def get_following(username):
 
     following_list = []
     for follow in paginated.items:
-        user = User.query.get(follow.following_id)
+        user = db.session.get(User, follow.following_id)
         if user:
             following_list.append({
                 'id': user.id,

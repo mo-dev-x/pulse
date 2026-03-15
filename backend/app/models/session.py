@@ -1,6 +1,6 @@
 """Session model for JWT session tracking and revocation."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app import db
 
@@ -18,8 +18,8 @@ class Session(db.Model):
         nullable=False,
         default='unknown'
     )
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    last_activity = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
+    last_activity = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
     expires_at = db.Column(db.DateTime, nullable=True)
     is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)
 

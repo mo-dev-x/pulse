@@ -9,7 +9,7 @@ Key Features:
 - Methods for validation and authentication
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from app import db
 import bcrypt
 import re
@@ -97,7 +97,7 @@ class User(db.Model):
     )
     
     # Metadata
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
     last_login = db.Column(db.DateTime, nullable=True)
     is_active = db.Column(db.Boolean, default=True)
     
@@ -253,7 +253,7 @@ class User(db.Model):
         """
         # Check cooldown
         if self.pseudonym_last_changed:
-            days_since = (datetime.utcnow() - self.pseudonym_last_changed).days
+            days_since = (datetime.now(timezone.utc).replace(tzinfo=None) - self.pseudonym_last_changed).days
             if days_since < 90:
                 raise ValueError(f"Can change pseudonym in {90 - days_since} days")
         
@@ -268,7 +268,7 @@ class User(db.Model):
         
         # Update
         self.pseudonym = new_pseudonym
-        self.pseudonym_last_changed = datetime.utcnow()
+        self.pseudonym_last_changed = datetime.now(timezone.utc).replace(tzinfo=None)
     
     def to_dict(self, include_private=False):
         """
@@ -322,7 +322,7 @@ class User(db.Model):
         if not self.pseudonym_last_changed:
             return True
         
-        days_since = (datetime.utcnow() - self.pseudonym_last_changed).days
+        days_since = (datetime.now(timezone.utc).replace(tzinfo=None) - self.pseudonym_last_changed).days
         return days_since >= 90
     
     def days_until_pseudonym_change(self):
@@ -335,7 +335,7 @@ class User(db.Model):
         if self.can_change_pseudonym():
             return 0
         
-        days_since = (datetime.utcnow() - self.pseudonym_last_changed).days
+        days_since = (datetime.now(timezone.utc).replace(tzinfo=None) - self.pseudonym_last_changed).days
         return 90 - days_since
     
     def __repr__(self):

@@ -5,7 +5,7 @@ Daily and weekly mood aggregation tables for campus wellness insights.
 Aggregates are only shown when total_posts >= 10 (privacy threshold).
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from app import db
 
 
@@ -42,8 +42,12 @@ class DailyAggregate(db.Model):
     avg_sentiment = db.Column(db.Float, nullable=True)
 
     # Timestamps
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+        onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
 
     # Relationships
     zone = db.relationship('CampusZone', backref=db.backref('daily_aggregates', lazy='dynamic'))
@@ -134,8 +138,12 @@ class WeeklyAggregate(db.Model):
     avg_sentiment = db.Column(db.Float, nullable=True)
 
     # Timestamps
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+        onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
 
     # Relationships
     zone = db.relationship('CampusZone', backref=db.backref('weekly_aggregates', lazy='dynamic'))

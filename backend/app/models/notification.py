@@ -1,6 +1,6 @@
 """Notification model for user activity updates."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app import db
 
@@ -32,7 +32,7 @@ class Notification(db.Model):
     related_id = db.Column(db.Integer, nullable=True)
     actor_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     is_read = db.Column(db.Boolean, default=False, nullable=False, index=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False, index=True)
 
     user = db.relationship('User', foreign_keys=[user_id], backref=db.backref('notifications', lazy='dynamic'))
     actor = db.relationship('User', foreign_keys=[actor_id])

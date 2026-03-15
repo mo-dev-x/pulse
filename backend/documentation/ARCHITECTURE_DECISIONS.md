@@ -1031,6 +1031,61 @@ if hours_since > 24:
 
 ---
 
+### **AD-051: MySQL FULLTEXT Search Over External Engine**
+
+**Date:** 2026-03-15  
+**Decision:** Use MySQL `FULLTEXT` indexes for Phase 6 search instead of Elasticsearch or Meilisearch.
+
+**Rationale:** The existing stack is Python + MySQL. Adding a dedicated search engine introduces extra infrastructure, synchronization logic, and cost that are not justified at Pulse's current scale. MySQL `FULLTEXT` search is sufficient for ranked campus search across posts, users, and zones.
+
+**Implementation:** Unified search is exposed through `app/routes/search.py`, with backend privacy enforcement for anonymous posts, private profiles, and deactivated users.
+
+---
+
+### **AD-052: Report System as Moderation Inbox, Not Auto-Remove**
+
+**Date:** 2026-03-15  
+**Decision:** User reports create moderation queue items; content is not deleted immediately on report submission.
+
+**Rationale:** Immediate takedown is too easy to abuse. Pulse handles sensitive campus expression, so false positives are costly. The system uses admin review as the primary moderation path, with auto-flagging only as a temporary hide signal after repeated reports.
+
+**Implementation:** `reports` table + `/api/reports` and `/api/admin/*` endpoints. Posts can be auto-flagged into the admin queue, but deletion remains an explicit admin action.
+
+---
+
+### **AD-053: Conversations Keyed by Sorted User ID Pair**
+
+**Date:** 2026-03-15  
+**Decision:** Store direct message conversations with `participant_a=min(id1,id2)` and `participant_b=max(id1,id2)` under a unique pair constraint.
+
+**Rationale:** This guarantees one conversation per user pair, avoids duplicate threads based on initiation order, and keeps lookup logic simple.
+
+**Implementation:** `Conversation.normalize_pair()` and the `uq_conversation` unique constraint in `app/models/conversation.py`.
+
+---
+
+### **AD-054: Push Notifications Delivered Outside the Request Cycle**
+
+**Date:** 2026-03-15  
+**Decision:** Push delivery must not block request latency.
+
+**Rationale:** Notification fan-out is external and variable-latency work. Post creation, comments, and follows should remain responsive even if push delivery is slow or unavailable. In-app notifications remain the durable source of truth.
+
+**Implementation:** Notification creation persists immediately, while push delivery is delegated through the Phase 6 background job interface and can fall back gracefully when Redis/RQ is not configured.
+
+---
+
+### **AD-055: RQ Over Celery for Background Jobs**
+
+**Date:** 2026-03-15  
+**Decision:** Use `rq` with Redis for Phase 6 background processing instead of Celery.
+
+**Rationale:** `rq` is simpler to operate for the current project size, matches the lightweight deployment model, and reuses Redis already useful for production rate limiting. It is sufficient for email delivery, moderation checks, push dispatch, and aggregate refresh jobs.
+
+**Implementation:** Queue entrypoints live under `app/tasks/`, and the shared dispatch layer is `app/services/job_queue_service.py`. Testing uses eager execution to keep unit tests deterministic.
+
+---
+
 **📌 This document grows with the project. Every technical decision is recorded here.**
 
-**Last Updated:** Phase 5C complete — Notifications, sessions, mentions/bookmarks, 2FA/security, UX controls
+**Last Updated:** Phase 6 complete — Search, discovery, rate limiting, moderation, messaging, push, caching, background jobs

@@ -64,7 +64,7 @@ class Config:
     SMTP_PORT = int(os.getenv('SMTP_PORT', 587))
     SMTP_USER = os.getenv('SMTP_USER')
     SMTP_PASSWORD = os.getenv('SMTP_PASSWORD')
-    SMTP_FROM = os.getenv('SMTP_FROM', 'noreply@pulse.ulaval.ca')
+    SMTP_FROM = os.getenv('SMTP_FROM', 'pulse.ulaval@gmail.com')
     SMTP_USE_TLS = os.getenv('SMTP_USE_TLS', 'true').lower() == 'true'
 
     # OIDC / Azure Entra configuration
@@ -76,6 +76,10 @@ class Config:
     OIDC_CLIENT_SECRET = os.getenv('OIDC_CLIENT_SECRET')
     OIDC_REDIRECT_URI = os.getenv('OIDC_REDIRECT_URI', 'http://127.0.0.1:5000/api/auth/oidc/callback')
     OIDC_SCOPE = os.getenv('OIDC_SCOPE', 'openid profile email')
+    REDIS_URL = os.getenv('REDIS_URL')
+    BACKGROUND_JOBS_ENABLED = os.getenv('BACKGROUND_JOBS_ENABLED', 'false').lower() == 'true'
+    BACKGROUND_JOBS_EAGER = os.getenv('BACKGROUND_JOBS_EAGER', 'false').lower() == 'true'
+    BACKGROUND_JOB_TIMEOUT = int(os.getenv('BACKGROUND_JOB_TIMEOUT', 300))
     PUSH_ENABLED = os.getenv('PUSH_ENABLED', 'false').lower() == 'true'
     FCM_SERVER_KEY = os.getenv('FCM_SERVER_KEY')
 
@@ -120,6 +124,8 @@ class TestingConfig(Config):
     TESTING = True
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'  # In-memory database for tests
     WTF_CSRF_ENABLED = False
+    BACKGROUND_JOBS_ENABLED = False
+    BACKGROUND_JOBS_EAGER = True
 
 
 # Configuration dictionary

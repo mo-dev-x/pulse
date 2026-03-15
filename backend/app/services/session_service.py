@@ -1,6 +1,6 @@
 """Session tracking service for JWT lifecycle events."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from flask_jwt_extended import decode_token
 
@@ -27,10 +27,10 @@ def track_session(user_id, jwt_token, ip_address=None, user_agent=None):
     if not jti:
         return None
 
-    expires_at = datetime.utcfromtimestamp(exp) if exp else None
+    expires_at = datetime.fromtimestamp(exp, timezone.utc).replace(tzinfo=None) if exp else None
     existing = Session.query.filter_by(token_jti=jti).first()
     if existing:
-        existing.last_activity = datetime.utcnow()
+        existing.last_activity = datetime.now(timezone.utc).replace(tzinfo=None)
         existing.is_active = True
         return existing
 
@@ -52,7 +52,7 @@ def revoke_session(token_jti):
     session = Session.query.filter_by(token_jti=token_jti).first()
     if session:
         session.is_active = False
-        session.last_activity = datetime.utcnow()
+        session.last_activity = datetime.now(timezone.utc).replace(tzinfo=None)
     return session
 
 
@@ -60,5 +60,5 @@ def touch_session(token_jti):
     """Update last activity for an active session."""
     session = Session.query.filter_by(token_jti=token_jti, is_active=True).first()
     if session:
-        session.last_activity = datetime.utcnow()
+        session.last_activity = datetime.now(timezone.utc).replace(tzinfo=None)
     return session

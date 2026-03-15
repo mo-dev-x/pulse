@@ -1,6 +1,6 @@
 """Automated tests for Phase 5A comment system."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import sys
 
@@ -99,8 +99,8 @@ class TestComments(Phase5BaseTestCase):
         )
         self.assertEqual(ok_edit.status_code, 200, ok_edit.get_json())
 
-        comment = Comment.query.get(comment_id)
-        comment.created_at = datetime.utcnow() - timedelta(minutes=6)
+        comment = db.session.get(Comment, comment_id)
+        comment.created_at = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=6)
         db.session.commit()
 
         late_edit = self.client.patch(
@@ -123,7 +123,7 @@ class TestComments(Phase5BaseTestCase):
             headers=self.auth_headers(token)
         )
         self.assertEqual(delete_resp.status_code, 200)
-        self.assertIsNone(Comment.query.get(comment_id))
+        self.assertIsNone(db.session.get(Comment, comment_id))
 
     def test_comment_creation_requires_verified_account(self):
         token, _ = self.register_user(email='comment7@ulaval.ca', username='comment7')

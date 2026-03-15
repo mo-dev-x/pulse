@@ -1,6 +1,6 @@
 """Direct message model."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app import db
 
@@ -14,7 +14,7 @@ class Message(db.Model):
     content = db.Column(db.Text, nullable=False)
     is_read = db.Column(db.Boolean, default=False, nullable=False, index=True)
     read_at = db.Column(db.DateTime, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False, index=True)
 
     conversation = db.relationship('Conversation', backref=db.backref('messages', cascade='all, delete-orphan', lazy='dynamic'))
     sender = db.relationship('User', backref=db.backref('messages_sent', lazy='dynamic'))

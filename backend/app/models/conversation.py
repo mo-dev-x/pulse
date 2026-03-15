@@ -1,6 +1,6 @@
 """Direct message conversation model."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app import db
 
@@ -12,7 +12,7 @@ class Conversation(db.Model):
     participant_a = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
     participant_b = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
     last_message_at = db.Column(db.DateTime, nullable=True, index=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False, index=True)
 
     user_a = db.relationship('User', foreign_keys=[participant_a])
     user_b = db.relationship('User', foreign_keys=[participant_b])

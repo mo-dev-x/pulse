@@ -496,8 +496,9 @@ def get_request_language(request):
         verify_jwt_in_request(optional=True)
         identity = get_jwt_identity()
         if identity:
+            from app import db
             from app.models.user import User
-            user = User.query.get(int(identity))
+            user = db.session.get(User, int(identity))
             if user and user.preferred_language in ['fr', 'en']:
                 return user.preferred_language
     except Exception:

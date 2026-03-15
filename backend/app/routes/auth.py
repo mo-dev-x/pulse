@@ -14,7 +14,7 @@ import re
 import secrets
 import base64
 import io
-from datetime import datetime
+from datetime import datetime, timezone
 from urllib.parse import urlencode
 
 import jwt as pyjwt
@@ -44,6 +44,13 @@ from app.utils.i18n import get_localized_message
 
 # Create blueprint
 bp = Blueprint('auth', __name__)
+
+
+def _should_log_email_warning(error_message):
+    """Keep expected SMTP-disabled test runs quiet while logging real delivery issues."""
+    if current_app.testing and error_message == 'SMTP is not configured':
+        return False
+    return True
 
 
 def _is_oidc_enabled():
@@ -163,7 +170,7 @@ def register():
         except Exception as exc:
             verification_email_error = str(exc)
 
-        if not verification_email_sent:
+        if not verification_email_sent and _should_log_email_warning(verification_email_error):
             current_app.logger.warning(
                 "Verification email not sent for user_id=%s email=%s reason=%s",
                 new_user.id,
@@ -316,7 +323,7 @@ def login():
     
     try:
         # Update last login timestamp
-        user.last_login = datetime.utcnow()
+        user.last_login = datetime.now(timezone.utc).replace(tzinfo=None)
         log_security_event(
             event_type='login_success',
             user_id=user.id,
@@ -401,7 +408,7 @@ def get_current_user():
         user_id = int(get_jwt_identity())
         
         # Fetch user from database
-        user = User.query.get(user_id)
+        user = db.session.get(User, user_id)
         
         if not user:
             return jsonify({
@@ -438,7 +445,7 @@ def update_profile():
         400: Validation error
     """
     user_id = int(get_jwt_identity())
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     
     if not user:
         return jsonify({'error': get_localized_message(request, 'user_not_found')}), 404
@@ -506,7 +513,7 @@ def update_pseudonym():
     - This is intentional to prevent building "alt identities"
     """
     user_id = int(get_jwt_identity())
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     
     if not user:
         return jsonify({'error': get_localized_message(request, 'user_not_found')}), 404
@@ -555,7 +562,7 @@ def update_pseudonym():
 def send_verification():
     """Send or resend a verification email for the current user."""
     user_id = int(get_jwt_identity())
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
 
     if not user:
         return jsonify({'error': get_localized_message(request, 'user_not_found')}), 404
@@ -572,7 +579,7 @@ def send_verification():
     except Exception as exc:
         error = str(exc)
 
-    if not sent:
+    if not sent and _should_log_email_warning(error):
         current_app.logger.warning(
             "Resend verification failed for user_id=%s email=%s reason=%s",
             user.id,
@@ -598,7 +605,7 @@ def verify_email(token):
     if not user:
         return jsonify({'error': get_localized_message(request, 'invalid_verification_token')}), 400
 
-    if not user.verification_expires or user.verification_expires < datetime.utcnow():
+    if not user.verification_expires or user.verification_expires < datetime.now(timezone.utc).replace(tzinfo=None):
         return jsonify({'error': get_localized_message(request, 'verification_token_expired')}), 400
 
     user.is_verified = True
@@ -624,7 +631,7 @@ def forgot_password():
         if user:
             try:
                 sent, error = send_password_reset_email(user)
-                if not sent:
+                if not sent and _should_log_email_warning(error):
                     current_app.logger.warning(
                         "Password reset email not sent for user_id=%s email=%s reason=%s",
                         user.id,
@@ -666,7 +673,7 @@ def reset_password():
     if not user:
         return jsonify({'error': get_localized_message(request, 'invalid_reset_token')}), 400
 
-    if not user.reset_expires or user.reset_expires < datetime.utcnow():
+    if not user.reset_expires or user.reset_expires < datetime.now(timezone.utc).replace(tzinfo=None):
         return jsonify({'error': get_localized_message(request, 'reset_token_expired')}), 400
 
     try:
@@ -928,7 +935,7 @@ def cas_callback_legacy_redirect():
 def update_bio():
     """Update only the bio field (max 500 chars)."""
     user_id = int(get_jwt_identity())
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({'error': get_localized_message(request, 'user_not_found')}), 404
 
@@ -979,7 +986,7 @@ def _handle_image_upload(user, request_key, upload_folder, filename_prefix, size
 def upload_profile_picture():
     """Upload and resize profile picture to 500x500 max."""
     user_id = int(get_jwt_identity())
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({'error': get_localized_message(request, 'user_not_found')}), 404
 
@@ -1016,7 +1023,7 @@ def upload_profile_picture():
 def upload_header_image():
     """Upload and resize header image to 1500x500 max."""
     user_id = int(get_jwt_identity())
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({'error': get_localized_message(request, 'user_not_found')}), 404
 
@@ -1111,7 +1118,7 @@ def revoke_all_sessions():
 def update_privacy_settings():
     """Update user profile privacy settings."""
     user_id = int(get_jwt_identity())
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({'error': get_localized_message(request, 'user_not_found')}), 404
 
@@ -1136,7 +1143,7 @@ def update_privacy_settings():
 def update_preferences():
     """Update user UI/notification preferences."""
     user_id = int(get_jwt_identity())
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({'error': get_localized_message(request, 'user_not_found')}), 404
 
@@ -1175,7 +1182,7 @@ def _build_qr_code_data_url(uri):
 def enable_2fa():
     """Initialize TOTP setup and return provisioning payload."""
     user_id = int(get_jwt_identity())
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({'error': get_localized_message(request, 'user_not_found')}), 404
 
@@ -1202,7 +1209,7 @@ def enable_2fa():
 def verify_2fa():
     """Verify TOTP code and finalize 2FA enablement."""
     user_id = int(get_jwt_identity())
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user or not user.totp_secret:
         return jsonify({'error': get_localized_message(request, 'validation_error'), 'message': '2FA is not initialized'}), 400
 
@@ -1237,7 +1244,7 @@ def verify_2fa():
 def disable_2fa():
     """Disable 2FA after verifying current TOTP or backup code."""
     user_id = int(get_jwt_identity())
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user or not user.totp_enabled or not user.totp_secret:
         return jsonify({'error': get_localized_message(request, 'validation_error'), 'message': '2FA is not enabled'}), 400
 
@@ -1276,7 +1283,7 @@ def disable_2fa():
 def regenerate_backup_codes():
     """Regenerate 2FA backup codes."""
     user_id = int(get_jwt_identity())
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user or not user.totp_enabled:
         return jsonify({'error': get_localized_message(request, 'validation_error'), 'message': '2FA is not enabled'}), 400
 
@@ -1290,14 +1297,14 @@ def regenerate_backup_codes():
 def deactivate_account():
     """Deactivate account without deleting user data."""
     user_id = int(get_jwt_identity())
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({'error': get_localized_message(request, 'user_not_found')}), 404
     if user.is_deactivated:
         return jsonify({'message': 'Account already deactivated'}), 200
 
     user.is_deactivated = True
-    user.deactivated_at = datetime.utcnow()
+    user.deactivated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     user.is_active = False
     log_security_event(
         event_type='account_deactivated',
@@ -1314,7 +1321,7 @@ def deactivate_account():
 def reactivate_account():
     """Reactivate previously deactivated account."""
     user_id = int(get_jwt_identity())
-    user = User.query.get(user_id)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({'error': get_localized_message(request, 'user_not_found')}), 404
 

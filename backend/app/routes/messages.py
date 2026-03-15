@@ -1,6 +1,6 @@
 """Direct messaging routes."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
@@ -13,7 +13,7 @@ bp = Blueprint('messages', __name__)
 
 
 def _get_conversation_or_403(conversation_id, current_user_id):
-    conversation = Conversation.query.get(conversation_id)
+    conversation = db.session.get(Conversation, conversation_id)
     if not conversation:
         return None, (jsonify({'error': get_localized_message(request, 'not_found'), 'message': 'Conversation not found'}), 404)
     if not conversation.has_participant(current_user_id):
@@ -22,7 +22,7 @@ def _get_conversation_or_403(conversation_id, current_user_id):
 
 
 def _other_user_payload(conversation, current_user_id):
-    other_user = User.query.get(conversation.other_user_id(current_user_id))
+    other_user = db.session.get(User, conversation.other_user_id(current_user_id))
     return {
         'id': other_user.id,
         'username': other_user.username,
@@ -138,7 +138,7 @@ def send_message(conversation_id):
         content=content,
     )
     db.session.add(message)
-    conversation.last_message_at = datetime.utcnow()
+    conversation.last_message_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.session.commit()
 
     return jsonify({'message': message.to_dict(current_user_id=current_user_id)}), 201
@@ -158,7 +158,7 @@ def mark_conversation_read(conversation_id):
         Message.is_read == False  # noqa: E712
     ).all()
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     for message in messages:
         message.is_read = True
         message.read_at = now

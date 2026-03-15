@@ -1,6 +1,6 @@
 """Automated tests for Phase 6 discovery and trending endpoints."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import sys
 
@@ -44,47 +44,47 @@ class TestDiscoveryTrending(Phase5BaseTestCase):
             'Library post with strong engagement and enough characters.',
             zone=self.zone_library,
             sentiment_score=0.7,
-            created_at=datetime.utcnow() - timedelta(hours=1),
+            created_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=1),
         )
         self.mid_post = self._make_post(
             self.author,
             'Another library discovery post with enough characters.',
             zone=self.zone_library,
             sentiment_score=0.4,
-            created_at=datetime.utcnow() - timedelta(hours=3),
+            created_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=3),
         )
         self.sports_post = self._make_post(
             self.author,
             'PEPS workout post with enough characters for testing.',
             zone=self.zone_peps,
             sentiment_score=0.2,
-            created_at=datetime.utcnow() - timedelta(hours=2),
+            created_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=2),
         )
         self.old_post = self._make_post(
             self.author,
             'Old public post outside the short trending window.',
             zone=self.zone_peps,
             sentiment_score=-0.4,
-            created_at=datetime.utcnow() - timedelta(days=2),
+            created_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=2),
         )
         self._make_post(
             self.author,
             'Anonymous campus thought that should not appear in discovery.',
             zone=self.zone_library,
             is_anonymous=True,
-            created_at=datetime.utcnow() - timedelta(minutes=30),
+            created_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=30),
         )
         self._make_post(
             self.unverified_author,
             'Unverified author post should never appear in discovery feeds.',
             zone=self.zone_library,
-            created_at=datetime.utcnow() - timedelta(minutes=20),
+            created_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=20),
         )
         self._make_post(
             self.deactivated_author,
             'Deactivated author post should never appear in discovery feeds.',
             zone=self.zone_library,
-            created_at=datetime.utcnow() - timedelta(minutes=10),
+            created_at=datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=10),
         )
         db.session.flush()
 

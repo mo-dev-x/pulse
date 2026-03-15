@@ -12,6 +12,7 @@ Before you start, make sure you have:
 - **MySQL 8.0+** installed and running
 - **Git** installed
 - **~3GB free disk space** (for CamemBERT model)
+- **Redis 7+** optional for production background jobs and shared rate-limit storage
 
 ---
 
@@ -144,6 +145,12 @@ UPLOAD_FOLDER=uploads/
 
 # Rate Limiting
 RATELIMIT_STORAGE_URL=memory://
+
+# Background Jobs / Redis (Phase 6)
+REDIS_URL=redis://localhost:6379/0
+BACKGROUND_JOBS_ENABLED=false
+BACKGROUND_JOBS_EAGER=false
+BACKGROUND_JOB_TIMEOUT=300
 ```
 
 **Save and close** (Ctrl+O, Enter, Ctrl+X in nano)
@@ -220,7 +227,51 @@ exit;
 
 ---
 
-## 🧪 STEP 6: TEST THE SETUP
+## 🧵 STEP 6: OPTIONAL REDIS + BACKGROUND JOBS
+
+Phase 6 adds a lightweight background job layer for email delivery, push dispatch, moderation checks, and aggregate refreshes.
+
+### **Local development without Redis**
+
+You can keep background jobs disabled and the backend will fall back gracefully:
+
+```bash
+BACKGROUND_JOBS_ENABLED=false
+```
+
+This is fine for normal local development and for the test suite.
+
+### **Enable Redis-backed jobs**
+
+```bash
+# Ubuntu / Debian
+sudo apt install redis-server
+
+# Start Redis
+sudo systemctl start redis-server
+```
+
+Set in `.env`:
+
+```bash
+REDIS_URL=redis://localhost:6379/0
+BACKGROUND_JOBS_ENABLED=true
+BACKGROUND_JOBS_EAGER=false
+```
+
+Start a worker from the `backend/` directory:
+
+```bash
+venv/bin/rq worker --url "$REDIS_URL" default email push moderation analytics
+```
+
+Notes:
+- If the worker is not running, the app still degrades gracefully for local use.
+- Tests use eager execution automatically, so no worker is required for unit tests.
+
+---
+
+## 🧪 STEP 7: TEST THE SETUP
 
 ### **Test 1: Start Flask**
 

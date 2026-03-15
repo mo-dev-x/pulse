@@ -37,13 +37,13 @@ Phase 6 transforms Pulse from a feature-complete MVP into a platform that can ha
 | **6B: Zone feed endpoint** | Should Have | ✅ Complete | 1 day |
 | **6C: Push notifications** | Nice to Have | ✅ Complete | 2 days |
 | **6C: Caching layer** | Nice to Have | ✅ Complete | 1 day |
-| **6C: Background job queue** | Nice to Have | 🔲 Not started | 2 days |
+| **6C: Background job queue** | Nice to Have | ✅ Complete | 2 days |
 
-**Phase 6A Progress:** 🟩🟩🟩🟩🟩🟩🔲🔲🔲🔲 60% (Must Have — 5 days)  
+**Phase 6A Progress:** 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 100% (Must Have — 5 days)  
 **Phase 6B Progress:** 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 100% (Should Have — 6 days)  
-**Phase 6C Progress:** 🟩🟩🟩🟩🟩🟩🔲🔲🔲🔲 60% (Nice to Have — 5 days)
+**Phase 6C Progress:** 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 100% (Nice to Have — 5 days)
 
-**Overall Phase 6 Progress:** 🟩🟩🟩🟩🟩🟩🟩🟩🔲🔲 80% / 100%
+**Overall Phase 6 Progress:** 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 100% / 100%
 
 ---
 
@@ -905,11 +905,11 @@ FCM_SERVER_KEY=***
 
 ## 📚 DOCUMENTATION TO CREATE
 
-- [ ] `SEARCH_API_GUIDE.md` — Query syntax, type filters, privacy rules
-- [ ] `MESSAGING_GUIDE.md` — DM system, conversation model, read receipts
-- [ ] `MODERATION_GUIDE.md` — Report workflow, admin actions, auto-flag rules
-- [ ] `RATE_LIMITING_GUIDE.md` — Limits per endpoint, Redis setup, custom key functions
-- [ ] Updated `ARCHITECTURE_DECISIONS.md` — AD-051 to AD-055
+- [x] `SEARCH_API_GUIDE.md` — Query syntax, type filters, privacy rules
+- [x] `MESSAGING_GUIDE.md` — DM system, conversation model, read receipts
+- [x] `MODERATION_GUIDE.md` — Report workflow, admin actions, auto-flag rules
+- [x] `RATE_LIMITING_GUIDE.md` — Limits per endpoint, Redis setup, custom key functions
+- [x] Updated `ARCHITECTURE_DECISIONS.md` — AD-051 to AD-055
 
 ---
 

@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from app import db
 from app.models import PushSubscription
 from tests.phase5_test_utils import Phase5BaseTestCase
 
@@ -34,7 +35,7 @@ class TestPush(Phase5BaseTestCase):
 
         delete_resp = self.client.delete(f'/api/push/subscribe/{subscription_id}', headers=self.auth_headers(token))
         self.assertEqual(delete_resp.status_code, 200, delete_resp.get_json())
-        self.assertFalse(PushSubscription.query.get(subscription_id).is_active)
+        self.assertFalse(db.session.get(PushSubscription, subscription_id).is_active)
 
     def test_subscribe_is_idempotent_for_same_token(self):
         token = self._verified_user('push2@ulaval.ca', 'push2')

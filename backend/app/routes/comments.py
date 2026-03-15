@@ -1,6 +1,6 @@
 """Comment routes for posts and threaded replies."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, verify_jwt_in_request
@@ -32,7 +32,7 @@ def _get_optional_user_id():
 def create_comment(post_id):
     """Create a comment on a post (or reply to another comment)."""
     user_id = int(get_jwt_identity())
-    post = Post.query.get(post_id)
+    post = db.session.get(Post, post_id)
     if not post:
         return jsonify({
             'error': get_localized_message(request, 'validation_error'),
@@ -51,7 +51,7 @@ def create_comment(post_id):
         }), 400
 
     if parent_id is not None:
-        parent = Comment.query.get(parent_id)
+        parent = db.session.get(Comment, parent_id)
         if not parent or parent.post_id != post_id:
             return jsonify({
                 'error': get_localized_message(request, 'validation_error'),
@@ -73,7 +73,7 @@ def create_comment(post_id):
     db.session.add(comment)
     db.session.flush()
 
-    actor = User.query.get(user_id)
+    actor = db.session.get(User, user_id)
     if parent_id is not None and parent.user_id != user_id:
         create_notification(
             user_id=parent.user_id,
@@ -112,7 +112,7 @@ def create_comment(post_id):
 @bp.route('/posts/<int:post_id>/comments', methods=['GET'])
 def get_post_comments(post_id):
     """List top-level comments for a post with pagination."""
-    post = Post.query.get(post_id)
+    post = db.session.get(Post, post_id)
     if not post:
         return jsonify({
             'error': get_localized_message(request, 'validation_error'),
@@ -139,7 +139,7 @@ def get_post_comments(post_id):
 @bp.route('/comments/<int:comment_id>/replies', methods=['GET'])
 def get_comment_replies(comment_id):
     """List replies for a given comment (one level)."""
-    parent_comment = Comment.query.get(comment_id)
+    parent_comment = db.session.get(Comment, comment_id)
     if not parent_comment:
         return jsonify({
             'error': get_localized_message(request, 'validation_error'),
@@ -168,7 +168,7 @@ def get_comment_replies(comment_id):
 def edit_comment(comment_id):
     """Edit a comment inside a 5-minute edit window."""
     user_id = int(get_jwt_identity())
-    comment = Comment.query.get(comment_id)
+    comment = db.session.get(Comment, comment_id)
     if not comment:
         return jsonify({
             'error': get_localized_message(request, 'validation_error'),
@@ -181,7 +181,7 @@ def edit_comment(comment_id):
             'message': get_localized_message(request, 'comment_edit_own_only')
         }), 403
 
-    if datetime.utcnow() - comment.created_at > timedelta(minutes=5):
+    if datetime.now(timezone.utc).replace(tzinfo=None) - comment.created_at > timedelta(minutes=5):
         return jsonify({
             'error': get_localized_message(request, 'validation_error'),
             'message': get_localized_message(request, 'comment_edit_expired')
@@ -208,7 +208,7 @@ def edit_comment(comment_id):
 def delete_comment(comment_id):
     """Delete a comment owned by the current user."""
     user_id = int(get_jwt_identity())
-    comment = Comment.query.get(comment_id)
+    comment = db.session.get(Comment, comment_id)
     if not comment:
         return jsonify({
             'error': get_localized_message(request, 'validation_error'),

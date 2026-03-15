@@ -5,6 +5,7 @@ from functools import wraps
 from flask import jsonify, request
 from flask_jwt_extended import get_jwt_identity
 
+from app import db
 from app.models.user import User
 from app.utils.i18n import get_localized_message
 
@@ -21,7 +22,7 @@ def require_verification(func):
                 'message': get_localized_message(request, 'unauthorized')
             }), 401
 
-        user = User.query.get(int(current_user_id))
+        user = db.session.get(User, int(current_user_id))
         if not user:
             return jsonify({
                 'error': get_localized_message(request, 'validation_error'),
@@ -51,7 +52,7 @@ def require_admin(func):
                 'message': get_localized_message(request, 'unauthorized')
             }), 401
 
-        user = User.query.get(int(current_user_id))
+        user = db.session.get(User, int(current_user_id))
         if not user:
             return jsonify({
                 'error': get_localized_message(request, 'validation_error'),

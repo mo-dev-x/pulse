@@ -1,6 +1,6 @@
 """Security audit log model."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app import db
 
@@ -37,7 +37,7 @@ class SecurityLog(db.Model):
     ip_address = db.Column(db.String(45), nullable=True)
     user_agent = db.Column(db.String(512), nullable=True)
     metadata_json = db.Column(db.JSON, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False, index=True)
 
     user = db.relationship('User', backref=db.backref('security_logs', lazy='dynamic'))
 

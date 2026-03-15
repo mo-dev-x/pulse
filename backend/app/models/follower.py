@@ -5,7 +5,7 @@ Represents one-way follow relationships between users.
 Friends are computed as mutual follows (not stored separately).
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from app import db
 
 
@@ -39,7 +39,7 @@ class Follower(db.Model):
     )
 
     # Timestamp
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     # Relationships
     follower = db.relationship(

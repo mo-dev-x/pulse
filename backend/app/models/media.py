@@ -4,7 +4,7 @@ Media Model - Uploaded Images/Files for Posts
 Supports image uploads attached to posts.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from app import db
 
 
@@ -38,7 +38,7 @@ class Media(db.Model):
     mime_type = db.Column(db.String(100), nullable=True)
 
     # Timestamp
-    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    uploaded_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     # Relationships
     post = db.relationship('Post', backref=db.backref('media', lazy=True))

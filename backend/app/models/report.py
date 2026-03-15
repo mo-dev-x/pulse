@@ -1,6 +1,6 @@
 """Moderation report model."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app import db
 
@@ -37,7 +37,7 @@ class Report(db.Model):
     )
     reviewed_by = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     reviewed_at = db.Column(db.DateTime, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False, index=True)
 
     reporter = db.relationship('User', foreign_keys=[reporter_id], backref=db.backref('reports_submitted', lazy='dynamic'))
     reviewer = db.relationship('User', foreign_keys=[reviewed_by], backref=db.backref('reports_reviewed', lazy='dynamic'))

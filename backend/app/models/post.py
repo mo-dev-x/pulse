@@ -3,7 +3,7 @@ Post Model - Content with Sentiment Analysis
 Supports both public and anonymous posting
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from app import db
 
 class Post(db.Model):
@@ -36,8 +36,12 @@ class Post(db.Model):
     hidden_by_mod = db.Column(db.Boolean, default=False, nullable=False)
     
     # Timestamps
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+        onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
     
     # Relationships
     author = db.relationship(

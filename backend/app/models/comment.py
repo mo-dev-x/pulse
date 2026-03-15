@@ -1,6 +1,6 @@
 """Comment model with one-level threading support."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app import db
 
@@ -14,8 +14,12 @@ class Comment(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
     parent_id = db.Column(db.Integer, db.ForeignKey('comments.id', ondelete='CASCADE'), nullable=True, index=True)
     is_anonymous = db.Column(db.Boolean, default=False, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
+    updated_at = db.Column(
+        db.DateTime,
+        default=lambda: datetime.now(timezone.utc).replace(tzinfo=None),
+        onupdate=lambda: datetime.now(timezone.utc).replace(tzinfo=None)
+    )
 
     post = db.relationship('Post', backref=db.backref('comments', cascade='all, delete-orphan', lazy='dynamic'))
     user = db.relationship('User', backref=db.backref('comments', cascade='all, delete-orphan', lazy='dynamic'))

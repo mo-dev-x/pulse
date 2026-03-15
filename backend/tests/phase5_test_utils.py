@@ -27,6 +27,8 @@ class Phase5BaseTestCase(unittest.TestCase):
             PROFILE_UPLOAD_FOLDER=os.path.join(self.temp_dir.name, 'profiles'),
             HEADER_UPLOAD_FOLDER=os.path.join(self.temp_dir.name, 'headers'),
             SMTP_HOST=None,
+            BACKGROUND_JOBS_ENABLED=False,
+            BACKGROUND_JOBS_EAGER=True,
         )
 
         os.makedirs(self.app.config['PROFILE_UPLOAD_FOLDER'], exist_ok=True)

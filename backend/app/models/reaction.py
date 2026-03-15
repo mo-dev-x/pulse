@@ -5,7 +5,7 @@ Users can react to posts (public or anonymous) with a single emoji.
 Only one reaction per user per post. Only aggregate counts are exposed (privacy).
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from app import db
 
 
@@ -40,7 +40,7 @@ class Reaction(db.Model):
     emoji = db.Column(db.String(10), nullable=False)
 
     # Timestamp
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     # Relationships
     post = db.relationship('Post', backref=db.backref('reactions', lazy='dynamic'))

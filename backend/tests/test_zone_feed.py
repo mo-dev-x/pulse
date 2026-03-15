@@ -1,6 +1,6 @@
 """Automated tests for Phase 6 zone feed endpoints."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import sys
 
@@ -31,10 +31,10 @@ class TestZoneFeed(Phase5BaseTestCase):
         db.session.add_all([self.author, self.reactor])
         db.session.flush()
 
-        self.public_positive = self._make_post('Morning run at PEPS feels great today.', 'positive', 0.8, datetime.utcnow() - timedelta(hours=2))
-        self.public_neutral = self._make_post('PEPS is busy this afternoon but manageable.', 'neutral', 0.0, datetime.utcnow() - timedelta(hours=1))
-        self.public_negative = self._make_post('Locker room line is frustrating today at PEPS.', 'negative', -0.6, datetime.utcnow() - timedelta(hours=3))
-        self._make_post('Anonymous PEPS post should not be listed.', 'neutral', 0.0, datetime.utcnow() - timedelta(minutes=30), is_anonymous=True)
+        self.public_positive = self._make_post('Morning run at PEPS feels great today.', 'positive', 0.8, datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=2))
+        self.public_neutral = self._make_post('PEPS is busy this afternoon but manageable.', 'neutral', 0.0, datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=1))
+        self.public_negative = self._make_post('Locker room line is frustrating today at PEPS.', 'negative', -0.6, datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=3))
+        self._make_post('Anonymous PEPS post should not be listed.', 'neutral', 0.0, datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=30), is_anonymous=True)
 
         db.session.flush()
         db.session.add_all([

@@ -65,7 +65,7 @@ def add_reaction(post_id):
         }), 400
 
     # Check post exists
-    post = Post.query.get(post_id)
+    post = db.session.get(Post, post_id)
     if not post:
         return jsonify({
             'error': get_localized_message(request, 'validation_error'),
@@ -83,7 +83,7 @@ def add_reaction(post_id):
             # Update existing reaction
             old_emoji = existing.emoji
             existing.emoji = emoji
-            actor = User.query.get(current_user_id)
+            actor = db.session.get(User, current_user_id)
             create_notification(
                 user_id=post.user_id,
                 notification_type='post_reaction',
@@ -118,7 +118,7 @@ def add_reaction(post_id):
                 emoji=emoji
             )
             db.session.add(new_reaction)
-            actor = User.query.get(current_user_id)
+            actor = db.session.get(User, current_user_id)
             create_notification(
                 user_id=post.user_id,
                 notification_type='post_reaction',
@@ -160,7 +160,7 @@ def remove_reaction(post_id):
     current_user_id = int(get_jwt_identity())
 
     # Check post exists
-    post = Post.query.get(post_id)
+    post = db.session.get(Post, post_id)
     if not post:
         return jsonify({
             'error': get_localized_message(request, 'validation_error'),
@@ -214,7 +214,7 @@ def get_reactions(post_id):
     current_user_id = int(get_jwt_identity())
 
     # Check post exists
-    post = Post.query.get(post_id)
+    post = db.session.get(Post, post_id)
     if not post:
         return jsonify({
             'error': get_localized_message(request, 'validation_error'),
