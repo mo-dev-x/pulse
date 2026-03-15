@@ -15,12 +15,12 @@ Endpoints:
 
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from werkzeug.utils import secure_filename
 
-from app import db
+from app import cache, db, limiter, rate_limit_key_user, rate_limit_value
 from app.middleware import require_verification
 from app.models import Post, CampusZone, User
 from app.models.follower import Follower
@@ -33,6 +33,13 @@ from app.utils.i18n import get_localized_message
 
 # Create blueprint
 bp = Blueprint('posts', __name__)
+
+TRENDING_WINDOWS = {
+    '1h': timedelta(hours=1),
+    '6h': timedelta(hours=6),
+    '24h': timedelta(hours=24),
+    '7d': timedelta(days=7),
+}
 
 
 def _enrich_post_dict(post_dict, post, current_user_id):
@@ -57,8 +64,101 @@ def _allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed
 
 
+def _paginate_list(items, page, per_page):
+    start = (page - 1) * per_page
+    end = start + per_page
+    return items[start:end], len(items) > end
+
+
+def _public_posts_query():
+    return (
+        Post.query
+        .join(User, User.id == Post.user_id)
+        .filter(Post.is_anonymous == False)  # noqa: E712
+        .filter(Post.hidden_by_mod == False)  # noqa: E712
+        .filter(User.is_verified == True)  # noqa: E712
+        .filter(User.is_deactivated == False)  # noqa: E712
+    )
+
+
+def _post_engagement_metrics(post, now=None):
+    now = now or datetime.utcnow()
+    reaction_count = Reaction.get_total_count(post.id)
+    comment_count = post.comments.count()
+    hours_since = max((now - post.created_at).total_seconds() / 3600, 1 / 60)
+    score = reaction_count * 2 + comment_count + (10 / hours_since)
+    return reaction_count, comment_count, round(score, 4)
+
+
+def _sentiment_bucket(avg_score):
+    if avg_score is None:
+        return 'neutral'
+    if avg_score > 0.15:
+        return 'positive'
+    if avg_score < -0.15:
+        return 'negative'
+    return 'neutral'
+
+
+def _serialize_ranked_posts(posts, current_user_id):
+    ranked = []
+    now = datetime.utcnow()
+    for post in posts:
+        post_dict = post.to_dict(current_user_id=current_user_id)
+        post_dict = _enrich_post_dict(post_dict, post, current_user_id)
+        reaction_count, comment_count, score = _post_engagement_metrics(post, now=now)
+        post_dict['reaction_count'] = reaction_count
+        post_dict['comment_count'] = comment_count
+        post_dict['engagement_score'] = score
+        ranked.append((score, post.created_at, post_dict))
+
+    ranked.sort(key=lambda item: (item[0], item[1]), reverse=True)
+    return [item[2] for item in ranked]
+
+
+def _build_trending_zones(posts):
+    zone_metrics = {}
+    for post in posts:
+        if not post.zone:
+            continue
+
+        entry = zone_metrics.setdefault(post.zone_id, {
+            'zone': post.zone.to_dict(),
+            'post_count': 0,
+            'reaction_count': 0,
+            'sentiment_scores': [],
+        })
+        entry['post_count'] += 1
+        entry['reaction_count'] += Reaction.get_total_count(post.id)
+        if post.sentiment_score is not None:
+            entry['sentiment_scores'].append(post.sentiment_score)
+
+    zone_results = []
+    for entry in zone_metrics.values():
+        scores = entry.pop('sentiment_scores')
+        avg_score = (sum(scores) / len(scores)) if scores else None
+        entry['avg_sentiment'] = _sentiment_bucket(avg_score)
+        entry['mood'] = entry['avg_sentiment']
+        zone_results.append(entry)
+
+    zone_results.sort(key=lambda item: (item['post_count'], item['reaction_count']), reverse=True)
+    return zone_results
+
+
+def _filtered_public_posts(zone_id=None, sentiment=None, window=None):
+    query = _public_posts_query()
+    if zone_id:
+        query = query.filter(Post.zone_id == zone_id)
+    if sentiment:
+        query = query.filter(Post.sentiment_label == sentiment)
+    if window:
+        query = query.filter(Post.created_at >= datetime.utcnow() - window)
+    return query.order_by(Post.created_at.desc()).all()
+
+
 @bp.route('', methods=['POST'])
 @jwt_required()
+@limiter.limit(rate_limit_value('POST_CREATE_RATE_LIMIT', '15 per hour'), key_func=rate_limit_key_user)
 @require_verification
 def create_post():
     """
@@ -272,7 +372,8 @@ def get_feed():
     # CRITICAL: Only public posts from followed users
     feed_query = Post.query.filter(
         Post.user_id.in_(following_ids),
-        Post.is_anonymous == False  # noqa: E712 — SQLAlchemy requires ==
+        Post.is_anonymous == False,  # noqa: E712 — SQLAlchemy requires ==
+        Post.hidden_by_mod == False  # noqa: E712
     ).join(User, User.id == Post.user_id).filter(
         User.is_deactivated == False  # noqa: E712
     ).order_by(Post.created_at.desc())
@@ -291,6 +392,71 @@ def get_feed():
         'page': paginated.page,
         'pages': paginated.pages,
         'has_next': paginated.has_next
+    }), 200
+
+
+@bp.route('/discover', methods=['GET'])
+@jwt_required()
+def discover_posts():
+    """Return a ranked discovery feed from verified public posts."""
+    current_user_id = int(get_jwt_identity())
+    page = request.args.get('page', 1, type=int)
+    per_page = min(request.args.get('per_page', 20, type=int), 50)
+    zone_id = request.args.get('zone_id', type=int)
+    sentiment = (request.args.get('sentiment') or '').strip().lower() or None
+
+    if page < 1 or per_page < 1:
+        return jsonify({'error': 'Invalid pagination', 'message': 'page and per_page must be positive integers'}), 400
+
+    if sentiment and sentiment not in {'positive', 'negative', 'neutral'}:
+        return jsonify({'error': 'Invalid sentiment filter', 'message': 'sentiment must be positive, negative, or neutral'}), 400
+
+    posts = _filtered_public_posts(zone_id=zone_id, sentiment=sentiment)
+    ranked_posts = _serialize_ranked_posts(posts, current_user_id=current_user_id)
+    paginated_posts, has_next = _paginate_list(ranked_posts, page, per_page)
+
+    return jsonify({
+        'posts': paginated_posts,
+        'total': len(ranked_posts),
+        'page': page,
+        'has_next': has_next,
+        'filters': {
+            'zone_id': zone_id,
+            'sentiment': sentiment,
+        },
+    }), 200
+
+
+@bp.route('/trending', methods=['GET'])
+@jwt_required()
+@cache.cached(timeout=120, query_string=True)
+def trending_posts():
+    """Return trending public posts and zone activity for a time window."""
+    current_user_id = int(get_jwt_identity())
+    window_name = (request.args.get('window') or '24h').strip().lower()
+    zone_id = request.args.get('zone_id', type=int)
+    limit = min(request.args.get('limit', 10, type=int), 25)
+
+    window = TRENDING_WINDOWS.get(window_name)
+    if not window:
+        return jsonify({'error': 'Invalid window', 'message': 'window must be one of 1h, 6h, 24h, or 7d'}), 400
+
+    posts = _filtered_public_posts(zone_id=zone_id, window=window)
+    ranked_posts = _serialize_ranked_posts(posts, current_user_id=current_user_id)[:limit]
+    trending_zones = _build_trending_zones(posts)
+
+    return jsonify({
+        'window': window_name,
+        'posts': ranked_posts,
+        'trending_zones': [
+            {
+                'zone': item['zone'],
+                'post_count': item['post_count'],
+                'reaction_count': item['reaction_count'],
+                'avg_sentiment': item['avg_sentiment'],
+            }
+            for item in trending_zones[:limit]
+        ],
     }), 200
 
 
@@ -418,7 +584,7 @@ def get_zone_posts(zone_id):
     """
     Get all posts in a campus zone (paginated).
 
-    Shows both public and anonymous posts (anonymous hide author info).
+    Shows only public posts from verified, active users.
     """
     current_user_id = int(get_jwt_identity())
 
@@ -432,9 +598,16 @@ def get_zone_posts(zone_id):
     page = request.args.get('page', 1, type=int)
     per_page = min(request.args.get('per_page', 20, type=int), 50)
 
-    query = Post.query.filter_by(
-        zone_id=zone_id
-    ).order_by(Post.created_at.desc())
+    query = (
+        Post.query
+        .join(User, User.id == Post.user_id)
+        .filter(Post.zone_id == zone_id)
+        .filter(Post.is_anonymous == False)  # noqa: E712
+        .filter(Post.hidden_by_mod == False)  # noqa: E712
+        .filter(User.is_verified == True)  # noqa: E712
+        .filter(User.is_deactivated == False)  # noqa: E712
+        .order_by(Post.created_at.desc())
+    )
 
     paginated = query.paginate(page=page, per_page=per_page, error_out=False)
 

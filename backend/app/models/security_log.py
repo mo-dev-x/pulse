@@ -23,6 +23,12 @@ class SecurityLog(db.Model):
             'account_deactivated',
             'account_reactivated',
             'session_revoked',
+            'report_submitted',
+            'report_reviewed',
+            'content_hidden_by_admin',
+            'user_warned',
+            'user_deactivated_by_admin',
+            'post_deleted_by_admin',
             name='security_event_type_enum'
         ),
         nullable=False,

@@ -31,6 +31,9 @@ class Post(db.Model):
         nullable=True
     )
     detected_language = db.Column(db.String(2), nullable=True)  # 'en' or 'fr'
+    is_flagged = db.Column(db.Boolean, default=False, nullable=False)
+    flagged_at = db.Column(db.DateTime, nullable=True)
+    hidden_by_mod = db.Column(db.Boolean, default=False, nullable=False)
     
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -62,6 +65,8 @@ class Post(db.Model):
             'sentiment': self.sentiment_label,
             'sentiment_score': round(self.sentiment_score, 2) if self.sentiment_score else None,
             'detected_language': self.detected_language,
+            'is_flagged': self.is_flagged,
+            'hidden_by_mod': self.hidden_by_mod,
             'created_at': self.created_at.isoformat() + 'Z',
         }
         

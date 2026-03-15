@@ -12,7 +12,7 @@ Endpoints:
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from app import db
+from app import db, limiter, rate_limit_key_user, rate_limit_value
 from app.models.post import Post
 from app.models.reaction import Reaction
 from app.models.user import User
@@ -25,6 +25,7 @@ bp = Blueprint('reactions', __name__)
 
 @bp.route('/<int:post_id>/react', methods=['POST'])
 @jwt_required()
+@limiter.limit(rate_limit_value('REACTION_RATE_LIMIT', '30 per minute'), key_func=rate_limit_key_user)
 def add_reaction(post_id):
     """
     Add or update emoji reaction on a post.

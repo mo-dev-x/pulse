@@ -1,10 +1,14 @@
 """Notification service for creation and mention extraction."""
 
 import re
+import threading
+
+from flask import current_app
 
 from app import db
 from app.models.notification import Notification
 from app.models.user import User
+from app.services.push_service import send_push_notification
 
 MENTION_PATTERN = re.compile(r'@(\w+)')
 
@@ -24,6 +28,23 @@ def create_notification(user_id, notification_type, title, message, related_type
         actor_id=actor_id,
     )
     db.session.add(notification)
+
+    app = current_app._get_current_object()
+
+    def _dispatch_push():
+        with app.app_context():
+            send_push_notification(
+                user_id=user_id,
+                title=title,
+                body=message,
+                data={
+                    'notification_type': notification_type,
+                    'related_type': related_type,
+                    'related_id': related_id,
+                },
+            )
+
+    threading.Thread(target=_dispatch_push, daemon=True).start()
     return notification
 
 

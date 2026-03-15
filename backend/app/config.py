@@ -76,6 +76,8 @@ class Config:
     OIDC_CLIENT_SECRET = os.getenv('OIDC_CLIENT_SECRET')
     OIDC_REDIRECT_URI = os.getenv('OIDC_REDIRECT_URI', 'http://127.0.0.1:5000/api/auth/oidc/callback')
     OIDC_SCOPE = os.getenv('OIDC_SCOPE', 'openid profile email')
+    PUSH_ENABLED = os.getenv('PUSH_ENABLED', 'false').lower() == 'true'
+    FCM_SERVER_KEY = os.getenv('FCM_SERVER_KEY')
 
 
 class DevelopmentConfig(Config):

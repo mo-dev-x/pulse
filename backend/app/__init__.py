@@ -6,9 +6,12 @@ blueprints, and error handlers.
 """
 
 from flask import Flask, jsonify, request
+from flask_caching import Cache
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 from app.config import config
 from app.utils.i18n import get_localized_message
@@ -16,6 +19,35 @@ from app.utils.i18n import get_localized_message
 # Initialize extensions (without binding to app yet)
 db = SQLAlchemy()
 jwt = JWTManager()
+cache = Cache(config={'CACHE_TYPE': 'SimpleCache'})
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=[],
+    storage_uri='memory://',
+)
+
+
+def rate_limit_key_user():
+    """Prefer authenticated user id for limits, fallback to remote IP."""
+    identity = request.headers.get('Authorization', '').removeprefix('Bearer ').strip()
+    if identity:
+        try:
+            from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+            verify_jwt_in_request(optional=True)
+            jwt_identity = get_jwt_identity()
+            if jwt_identity:
+                return f"user:{jwt_identity}"
+        except Exception:
+            pass
+    return get_remote_address()
+
+
+def rate_limit_value(config_key, default):
+    """Read a rate limit string from app config at request time."""
+    def _resolver():
+        from flask import current_app
+        return current_app.config.get(config_key, default)
+    return _resolver
 
 
 def create_app(config_name='development'):
@@ -46,7 +78,9 @@ def create_app(config_name='development'):
     # Initialize extensions with app
     db.init_app(app)
     jwt.init_app(app)
+    cache.init_app(app)
     CORS(app)
+    limiter.init_app(app)
 
     @jwt.token_in_blocklist_loader
     def is_token_revoked(jwt_header, jwt_payload):
@@ -87,7 +121,7 @@ def register_blueprints(app):
     """
     Register all Flask blueprints
     """
-    from app.routes import auth, posts, social, reactions, analytics, comments, notifications, bookmarks, zones
+    from app.routes import auth, posts, social, reactions, analytics, comments, notifications, bookmarks, zones, search, reports, messages, push
     
     app.register_blueprint(auth.bp, url_prefix='/api/auth')
     app.register_blueprint(posts.bp, url_prefix='/api/posts')
@@ -98,6 +132,10 @@ def register_blueprints(app):
     app.register_blueprint(notifications.bp, url_prefix='/api')
     app.register_blueprint(bookmarks.bp, url_prefix='/api')
     app.register_blueprint(zones.bp, url_prefix='/api')
+    app.register_blueprint(search.bp, url_prefix='/api')
+    app.register_blueprint(reports.bp, url_prefix='/api')
+    app.register_blueprint(messages.bp, url_prefix='/api')
+    app.register_blueprint(push.bp, url_prefix='/api')
 
 
 def register_error_handlers(app):
@@ -143,7 +181,17 @@ def register_error_handlers(app):
     
     @app.errorhandler(429)
     def rate_limit_exceeded(error):
+        retry_after = getattr(error, 'retry_after', None)
+        if retry_after is None:
+            retry_after = getattr(getattr(error, 'description', None), 'retry_after', None)
+        if retry_after is not None:
+            try:
+                retry_after = int(retry_after)
+            except (TypeError, ValueError):
+                retry_after = None
+
         return jsonify({
             'error': get_localized_message(request, 'rate_limit_exceeded'),
-            'message': get_localized_message(request, 'rate_limit_exceeded')
+            'message': get_localized_message(request, 'rate_limit_exceeded'),
+            'retry_after': retry_after
         }), 429

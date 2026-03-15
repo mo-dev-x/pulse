@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity, verify_jwt_in_request
 
-from app import db
+from app import db, limiter, rate_limit_key_user, rate_limit_value
 from app.middleware import require_verification
 from app.models.comment import Comment
 from app.models.post import Post
@@ -27,6 +27,7 @@ def _get_optional_user_id():
 
 @bp.route('/posts/<int:post_id>/comments', methods=['POST'])
 @jwt_required()
+@limiter.limit(rate_limit_value('COMMENT_CREATE_RATE_LIMIT', '20 per hour'), key_func=rate_limit_key_user)
 @require_verification
 def create_comment(post_id):
     """Create a comment on a post (or reply to another comment)."""

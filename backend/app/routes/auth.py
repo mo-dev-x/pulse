@@ -32,7 +32,7 @@ try:
 except ImportError:  # pragma: no cover
     qrcode = None
 
-from app import db
+from app import db, limiter, rate_limit_value
 from app.models.post import Post
 from app.models.session import Session
 from app.models.user import User
@@ -207,6 +207,7 @@ def register():
 
 
 @bp.route('/login', methods=['POST'])
+@limiter.limit(rate_limit_value('LOGIN_RATE_LIMIT', '10 per minute'))
 def login():
     """
     Authenticate user and return JWT token
@@ -550,6 +551,7 @@ def update_pseudonym():
 
 @bp.route('/send-verification', methods=['POST'])
 @jwt_required()
+@limiter.limit(rate_limit_value('SEND_VERIFICATION_RATE_LIMIT', '5 per hour'))
 def send_verification():
     """Send or resend a verification email for the current user."""
     user_id = int(get_jwt_identity())
@@ -611,6 +613,7 @@ def verify_email(token):
 
 
 @bp.route('/forgot-password', methods=['POST'])
+@limiter.limit(rate_limit_value('FORGOT_PASSWORD_RATE_LIMIT', '5 per hour'))
 def forgot_password():
     """Request password reset link without revealing account existence."""
     data = request.get_json() or {}

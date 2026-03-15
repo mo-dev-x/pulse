@@ -56,6 +56,7 @@ CREATE TABLE users (
     backup_codes JSON NULL,
 
     -- Account lifecycle
+    is_admin BOOLEAN NOT NULL DEFAULT FALSE,
     is_deactivated BOOLEAN NOT NULL DEFAULT FALSE,
     deactivated_at TIMESTAMP NULL,
     pinned_post_id INT NULL,
@@ -144,6 +145,9 @@ CREATE TABLE posts (
     sentiment_score DECIMAL(3,2),  -- -1.00 to 1.00
     sentiment_label ENUM('positive', 'neutral', 'negative'),
     detected_language ENUM('en', 'fr') DEFAULT 'fr',  -- Auto-detected language
+    is_flagged BOOLEAN NOT NULL DEFAULT FALSE,
+    flagged_at TIMESTAMP NULL,
+    hidden_by_mod BOOLEAN NOT NULL DEFAULT FALSE,
     
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -239,7 +243,13 @@ CREATE TABLE security_logs (
         '2fa_verify_failed',
         'account_deactivated',
         'account_reactivated',
-        'session_revoked'
+        'session_revoked',
+        'report_submitted',
+        'report_reviewed',
+        'content_hidden_by_admin',
+        'user_warned',
+        'user_deactivated_by_admin',
+        'post_deleted_by_admin'
     ) NOT NULL,
     ip_address VARCHAR(45) NULL,
     user_agent VARCHAR(512) NULL,
@@ -262,6 +272,71 @@ CREATE TABLE bookmarks (
     FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
     UNIQUE KEY unique_user_bookmark (user_id, post_id),
     INDEX idx_bookmark_user_created (user_id, created_at DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+CREATE TABLE reports (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    reporter_id INT NOT NULL,
+    target_type ENUM('post', 'comment', 'user') NOT NULL,
+    target_id INT NOT NULL,
+    reason ENUM('spam', 'harassment', 'self_harm', 'misinformation', 'inappropriate', 'other') NOT NULL,
+    details TEXT NULL,
+    status ENUM('pending', 'reviewed', 'actioned', 'dismissed') NOT NULL DEFAULT 'pending',
+    reviewed_by INT NULL,
+    reviewed_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (reporter_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL,
+    UNIQUE KEY unique_reporter_target (reporter_id, target_type, target_id),
+    INDEX idx_reports_status (status),
+    INDEX idx_reports_target (target_type, target_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+CREATE TABLE conversations (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    participant_a INT NOT NULL,
+    participant_b INT NOT NULL,
+    last_message_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (participant_a) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (participant_b) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY uq_conversation (participant_a, participant_b),
+    INDEX idx_conv_last_msg (last_message_at DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+CREATE TABLE messages (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    conversation_id INT NOT NULL,
+    sender_id INT NOT NULL,
+    content TEXT NOT NULL,
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    read_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
+    FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_msg_conv_time (conversation_id, created_at DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+CREATE TABLE push_subscriptions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    platform ENUM('web', 'ios', 'android') NOT NULL,
+    token TEXT NOT NULL,
+    device_label VARCHAR(100) NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_used_at TIMESTAMP NULL,
+
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_push_user (user_id),
+    INDEX idx_push_active (is_active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 

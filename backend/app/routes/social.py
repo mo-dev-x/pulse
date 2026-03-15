@@ -12,10 +12,12 @@ Endpoints:
 - GET    /api/users/@{username}          — Public user profile
 """
 
+from copy import deepcopy
+
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from app import db
+from app import cache, db
 from app.models.user import User
 from app.models.follower import Follower
 from app.models.post import Post
@@ -24,6 +26,42 @@ from app.utils.i18n import get_localized_message
 
 # Create blueprint
 bp = Blueprint('social', __name__)
+
+
+def _public_profile_cache_key(username):
+    return f'public_profile:{username.lower()}'
+
+
+def _build_public_profile_base(user, current_user_id):
+    recent_posts = Post.query.filter_by(
+        user_id=user.id,
+        is_anonymous=False
+    ).order_by(Post.created_at.desc()).limit(10).all()
+
+    pinned_post = None
+    if user.pinned_post_id:
+        pinned = Post.query.filter_by(id=user.pinned_post_id, user_id=user.id, is_anonymous=False).first()
+        if pinned:
+            pinned_post = pinned.to_dict(current_user_id=current_user_id)
+
+    return {
+        'user': {
+            'id': user.id,
+            'username': user.username,
+            'display_name': user.display_name,
+            'bio': user.bio,
+            'profile_picture': user.profile_picture,
+            'website': user.website,
+            'location': user.location,
+            'email': None,
+            'profile_visibility': user.profile_visibility,
+            'created_at': user.created_at.isoformat() if user.created_at else None,
+            'follower_count': Follower.get_follower_count(user.id),
+            'following_count': Follower.get_following_count(user.id),
+        },
+        'pinned_post': pinned_post,
+        'recent_posts': [post.to_dict(current_user_id=current_user_id) for post in recent_posts]
+    }
 
 
 @bp.route('/follow/@<string:username>', methods=['POST'])
@@ -305,42 +343,21 @@ def get_user_profile(username):
                 'message': get_localized_message(request, 'forbidden')
             }), 403
 
-    # Get counts
-    follower_count = Follower.get_follower_count(user.id)
-    following_count = Follower.get_following_count(user.id)
     is_following = Follower.is_following(current_user_id, user.id)
     is_friend = Follower.is_following(current_user_id, user.id) and Follower.is_following(user.id, current_user_id)
+    if user.profile_visibility == 'public' and user.id != current_user_id:
+        cache_key = _public_profile_cache_key(user.username)
+        base_payload = cache.get(cache_key)
+        if base_payload is None:
+            base_payload = _build_public_profile_base(user, current_user_id)
+            cache.set(cache_key, base_payload, timeout=120)
+        payload = deepcopy(base_payload)
+    else:
+        payload = _build_public_profile_base(user, current_user_id)
 
-    # Get recent public posts (last 10)
-    recent_posts = Post.query.filter_by(
-        user_id=user.id,
-        is_anonymous=False
-    ).order_by(Post.created_at.desc()).limit(10).all()
+    payload['user']['email'] = user.email if user.show_email or user.id == current_user_id else None
+    payload['user']['is_following'] = is_following
+    payload['user']['is_friend'] = is_friend
+    payload['user']['is_you'] = (user.id == current_user_id)
 
-    pinned_post = None
-    if user.pinned_post_id:
-        pinned = Post.query.filter_by(id=user.pinned_post_id, user_id=user.id, is_anonymous=False).first()
-        if pinned:
-            pinned_post = pinned.to_dict(current_user_id=current_user_id)
-
-    return jsonify({
-        'user': {
-            'id': user.id,
-            'username': user.username,
-            'display_name': user.display_name,
-            'bio': user.bio,
-            'profile_picture': user.profile_picture,
-            'website': user.website,
-            'location': user.location,
-            'email': user.email if user.show_email or user.id == current_user_id else None,
-            'profile_visibility': user.profile_visibility,
-            'created_at': user.created_at.isoformat() if user.created_at else None,
-            'follower_count': follower_count,
-            'following_count': following_count,
-            'is_following': is_following,
-            'is_friend': is_friend,
-            'is_you': (user.id == current_user_id)
-        },
-        'pinned_post': pinned_post,
-        'recent_posts': [post.to_dict(current_user_id=current_user_id) for post in recent_posts]
-    }), 200
+    return jsonify(payload), 200

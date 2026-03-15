@@ -17,10 +17,15 @@ from app.models.notification import Notification
 from app.models.session import Session
 from app.models.bookmark import Bookmark
 from app.models.security_log import SecurityLog
+from app.models.report import Report
+from app.models.conversation import Conversation
+from app.models.message import Message
+from app.models.push_subscription import PushSubscription
 
 __all__ = [
     'User', 'Post', 'CampusZone',
     'Follower', 'Reaction', 'Media',
     'DailyAggregate', 'WeeklyAggregate', 'Comment',
-    'Notification', 'Session', 'Bookmark', 'SecurityLog'
+    'Notification', 'Session', 'Bookmark', 'SecurityLog', 'Report',
+    'Conversation', 'Message', 'PushSubscription'
 ]

@@ -13,6 +13,7 @@ from datetime import datetime, date, timedelta
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
 
+from app import cache
 from app.models.aggregate import DailyAggregate, WeeklyAggregate
 from app.models.campus_zone import CampusZone
 from app.services.aggregation_service import (
@@ -134,6 +135,7 @@ def get_weekly_analytics():
 
 @bp.route('/campus', methods=['GET'])
 @jwt_required()
+@cache.cached(timeout=300, query_string=True)
 def get_campus_overview():
     """
     Get campus-wide mood overview with per-zone breakdown.

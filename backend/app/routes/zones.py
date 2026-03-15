@@ -1,12 +1,20 @@
-"""Campus zone discovery and search routes."""
+"""Campus zone discovery, search, and trending routes."""
 
+from datetime import datetime, timedelta
 from flask import Blueprint, jsonify, request
 from sqlalchemy import func, or_
 
-from app import db
-from app.models.campus_zone import CampusZone
+from app import cache, db
+from app.models import CampusZone, Post, Reaction, User
 
 bp = Blueprint('zones', __name__)
+
+TRENDING_WINDOWS = {
+    '1h': timedelta(hours=1),
+    '6h': timedelta(hours=6),
+    '24h': timedelta(hours=24),
+    '7d': timedelta(days=7),
+}
 
 ZONE_ALIASES = {
     'biblio': 'Bonenfant',
@@ -146,6 +154,7 @@ def suggest_zones():
 
 
 @bp.route('/zones', methods=['GET'])
+@cache.cached(timeout=3600, query_string=True)
 def get_all_zones():
     """List all zones, optionally filtered by type."""
     zone_type = (request.args.get('type') or '').strip()
@@ -187,4 +196,136 @@ def get_zone_types():
             {'type': zone_type, 'count': count}
             for zone_type, count in results
         ]
+    }), 200
+
+
+@bp.route('/zones/trending', methods=['GET'])
+@cache.cached(timeout=300, query_string=True)
+def get_trending_zones():
+    """Return the most active public zones for a given time window."""
+    window_name = (request.args.get('window') or '24h').strip().lower()
+    limit = min(request.args.get('limit', 10, type=int), 25)
+    window = TRENDING_WINDOWS.get(window_name)
+
+    if not window:
+        return jsonify({'error': 'Invalid window', 'message': 'window must be one of 1h, 6h, 24h, or 7d'}), 400
+
+    cutoff = datetime.utcnow() - window
+    posts = (
+        Post.query
+        .join(User, User.id == Post.user_id)
+        .filter(Post.is_anonymous == False)  # noqa: E712
+        .filter(Post.hidden_by_mod == False)  # noqa: E712
+        .filter(User.is_verified == True)  # noqa: E712
+        .filter(User.is_deactivated == False)  # noqa: E712
+        .filter(Post.zone_id.isnot(None))
+        .filter(Post.created_at >= cutoff)
+        .all()
+    )
+
+    zone_metrics = {}
+    for post in posts:
+        entry = zone_metrics.setdefault(post.zone_id, {
+            'zone': post.zone.to_dict(),
+            'post_count': 0,
+            'reaction_count': 0,
+            'scores': [],
+        })
+        entry['post_count'] += 1
+        entry['reaction_count'] += Reaction.get_total_count(post.id)
+        if post.sentiment_score is not None:
+            entry['scores'].append(post.sentiment_score)
+
+    zones = []
+    for entry in zone_metrics.values():
+        avg_score = (sum(entry['scores']) / len(entry['scores'])) if entry['scores'] else None
+        if avg_score is None:
+            mood = 'neutral'
+        elif avg_score > 0.15:
+            mood = 'positive'
+        elif avg_score < -0.15:
+            mood = 'negative'
+        else:
+            mood = 'neutral'
+
+        zones.append({
+            'zone': entry['zone'],
+            'post_count': entry['post_count'],
+            'reaction_count': entry['reaction_count'],
+            'mood': mood,
+        })
+
+    zones.sort(key=lambda item: (item['post_count'], item['reaction_count']), reverse=True)
+    return jsonify({
+        'window': window_name,
+        'zones': zones[:limit],
+    }), 200
+
+
+@bp.route('/zones/<int:zone_id>/activity', methods=['GET'])
+def get_zone_activity(zone_id):
+    """Return zone activity summary and recent public posts."""
+    zone = CampusZone.query.get(zone_id)
+    if not zone:
+        return jsonify({
+            'error': 'Zone not found',
+            'message': f'No zone found with ID {zone_id}'
+        }), 404
+
+    cutoff = datetime.utcnow() - timedelta(hours=24)
+    posts = (
+        Post.query
+        .join(User, User.id == Post.user_id)
+        .filter(Post.zone_id == zone_id)
+        .filter(Post.is_anonymous == False)  # noqa: E712
+        .filter(Post.hidden_by_mod == False)  # noqa: E712
+        .filter(User.is_verified == True)  # noqa: E712
+        .filter(User.is_deactivated == False)  # noqa: E712
+        .filter(Post.created_at >= cutoff)
+        .order_by(Post.created_at.desc())
+        .all()
+    )
+
+    reaction_count = sum(Reaction.get_total_count(post.id) for post in posts)
+    sentiment_counts = {'positive': 0, 'neutral': 0, 'negative': 0}
+    for post in posts:
+        label = post.sentiment_label or 'neutral'
+        if label in sentiment_counts:
+            sentiment_counts[label] += 1
+
+    total_posts = len(posts)
+    dominant_sentiment = 'neutral'
+    if total_posts:
+        dominant_sentiment = max(sentiment_counts, key=sentiment_counts.get)
+
+    sentiment_breakdown = {
+        key: round((count / total_posts), 2) if total_posts else 0.0
+        for key, count in sentiment_counts.items()
+    }
+
+    recent_posts = []
+    for post in posts[:5]:
+        recent_posts.append({
+            'id': post.id,
+            'content': post.content,
+            'created_at': post.created_at.isoformat() + 'Z' if post.created_at else None,
+            'author': {
+                'id': post.author.id,
+                'username': post.author.username,
+                'display_name': post.author.display_name,
+                'profile_picture': post.author.profile_picture,
+            },
+            'sentiment': post.sentiment_label,
+            'reaction_count': Reaction.get_total_count(post.id),
+        })
+
+    return jsonify({
+        'zone': zone.to_dict(),
+        'last_24h': {
+            'post_count': total_posts,
+            'reaction_count': reaction_count,
+            'dominant_sentiment': dominant_sentiment,
+            'sentiment_breakdown': sentiment_breakdown,
+        },
+        'recent_posts': recent_posts,
     }), 200

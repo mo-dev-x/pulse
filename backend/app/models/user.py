@@ -76,6 +76,7 @@ class User(db.Model):
     backup_codes = db.Column(db.JSON, nullable=True)
 
     # Account status and profile pinning
+    is_admin = db.Column(db.Boolean, default=False, nullable=False)
     is_deactivated = db.Column(db.Boolean, default=False, nullable=False)
     deactivated_at = db.Column(db.DateTime, nullable=True)
     pinned_post_id = db.Column(
@@ -304,6 +305,7 @@ class User(db.Model):
             data['email_notifications'] = self.email_notifications
             data['push_notifications'] = self.push_notifications
             data['totp_enabled'] = self.totp_enabled
+            data['is_admin'] = self.is_admin
             data['is_deactivated'] = self.is_deactivated
             data['deactivated_at'] = self.deactivated_at.isoformat() if self.deactivated_at else None
             data['pinned_post_id'] = self.pinned_post_id
