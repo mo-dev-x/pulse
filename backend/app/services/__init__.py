@@ -26,6 +26,7 @@ from app.services.notification_service import (
     create_mention_notifications
 )
 from app.services.job_queue_service import enqueue_task
+from app.services.meilisearch_service import search as meilisearch_search, upsert_documents, delete_document
 from app.services.session_service import (
     track_session,
     revoke_session,
@@ -43,6 +44,7 @@ __all__ = [
     'create_verification_token', 'create_password_reset_token',
     'create_notification', 'create_notifications_batch', 'extract_mentions', 'create_mention_notifications',
     'enqueue_task',
+    'meilisearch_search', 'upsert_documents', 'delete_document',
     'track_session', 'revoke_session', 'touch_session',
     'log_security_event',
     'generate_secret', 'generate_totp', 'verify_totp', 'build_provisioning_uri'

@@ -27,7 +27,7 @@ from app.models.follower import Follower
 from app.models.media import Media
 from app.models.reaction import Reaction
 from app.models.bookmark import Bookmark
-from app.services import analyze_sentiment
+from app.services import analyze_sentiment, delete_document, upsert_documents
 from app.services.job_queue_service import enqueue_task
 from app.services.notification_service import create_mention_notifications
 from app.utils.i18n import get_localized_message
@@ -165,6 +165,20 @@ def _trending_cache_key():
     return f"trending_posts:{current_user_id}:{query_string}"
 
 
+def _post_search_document(post):
+    return {
+        'id': post.id,
+        'content': post.content,
+        'is_anonymous': post.is_anonymous,
+        'hidden_by_mod': post.hidden_by_mod,
+        'zone_id': post.zone_id,
+        'zone_name': post.zone.name if post.zone else None,
+        'author_display_name': post.author.display_name if post.author else None,
+        'author_is_deactivated': bool(post.author.is_deactivated) if post.author else False,
+        'created_at': post.created_at.isoformat() if post.created_at else None,
+    }
+
+
 @bp.route('', methods=['POST'])
 @jwt_required()
 @limiter.limit(rate_limit_value('POST_CREATE_RATE_LIMIT', '15 per hour'), key_func=rate_limit_key_user)
@@ -289,6 +303,10 @@ def create_post():
             new_post.id,
             queue_name='analytics',
         )
+        try:
+            upsert_documents('posts', [_post_search_document(new_post)])
+        except Exception:
+            current_app.logger.warning('Meilisearch post upsert failed for post_id=%s', new_post.id)
 
         # Return post (privacy-aware serialization)
         post_dict = new_post.to_dict(current_user_id=user_id)
@@ -678,8 +696,13 @@ def delete_post(post_id):
             }), 403
 
     try:
+        post_id_to_remove = post.id
         db.session.delete(post)
         db.session.commit()
+        try:
+            delete_document('posts', post_id_to_remove)
+        except Exception:
+            current_app.logger.warning('Meilisearch post delete failed for post_id=%s', post_id_to_remove)
 
         return jsonify({
             'message': get_localized_message(request, 'post_deleted'),

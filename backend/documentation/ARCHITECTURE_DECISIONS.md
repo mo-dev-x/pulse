@@ -1038,7 +1038,7 @@ if hours_since > 24:
 
 **Rationale:** The existing stack is Python + MySQL. Adding a dedicated search engine introduces extra infrastructure, synchronization logic, and cost that are not justified at Pulse's current scale. MySQL `FULLTEXT` search is sufficient for ranked campus search across posts, users, and zones.
 
-**Implementation:** Unified search is exposed through `app/routes/search.py`, with backend privacy enforcement for anonymous posts, private profiles, and deactivated users.
+**Implementation:** Unified search is exposed through `app/routes/search.py`, with backend privacy enforcement for anonymous posts, private profiles, and deactivated users. A feature-flagged Meilisearch scaffold may exist for future rollout, but MySQL remains the default source of truth until an explicit architecture change is made.
 
 ---
 

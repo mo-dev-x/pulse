@@ -65,6 +65,8 @@ Used by `@mention` autocomplete in post and comment composition.
 - Search supports posts, users, and zones from one endpoint
 - Zone search works alongside the dedicated zone search/suggest endpoints
 - Post search should narrow results in SQL before Python-side match scoring
+- Users and zones also narrow candidates in SQL before final ranking
+- A feature-flagged Meilisearch path can be enabled later with `ENABLE_MEILISEARCH=true` while the database path remains the default
 
 ## Validation
 1. Search with `type=posts` and confirm anonymous content is excluded.

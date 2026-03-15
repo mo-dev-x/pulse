@@ -76,6 +76,12 @@ class Config:
     OIDC_CLIENT_SECRET = os.getenv('OIDC_CLIENT_SECRET')
     OIDC_REDIRECT_URI = os.getenv('OIDC_REDIRECT_URI', 'http://127.0.0.1:5000/api/auth/oidc/callback')
     OIDC_SCOPE = os.getenv('OIDC_SCOPE', 'openid profile email')
+    ENABLE_MEILISEARCH = os.getenv('ENABLE_MEILISEARCH', 'false').lower() == 'true'
+    MEILISEARCH_URL = os.getenv('MEILISEARCH_URL', 'http://127.0.0.1:7700')
+    MEILISEARCH_API_KEY = os.getenv('MEILISEARCH_API_KEY')
+    MEILISEARCH_POSTS_INDEX = os.getenv('MEILISEARCH_POSTS_INDEX', 'posts')
+    MEILISEARCH_USERS_INDEX = os.getenv('MEILISEARCH_USERS_INDEX', 'users')
+    MEILISEARCH_ZONES_INDEX = os.getenv('MEILISEARCH_ZONES_INDEX', 'zones')
     REDIS_URL = os.getenv('REDIS_URL')
     BACKGROUND_JOBS_ENABLED = os.getenv('BACKGROUND_JOBS_ENABLED', 'false').lower() == 'true'
     BACKGROUND_JOBS_EAGER = os.getenv('BACKGROUND_JOBS_EAGER', 'false').lower() == 'true'

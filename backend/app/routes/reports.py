@@ -2,12 +2,13 @@
 
 from datetime import datetime, timedelta, timezone
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from app import db
 from app.middleware import require_admin
 from app.models import Comment, Post, Report, User
+from app.services import delete_document
 from app.services.job_queue_service import enqueue_task
 from app.services.security_log_service import log_security_event
 from app.utils.i18n import get_localized_message
@@ -242,6 +243,10 @@ def admin_delete_post(post_id):
         metadata={'post_id': post_id},
     )
     db.session.commit()
+    try:
+        delete_document('posts', post_id)
+    except Exception:
+        current_app.logger.warning('Meilisearch post delete failed for admin post_id=%s', post_id)
     return jsonify({'message': 'Post deleted', 'deleted': True}), 200
 
 

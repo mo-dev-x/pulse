@@ -151,6 +151,11 @@ REDIS_URL=redis://localhost:6379/0
 BACKGROUND_JOBS_ENABLED=false
 BACKGROUND_JOBS_EAGER=false
 BACKGROUND_JOB_TIMEOUT=300
+
+# Optional Meilisearch Search Scaffold
+ENABLE_MEILISEARCH=false
+MEILISEARCH_URL=http://127.0.0.1:7700
+MEILISEARCH_API_KEY=
 ```
 
 **Save and close** (Ctrl+O, Enter, Ctrl+X in nano)

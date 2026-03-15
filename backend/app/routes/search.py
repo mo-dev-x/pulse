@@ -2,9 +2,12 @@
 
 from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required
+from sqlalchemy import or_
 
 from app import limiter, rate_limit_value
 from app.models import CampusZone, Post, User
+from app.services import meilisearch_search
+from app.services.meilisearch_service import is_enabled as meilisearch_enabled
 
 bp = Blueprint('search', __name__)
 
@@ -76,22 +79,24 @@ def _search_posts(query, zone_id=None):
 
 
 def _search_users(query):
+    search_pattern = f"%{query}%"
     users = (
         User.query
         .filter(User.profile_visibility != 'private')
         .filter(User.is_deactivated == False)  # noqa: E712
+        .filter(
+            or_(
+                User.username.ilike(search_pattern),
+                User.display_name.ilike(search_pattern),
+                User.bio.ilike(search_pattern),
+            )
+        )
         .order_by(User.created_at.desc())
         .all()
     )
 
     results = []
     for user in users:
-        if not any(
-            _contains(value, query)
-            for value in (user.username, user.display_name, user.bio)
-        ):
-            continue
-
         user_dict = user.to_dict()
         user_dict['match_score'] = _score_text_match(
             query,
@@ -106,19 +111,43 @@ def _search_users(query):
 
 
 def _search_zones(query):
-    zones = CampusZone.query.order_by(CampusZone.name.asc()).all()
+    search_pattern = f"%{query}%"
+    zones = (
+        CampusZone.query
+        .filter(
+            or_(
+                CampusZone.name.ilike(search_pattern),
+                CampusZone.description.ilike(search_pattern),
+            )
+        )
+        .order_by(CampusZone.name.asc())
+        .all()
+    )
     results = []
 
     for zone in zones:
-        if not any(_contains(value, query) for value in (zone.name, zone.description)):
-            continue
-
         zone_dict = zone.to_dict()
         zone_dict['match_score'] = _score_text_match(query, zone.name, zone.description)
         results.append(zone_dict)
 
     results.sort(key=lambda item: (item['match_score'], item['name']), reverse=True)
     return results
+
+
+def _search_posts_meili(query, zone_id=None, limit=50):
+    filters = ["is_anonymous = false", "hidden_by_mod = false", "author_is_deactivated = false"]
+    if zone_id is not None:
+        filters.append(f"zone_id = {zone_id}")
+    return meilisearch_search('posts', query, limit=limit, filters=filters)
+
+
+def _search_users_meili(query, limit=50):
+    filters = ["profile_visibility != 'private'", "is_deactivated = false"]
+    return meilisearch_search('users', query, limit=limit, filters=filters)
+
+
+def _search_zones_meili(query, limit=50):
+    return meilisearch_search('zones', query, limit=limit)
 
 
 @bp.route('/search', methods=['GET'])
@@ -146,13 +175,28 @@ def search():
 
     all_results = {'posts': [], 'users': [], 'zones': []}
     has_next = False
-
-    if search_type in {'all', 'posts'}:
-        all_results['posts'] = _search_posts(query, zone_id=zone_id)
-    if search_type in {'all', 'users'}:
-        all_results['users'] = _search_users(query)
-    if search_type in {'all', 'zones'}:
-        all_results['zones'] = _search_zones(query)
+    try:
+        if meilisearch_enabled():
+            if search_type in {'all', 'posts'}:
+                all_results['posts'] = _search_posts_meili(query, zone_id=zone_id, limit=max(per_page * page, 50))
+            if search_type in {'all', 'users'}:
+                all_results['users'] = _search_users_meili(query, limit=max(per_page * page, 50))
+            if search_type in {'all', 'zones'}:
+                all_results['zones'] = _search_zones_meili(query, limit=max(per_page * page, 50))
+        else:
+            if search_type in {'all', 'posts'}:
+                all_results['posts'] = _search_posts(query, zone_id=zone_id)
+            if search_type in {'all', 'users'}:
+                all_results['users'] = _search_users(query)
+            if search_type in {'all', 'zones'}:
+                all_results['zones'] = _search_zones(query)
+    except Exception:
+        if search_type in {'all', 'posts'}:
+            all_results['posts'] = _search_posts(query, zone_id=zone_id)
+        if search_type in {'all', 'users'}:
+            all_results['users'] = _search_users(query)
+        if search_type in {'all', 'zones'}:
+            all_results['zones'] = _search_zones(query)
 
     paginated_results = {}
     counts = {}
@@ -181,7 +225,10 @@ def search_users():
     if not query:
         return jsonify({'error': 'Missing search query', 'message': 'Please provide ?q=...'}), 400
 
-    matches = _search_users(query)[:limit]
+    try:
+        matches = (_search_users_meili(query, limit=limit) if meilisearch_enabled() else _search_users(query)[:limit])
+    except Exception:
+        matches = _search_users(query)[:limit]
     users = [
         {
             'username': user['username'],

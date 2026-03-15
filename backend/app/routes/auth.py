@@ -36,6 +36,7 @@ from app import db, limiter, rate_limit_value
 from app.models.post import Post
 from app.models.session import Session
 from app.models.user import User
+from app.services import upsert_documents
 from app.services.email_service import send_verification_email, send_password_reset_email
 from app.services.security_log_service import log_security_event
 from app.services.session_service import track_session, revoke_session
@@ -56,6 +57,19 @@ def _should_log_email_warning(error_message):
 def _is_oidc_enabled():
     """Feature flag guard to keep OIDC code available but disabled by default."""
     return bool(current_app.config.get('ENABLE_OIDC_AUTH', False))
+
+
+def _user_search_document(user):
+    return {
+        'id': user.id,
+        'username': user.username,
+        'display_name': user.display_name,
+        'bio': user.bio,
+        'profile_picture': user.profile_picture,
+        'profile_visibility': user.profile_visibility,
+        'is_deactivated': bool(user.is_deactivated),
+        'created_at': user.created_at.isoformat() if user.created_at else None,
+    }
 
 
 def _allowed_file(filename):
@@ -186,6 +200,10 @@ def register():
             ip_address=request.remote_addr,
             user_agent=request.headers.get('User-Agent')
         )
+        try:
+            upsert_documents('users', [_user_search_document(new_user)])
+        except Exception:
+            current_app.logger.warning('Meilisearch user upsert failed for user_id=%s', new_user.id)
         db.session.commit()
         
         response = {
@@ -340,6 +358,10 @@ def login():
             user_agent=request.headers.get('User-Agent')
         )
         db.session.commit()
+        try:
+            upsert_documents('users', [_user_search_document(user)])
+        except Exception:
+            current_app.logger.warning('Meilisearch user upsert failed for user_id=%s', user.id)
         
         return jsonify({
             'message': get_localized_message(request, 'login_successful'),
@@ -479,6 +501,10 @@ def update_profile():
             user.profile_picture = data['profile_picture']
         
         db.session.commit()
+        try:
+            upsert_documents('users', [_user_search_document(user)])
+        except Exception:
+            current_app.logger.warning('Meilisearch user upsert failed for user_id=%s', user.id)
         
         return jsonify({
             'message': get_localized_message(request, 'profile_updated'),
@@ -949,6 +975,10 @@ def update_bio():
 
     user.bio = bio or None
     db.session.commit()
+    try:
+        upsert_documents('users', [_user_search_document(user)])
+    except Exception:
+        current_app.logger.warning('Meilisearch user upsert failed for user_id=%s', user.id)
     return jsonify({'message': get_localized_message(request, 'bio_updated_success'), 'user': user.to_dict(include_private=True)}), 200
 
 
@@ -1005,6 +1035,10 @@ def upload_profile_picture():
     old_filename = user.profile_picture
     user.profile_picture = f'profiles/{filename}'
     db.session.commit()
+    try:
+        upsert_documents('users', [_user_search_document(user)])
+    except Exception:
+        current_app.logger.warning('Meilisearch user upsert failed for user_id=%s', user.id)
 
     if old_filename:
         old_path = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'uploads/'), old_filename)
@@ -1042,6 +1076,10 @@ def upload_header_image():
     old_filename = user.header_image
     user.header_image = f'headers/{filename}'
     db.session.commit()
+    try:
+        upsert_documents('users', [_user_search_document(user)])
+    except Exception:
+        current_app.logger.warning('Meilisearch user upsert failed for user_id=%s', user.id)
 
     if old_filename:
         old_path = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'uploads/'), old_filename)

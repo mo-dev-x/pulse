@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app import db
 from app.models import CampusZone, Post, User
 from tests.phase5_test_utils import Phase5BaseTestCase
+from unittest.mock import patch
 
 
 class TestSearch(Phase5BaseTestCase):
@@ -170,3 +171,11 @@ class TestSearch(Phase5BaseTestCase):
         users = response.get_json()['users']
         self.assertEqual(len(users), 1)
         self.assertEqual(users[0]['username'], 'bibliofan')
+
+    def test_search_uses_meilisearch_when_feature_flag_enabled(self):
+        self.app.config['ENABLE_MEILISEARCH'] = True
+        with patch('app.routes.search._search_posts_meili', return_value=[{'id': 999, 'content': 'meili hit', 'match_score': 100, 'created_at': 'z'}]) as mocked_posts:
+            response = self.client.get('/api/search?q=meili&type=posts', headers=self.auth_headers(self.token))
+        self.assertEqual(response.status_code, 200, response.get_json())
+        self.assertEqual(response.get_json()['results']['posts'][0]['content'], 'meili hit')
+        mocked_posts.assert_called_once()
