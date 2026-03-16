@@ -19,12 +19,7 @@
 
       <form class="form" id="registerForm">
         <div id="error" class="error" style="display:none;"></div>
-<!-- 
-        display_name
-        <div class="field">
-          <label class="label" for="display_name">Display name</label>
-          <input class="input" id="display_name" type="text" placeholder="Your public name" required>
-        </div> -->
+        <p id="msg" class="msg" style="display:none;"></p>
 
         <!-- username -->
         <div class="field">
@@ -39,7 +34,12 @@
 
         <div class="field">
           <label class="label" for="password">Password</label>
-          <input class="input" id="password" type="password" placeholder="••••••••" required>
+          <div class="password-wrapper">
+            <input class="input" id="password" type="password" placeholder="••••••••" required>
+            <button type="button" id="togglePassword" class="toggle-password" aria-label="Toggle password visibility">
+              👁
+            </button>
+          </div>
         </div>
 
         <button class="btn btn-primary" type="submit">Create account</button>

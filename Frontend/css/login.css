@@ -128,3 +128,64 @@ body {
   font-size: 13px;
   color: #fca5a5;
 }
+
+.password-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.password-wrapper .input {
+  width: 100%;
+  padding-right: 48px;
+  box-sizing: border-box;
+}
+
+.toggle-password {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #9fb3ff;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0;
+  margin: 0;
+}
+
+.toggle-password:focus {
+  outline: none;
+}
+.toggle-password {
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #9fb3ff;
+  font-size: 16px;
+  padding: 0;
+  margin: 0;
+  line-height: 1;
+  transition: transform 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+}
+
+.toggle-password:hover {
+  color: #c7d4ff;
+}
+
+.toggle-password:active {
+  transform: translateY(-50%) scale(0.88);
+  color: #ffffff;
+}
+
+.toggle-password:focus {
+  outline: none;
+}
+.toggle-password.active {
+  color: #ffffff;
+}

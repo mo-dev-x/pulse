@@ -13,8 +13,8 @@
     <section class="card">
       <div class="brand">
         <div>
-          <h1>ASLEEEEMAAAAA</h1>
-          <p>Sign in to continue</p>
+          <h1>PULSE</h1> <!-- gotta change it to PULSE T^T-->
+          <p>Sign in to continue to your campus wellness feed</p>
         </div>
       </div>
 
@@ -25,15 +25,26 @@
         <input class="input" id="email" type="email" placeholder="name@ulaval.ca" required>
 
         <label class="label" for="password">Password</label>
-        <input class="input" id="password" type="password" placeholder="••••••••" required>
-
+        <div class="password-wrapper">
+          <input
+            class="input"
+            id="password"
+            type="password"
+            placeholder="••••••••"
+            required
+          >
+          <button type="button" id="togglePassword" class="toggle-password">
+            👁
+          </button>
+        </div>
+        
         <div class="row">
           <label class="check">
             <input id="rememberMe" type="checkbox">
             <span>Remember me</span>
           </label>
 
-          <a class="link" href="#">Forgot?</a>
+          <a class="link" href="#">Forgot password?</a> <!-- gotta change it to href="forgot-password.html...." -->
         </div>
 
         <button class="btn" type="submit">Login</button>
