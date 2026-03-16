@@ -98,7 +98,7 @@ CREATE TABLE followers (
     
     -- Foreign keys
     FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (following_id) REFERENCES users(id) ON DELETE CASCADE,
     
     -- Constraints
     UNIQUE KEY unique_follow (follower_id, following_id),
@@ -162,7 +162,7 @@ CREATE TABLE posts (
     INDEX idx_user_posts (user_id, created_at DESC),
     INDEX idx_user_anonymous (user_id, is_anonymous),
     INDEX idx_zone_recent (zone_id, created_at DESC),
-    INDEX idx_public_recent (is_anonymous, created_at DESC),
+    INDEX idx_feed_query (zone_id, is_anonymous, created_at DESC)
     INDEX idx_sentiment_date (sentiment_label, created_at),
     INDEX idx_language (detected_language),
     
