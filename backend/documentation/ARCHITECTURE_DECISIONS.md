@@ -334,7 +334,7 @@ from langdetect import detect
 vader = SentimentIntensityAnalyzer()
 french_analyzer = pipeline(
     "sentiment-analysis",
-    model="cardiffnlp/twitter-xlm-roberta-base-sentiment",
+    model="cardiffnlp/twitter-xlm-roberta-base-emotion",
     top_k=None
 )
 
@@ -601,7 +601,7 @@ def analyze_sentiment(text):
 ### **AD-009: NLP Model Selection — Twitter XLM-RoBERTa**
 
 **Date:** 2026-02-13  
-**Decision:** Use `cardiffnlp/twitter-xlm-roberta-base-sentiment` for French sentiment
+**Decision:** Use `cardiffnlp/twitter-xlm-roberta-base-emotion` for French emotion analysis
 
 **Alternatives Evaluated:**
 
@@ -612,27 +612,44 @@ def analyze_sentiment(text):
 | **Twitter XLM-RoBERTa** | **81%** | **Social media** | **✅ Selected** |
 
 **Why This Model:**
-1. **Perfect stress detection** — 100% of negative/stressed posts detected correctly
-2. **Zero false negatives** — no missed distress signals (critical for wellness)
+1. **Campus-relevant emotions** — joy, sadness, anger, fear, disgust, and surprise map better to wellness language than a 3-label sentiment output
+2. **Better triage context** — fear can surface as `Stressed`, anger as `Frustrated`, and disgust as `Overwhelmed`
 3. **Social media trained** — understands emojis, slang, informal writing
-4. **Bilingual** — handles both French and English natively
-5. **1M+ downloads** — proven and community-validated
+4. **Bilingual** — still supports multilingual campus posts
+5. **Backward compatible** — API keeps derived `positive` / `neutral` / `negative` labels for existing analytics
 
-**Known Limitation:**
-- Neutral posts lean slightly positive (score ~0.10–0.20)
-- Acceptable for wellness context: false positive (neutral → positive) is harmless; false negative (negative → neutral) would be dangerous — and there are zero of those
-
-**Classification Thresholds:**
+**Emotion Mapping:**
 ```python
-score > 0.05   → 'positive'
-score < -0.05  → 'negative'
-else           → 'neutral'
+joy      -> Joy
+sadness  -> Sad
+anger    -> Frustrated
+fear     -> Stressed
+disgust  -> Overwhelmed
+surprise -> Surprised
+```
+
+**Backward Compatibility:**
+```python
+positive <- joy, surprise
+negative <- sadness, anger, fear, disgust
+neutral  <- low-confidence fallback
 ```
 
 **Performance:**
 - First load: ~40 seconds (downloads 500MB model)
 - Cached: <1 second per analysis
 - GPU not required (CPU works fine)
+
+---
+
+### **AD-052: Emotion Model Swap for Campus Mood**
+
+**Date:** 2026-03-16  
+**Decision:** Swap the French Cardiff model from the sentiment variant to the emotion variant.
+
+**Rationale:** The 6-label emotion output maps more naturally to campus wellness language than coarse 3-label sentiment. Posts can now carry a raw model emotion (`joy`, `fear`, etc.) plus a campus-facing label (`Joy`, `Stressed`, `Frustrated`, etc.), while legacy `sentiment_label` stays derived for existing trend charts and analytics.
+
+**Consequence:** New post records store both `emotion_label` and `emotion_display`, and analytics responses include a parallel emotion breakdown without removing the existing sentiment distributions.
 
 ---
 

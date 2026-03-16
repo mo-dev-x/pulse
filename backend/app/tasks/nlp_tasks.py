@@ -16,6 +16,8 @@ def analyze_post_sentiment(post_id):
         result = analyze_sentiment(post.content)
         post.sentiment_score = result['score']
         post.sentiment_label = result['label']
+        post.emotion_label = result.get('emotion_label')
+        post.emotion_display = result.get('emotion_display')
         post.detected_language = result['language']
         db.session.commit()
         return {'updated': True, 'post_id': post_id}

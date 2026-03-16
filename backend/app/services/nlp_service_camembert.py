@@ -1,11 +1,11 @@
 """
-Production-Grade Bilingual NLP Service with Twitter Sentiment
+Production-grade bilingual NLP service with Twitter emotion detection.
 
 Uses state-of-the-art models:
-- French: cardiffnlp/twitter-xlm-roberta-base-sentiment (multilingual Twitter)
-- English: VADER (social media optimized)
+- French: cardiffnlp/twitter-xlm-roberta-base-emotion (multilingual Twitter)
+- English: VADER (social media optimized) + lightweight campus emotion mapping
 
-Designed for Université Laval's bilingual campus community.
+Designed for Universite Laval's bilingual campus community.
 Perfect for social media-style wellness posts.
 """
 
@@ -21,22 +21,42 @@ except ImportError:
     TORCH_AVAILABLE = False
 
 
+EMOTION_LABELS = ('joy', 'sadness', 'anger', 'fear', 'disgust', 'surprise')
+EMOTION_INDEX_TO_LABEL = dict(enumerate(EMOTION_LABELS))
+EMOTION_TO_DISPLAY = {
+    'joy': 'Joy',
+    'sadness': 'Sad',
+    'anger': 'Frustrated',
+    'fear': 'Stressed',
+    'disgust': 'Overwhelmed',
+    'surprise': 'Surprised',
+    'neutral': 'Neutral',
+}
+EMOTION_TO_SENTIMENT = {
+    'joy': 'positive',
+    'surprise': 'positive',
+    'sadness': 'negative',
+    'anger': 'negative',
+    'fear': 'negative',
+    'disgust': 'negative',
+    'neutral': 'neutral',
+}
+LOW_CONFIDENCE_THRESHOLD = 0.35
+
+
 class FrenchTwitterNLPService:
     """
-    Production-grade bilingual sentiment analysis
-    
-    French: cardiffnlp/twitter-xlm-roberta-base-sentiment (multilingual Twitter)
-    English: VADER (optimized for social media)
-    
-    The French model is trained on Twitter data (perfect for social posts!)
-    and outputs: negative, neutral, positive
+    Production-grade bilingual sentiment analysis.
+
+    French: cardiffnlp/twitter-xlm-roberta-base-emotion (multilingual Twitter)
+    English: VADER (optimized for social media) with campus emotion heuristics
     """
     
     def __init__(self):
         """
         Initialize models
         
-        Note: CamemBERT models are loaded lazily on first use
+        Note: transformer models are loaded lazily on first use
         to avoid long startup times during development
         """
         # English analyzer (lightweight, always loaded)
@@ -50,7 +70,7 @@ class FrenchTwitterNLPService:
     
     def _load_camembert(self):
         """
-        Load French sentiment model (lazy loading)
+        Load French emotion model (lazy loading)
         
         This is expensive (~500MB download + GPU/CPU setup)
         so we only load when first needed
@@ -63,19 +83,19 @@ class FrenchTwitterNLPService:
             self._use_french_fallback = True
             return
 
-        print("🧠 Loading French sentiment model...")
+        print("Loading French emotion model...")
         print("   (This may take a minute on first run)")
 
         try:
-            model_name = "cardiffnlp/twitter-xlm-roberta-base-sentiment"
+            model_name = "cardiffnlp/twitter-xlm-roberta-base-emotion"
             self._french_tokenizer = AutoTokenizer.from_pretrained(model_name)
             self._french_model = AutoModelForSequenceClassification.from_pretrained(model_name)
             self._french_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             self._french_model.to(self._french_device)
             self._french_model.eval()
-            print(f"✅ French sentiment model loaded successfully on {self._french_device}")
+            print(f"French emotion model loaded successfully on {self._french_device}")
         except Exception as e:
-            print(f"⚠️  Failed to load French sentiment model: {e}")
+            print(f"Failed to load French emotion model: {e}")
             print("   Falling back to basic French sentiment analysis")
             self._use_french_fallback = True
 
@@ -148,16 +168,17 @@ class FrenchTwitterNLPService:
         scores = self.vader.polarity_scores(text)
         compound = scores['compound']  # -1 to +1
         
-        return self._classify_score(compound, 'en')
+        emotion_label, confidence = self._infer_english_emotion(text, compound)
+        return self._classify_score(
+            compound,
+            'en',
+            confidence=confidence,
+            emotion_label=emotion_label
+        )
     
     def analyze_french(self, text):
         """
-        Analyze French text using multilingual Twitter sentiment model
-        
-        Uses cardiffnlp/twitter-xlm-roberta-base-sentiment which outputs:
-        - negative, neutral, positive (3 classes)
-        
-        Perfect for social media posts in French!
+        Analyze French text using multilingual Twitter emotion model.
         
         Args:
             text (str): French text
@@ -190,36 +211,64 @@ class FrenchTwitterNLPService:
                 outputs = self._french_model(**inputs)
                 predictions = torch.nn.functional.softmax(outputs.logits, dim=-1)
             
-            # Twitter sentiment model outputs 3 classes:
-            # 0: negative, 1: neutral, 2: positive
             probs = predictions[0].cpu().numpy()
-            
-            # Calculate sentiment score (-1 to +1)
-            score = probs[2] - probs[0]  # positive - negative
-            
-            # Confidence is the maximum probability
-            confidence = float(max(probs))
-            
-            return self._classify_score(float(score), 'fr', confidence=confidence)
-            
+
+            predicted_index = int(probs.argmax())
+            emotion_label = EMOTION_INDEX_TO_LABEL[predicted_index]
+            confidence = float(probs[predicted_index])
+            score = float(self._emotion_probabilities_to_score(probs))
+
+            return self._classify_score(
+                score,
+                'fr',
+                confidence=confidence,
+                emotion_label=emotion_label
+            )
+
         except Exception as e:
             # If French analysis fails, return neutral with error
             return {
                 'score': 0.0,
                 'label': 'neutral',
+                'emotion_label': 'neutral',
+                'emotion_display': EMOTION_TO_DISPLAY['neutral'],
                 'confidence': 0.0,
                 'language': 'fr',
                 'error': str(e)
             }
-    
-    def _classify_score(self, score, language, confidence=None):
+
+    def _emotion_probabilities_to_score(self, probs):
+        """Convert emotion probabilities into a coarse sentiment score."""
+        positive_mass = float(probs[0] + probs[5])
+        negative_mass = float(probs[1] + probs[2] + probs[3] + probs[4])
+        return max(min(positive_mass - negative_mass, 1.0), -1.0)
+
+    def _infer_english_emotion(self, text, score):
+        """Map English text to a campus emotion label for API consistency."""
+        lowered = text.lower()
+        keyword_map = {
+            'fear': ('stressed', 'stress', 'anxious', 'anxiety', 'panic', 'panicked', 'worried', 'nervous', 'scared', 'afraid', 'terrified', 'fear'),
+            'anger': ('angry', 'mad', 'furious', 'rage', 'frustrated', 'annoyed', 'irritated'),
+            'disgust': ('overwhelmed', 'burned out', 'burnt out', 'disgusted', 'gross', 'drained', 'exhausted'),
+            'sadness': ('sad', 'down', 'depressed', 'hopeless', 'lonely', 'crying', 'miserable'),
+            'surprise': ('surprised', 'shocked', 'unexpected', 'unbelievable', 'wow'),
+            'joy': ('happy', 'love', 'loving', 'amazing', 'great', 'awesome', 'excited', 'glad', 'relieved', 'proud'),
+        }
+
+        for emotion, keywords in keyword_map.items():
+            if any(keyword in lowered for keyword in keywords):
+                base_confidence = abs(score) if emotion not in {'joy', 'surprise'} else max(score, 0.0)
+                return emotion, round(max(base_confidence, 0.6), 2)
+
+        if score > 0.2:
+            return 'joy', round(abs(score), 2)
+        if score < -0.2:
+            return 'sadness', round(abs(score), 2)
+        return 'neutral', round(abs(score), 2)
+
+    def _classify_score(self, score, language, confidence=None, emotion_label=None):
         """
-        Classify sentiment score into label
-        
-        Thresholds:
-        - score > 0.05: Positive (optimistic, happy)
-        - score < -0.05: Negative (stressed, sad, frustrated)
-        - else: Neutral (informational, matter-of-fact)
+        Classify coarse sentiment and campus emotion labels.
         
         Args:
             score (float): Sentiment score from -1 to 1
@@ -229,25 +278,23 @@ class FrenchTwitterNLPService:
         Returns:
             dict: Classification result
         """
-        # Determine label
-        if score > 0.05:
-            label = 'positive'
-        elif score < -0.05:
-            label = 'negative'
-        else:
-            label = 'neutral'
-        
-        # Confidence is how far from neutral the score is
         if confidence is None:
-            confidence = abs(score) if abs(score) > 0.05 else 0.0
-        
+            confidence = abs(score)
+
+        emotion_label = emotion_label or 'neutral'
+        if confidence < LOW_CONFIDENCE_THRESHOLD:
+            emotion_label = 'neutral'
+
+        label = EMOTION_TO_SENTIMENT.get(emotion_label, 'neutral')
         result = {
             'score': round(score, 2),
             'label': label,
+            'emotion_label': emotion_label,
+            'emotion_display': EMOTION_TO_DISPLAY.get(emotion_label, 'Neutral'),
             'confidence': round(confidence, 2),
             'language': language
         }
-        
+
         return result
     
     def analyze_sentiment(self, text):
@@ -260,12 +307,8 @@ class FrenchTwitterNLPService:
             text (str): User's post content (any language)
         
         Returns:
-            dict: {
-                'score': float,      # -1.00 to 1.00
-                'label': str,        # 'positive', 'neutral', 'negative'
-                'confidence': float, # 0.00 to 1.00
-                'language': str      # 'fr' or 'en'
-            }
+            dict with score, coarse sentiment label, emotion labels, confidence,
+            and detected language.
         
         Raises:
             ValueError: If text is too short (< 10 characters)
@@ -276,6 +319,8 @@ class FrenchTwitterNLPService:
             {
                 'score': 0.87,
                 'label': 'positive',
+                'emotion_label': 'joy',
+                'emotion_display': 'Joy',
                 'confidence': 0.92,
                 'language': 'fr'
             }
@@ -303,7 +348,7 @@ class FrenchTwitterNLPService:
         Analyze multiple texts at once
         
         More efficient than calling analyze_sentiment() repeatedly
-        because CamemBERT can process batches.
+        because the transformer model can process batches.
         
         Args:
             texts (list): List of text strings

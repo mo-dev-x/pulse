@@ -8,6 +8,17 @@ Aggregates are only shown when total_posts >= 10 (privacy threshold).
 from datetime import datetime, timezone
 from app import db
 
+DEFAULT_EMOTION_KEYS = ('joy', 'sadness', 'anger', 'fear', 'disgust', 'surprise', 'neutral')
+EMOTION_DISPLAY_MAP = {
+    'joy': 'Joy',
+    'sadness': 'Sad',
+    'anger': 'Frustrated',
+    'fear': 'Stressed',
+    'disgust': 'Overwhelmed',
+    'surprise': 'Surprised',
+    'neutral': 'Neutral',
+}
+
 
 class DailyAggregate(db.Model):
     """
@@ -94,6 +105,9 @@ class DailyAggregate(db.Model):
                 'neutral': round(self.neutral_count / self.total_posts * 100, 1) if self.total_posts > 0 else 0,
                 'negative': round(self.negative_count / self.total_posts * 100, 1) if self.total_posts > 0 else 0
             },
+            'emotion_distribution': self._emotion_distribution(),
+            'emotion_percentages': self._emotion_percentages(),
+            'emotion_display_distribution': self._emotion_display_distribution(),
             'avg_sentiment': round(self.avg_sentiment, 2) if self.avg_sentiment is not None else None,
             'mood_label': self._get_mood_label()
         }
@@ -107,6 +121,26 @@ class DailyAggregate(db.Model):
         elif self.avg_sentiment < -0.05:
             return 'negative'
         return 'neutral'
+
+    def _emotion_distribution(self):
+        distribution = getattr(self, 'emotion_distribution', None) or {}
+        return {key: int(distribution.get(key, 0)) for key in DEFAULT_EMOTION_KEYS}
+
+    def _emotion_percentages(self):
+        distribution = self._emotion_distribution()
+        if self.total_posts <= 0:
+            return {key: 0 for key in DEFAULT_EMOTION_KEYS}
+        return {
+            key: round(distribution[key] / self.total_posts * 100, 1)
+            for key in DEFAULT_EMOTION_KEYS
+        }
+
+    def _emotion_display_distribution(self):
+        distribution = self._emotion_distribution()
+        return {
+            EMOTION_DISPLAY_MAP[key]: distribution[key]
+            for key in DEFAULT_EMOTION_KEYS
+        }
 
 
 class WeeklyAggregate(db.Model):
@@ -187,6 +221,9 @@ class WeeklyAggregate(db.Model):
                 'neutral': round(self.neutral_count / self.total_posts * 100, 1) if self.total_posts > 0 else 0,
                 'negative': round(self.negative_count / self.total_posts * 100, 1) if self.total_posts > 0 else 0
             },
+            'emotion_distribution': self._emotion_distribution(),
+            'emotion_percentages': self._emotion_percentages(),
+            'emotion_display_distribution': self._emotion_display_distribution(),
             'avg_sentiment': round(self.avg_sentiment, 2) if self.avg_sentiment is not None else None,
             'mood_label': self._get_mood_label()
         }
@@ -200,3 +237,23 @@ class WeeklyAggregate(db.Model):
         elif self.avg_sentiment < -0.05:
             return 'negative'
         return 'neutral'
+
+    def _emotion_distribution(self):
+        distribution = getattr(self, 'emotion_distribution', None) or {}
+        return {key: int(distribution.get(key, 0)) for key in DEFAULT_EMOTION_KEYS}
+
+    def _emotion_percentages(self):
+        distribution = self._emotion_distribution()
+        if self.total_posts <= 0:
+            return {key: 0 for key in DEFAULT_EMOTION_KEYS}
+        return {
+            key: round(distribution[key] / self.total_posts * 100, 1)
+            for key in DEFAULT_EMOTION_KEYS
+        }
+
+    def _emotion_display_distribution(self):
+        distribution = self._emotion_distribution()
+        return {
+            EMOTION_DISPLAY_MAP[key]: distribution[key]
+            for key in DEFAULT_EMOTION_KEYS
+        }

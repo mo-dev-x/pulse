@@ -11,7 +11,7 @@ Before you start, make sure you have:
 - **Python 3.12+** installed
 - **MySQL 8.0+** installed and running
 - **Git** installed
-- **~3GB free disk space** (for CamemBERT model)
+- **~3GB free disk space** (for the Cardiff emotion model cache)
 - **Redis 7+** optional for production background jobs and shared rate-limit storage
 
 ---
@@ -86,7 +86,7 @@ pip install -r requirements.txt
 - Security (bcrypt, JWT)
 - NLP libraries (VADER, French emotion model, language detection)
 
-**Note:** French emotion model (~250MB) downloads on first use, not during installation.
+**Note:** `cardiffnlp/twitter-xlm-roberta-base-emotion` downloads on first use, not during installation.
 
 
 ---
@@ -334,7 +334,7 @@ python tests/test_auth.py
 
 ---
 
-### **Test 3: Bilingual NLP (CamemBERT)**
+### **Test 3: Bilingual NLP (Twitter XLM-R Emotion)**
 
 ```bash
 # Run NLP tests
@@ -347,7 +347,7 @@ python tests/test_nlp_camembert.py
                     CAMEMBERT BILINGUAL NLP TESTS                    
 **********************************************************************
 
-🇫🇷 French: CamemBERT (state-of-the-art)
+🇫🇷 French: Twitter XLM-R emotion model
 🇬🇧 English: VADER (social media optimized)
 
 ⚠️  First test will download model (~400MB)
@@ -363,7 +363,7 @@ python tests/test_nlp_camembert.py
 ✨ French emotion model excels at campus wellness posts!
 ```
 
-**Note:** First run downloads CamemBERT (~400MB). Subsequent runs are instant.
+**Note:** First run downloads `cardiffnlp/twitter-xlm-roberta-base-emotion` (~400MB). Subsequent runs are instant.
 
 ---
 
@@ -525,7 +525,7 @@ student@outlook.com
 
 ---
 
-### **CamemBERT download fails**
+### **French emotion model download fails**
 
 ```bash
 # Check internet connection
@@ -606,7 +606,7 @@ Before moving on, verify:
 - [ ] Auth tests pass (7/7)
 - [ ] NLP tests pass
 - [ ] Can register with @ulaval.ca email
-- [ ] CamemBERT model downloaded (~400MB)
+- [ ] `cardiffnlp/twitter-xlm-roberta-base-emotion` downloaded (~400MB)
 
 ---
 
@@ -621,7 +621,7 @@ Before moving on, verify:
 
 ### **Université Laval Resources:**
 - Campus counseling: Available if sentiment trends show concern
-- French language support: CamemBERT understands Quebec expressions
+- French language support: the Cardiff emotion model understands social-style Quebec French well
 
 ---
 
@@ -649,8 +649,8 @@ Once setup is complete:
 - **Git Workflow:** Commit often, push daily
 - **Testing:** Run tests before every commit
 - **Documentation:** Update PROJECT_TRACKER.md after each task
-- **French Support:** CamemBERT is production-grade for Quebec French
-- **Performance:** First CamemBERT call is slow (~5s), then cached
+- **French Support:** Cardiff's multilingual emotion model is production-grade for Quebec French
+- **Performance:** First emotion-model call is slow (~5s), then cached
 
 ---
 

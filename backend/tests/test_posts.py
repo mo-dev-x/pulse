@@ -81,6 +81,8 @@ def main():
     if response.status_code == 201:
         post = response.json().get('post', {})
         print_test("Sentiment is positive", post.get('sentiment') == 'positive')
+        print_test("Has emotion_label", bool(post.get('emotion_label')))
+        print_test("Has emotion_display", bool(post.get('emotion_display')))
         print_test("Shows username", 'username' in post.get('author', {}))
     
     # Test 2: Anonymous French Post
@@ -92,6 +94,8 @@ def main():
     if response.status_code == 201:
         post = response.json().get('post', {})
         print_test("Sentiment is negative", post.get('sentiment') == 'negative')
+        print_test("Has emotion_label", bool(post.get('emotion_label')))
+        print_test("Has emotion_display", bool(post.get('emotion_display')))
         print_test("Shows pseudonym only", 'pseudonym' in post.get('author', {}))
         print_test("Hides username", 'username' not in post.get('author', {}))
     

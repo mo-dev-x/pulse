@@ -150,6 +150,7 @@ def main():
             print_test("Has avg_sentiment", 'avg_sentiment' in agg)
             print_test("Has mood_label", 'mood_label' in agg,
                        f"Mood: {agg.get('mood_label')}")
+            print_test("Has emotion_distribution", 'emotion_distribution' in agg)
             print_test("Total posts >= 10 (threshold met)",
                        agg.get('total_posts', 0) >= 10)
 
@@ -200,6 +201,7 @@ def main():
             print_test("Has total_posts", 'total_posts' in agg)
             print_test("Has avg_sentiment", 'avg_sentiment' in agg)
             print_test("Has mood_label", 'mood_label' in agg)
+            print_test("Has emotion_distribution", 'emotion_distribution' in agg)
 
     # ─── TEST 5: Weekly analytics with zone ──────────────────────────────
     print_header("TEST 5: Weekly Analytics with Zone Filter")
@@ -226,6 +228,7 @@ def main():
         if 'message' not in overview:
             print_test("Campus overview has total_posts", 'total_posts' in overview)
             print_test("Campus overview has mood_label", 'mood_label' in overview)
+            print_test("Campus overview has emotion_distribution", 'emotion_distribution' in overview)
 
     # ─── TEST 7: Campus analytics — default date (today) ─────────────────
     print_header("TEST 7: Campus Analytics — No Date Parameter")

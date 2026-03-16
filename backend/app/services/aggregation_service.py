@@ -5,11 +5,17 @@ Computes daily and weekly mood statistics from posts.
 Enforces privacy threshold (≥10 posts) before exposing data.
 """
 
+from collections import Counter
 from datetime import datetime, timedelta, date
 from app import db
 from app.models.post import Post
 from app.models.aggregate import DailyAggregate, WeeklyAggregate
 from app.models.campus_zone import CampusZone
+
+
+def _emotion_distribution(posts):
+    counts = Counter((post.emotion_label or 'neutral') for post in posts)
+    return dict(counts)
 
 
 def compute_daily_aggregate(target_date, zone_id=None):
@@ -37,6 +43,7 @@ def compute_daily_aggregate(target_date, zone_id=None):
     positive = sum(1 for p in posts if p.sentiment_label == 'positive')
     neutral = sum(1 for p in posts if p.sentiment_label == 'neutral')
     negative = sum(1 for p in posts if p.sentiment_label == 'negative')
+    emotion_distribution = _emotion_distribution(posts)
 
     # Compute average sentiment score
     scores = [p.sentiment_score for p in posts if p.sentiment_score is not None]
@@ -54,6 +61,7 @@ def compute_daily_aggregate(target_date, zone_id=None):
         existing.neutral_count = neutral
         existing.negative_count = negative
         existing.avg_sentiment = avg_sentiment
+        existing.emotion_distribution = emotion_distribution
         aggregate = existing
     else:
         aggregate = DailyAggregate(
@@ -65,6 +73,7 @@ def compute_daily_aggregate(target_date, zone_id=None):
             negative_count=negative,
             avg_sentiment=avg_sentiment
         )
+        aggregate.emotion_distribution = emotion_distribution
         db.session.add(aggregate)
 
     db.session.commit()
@@ -99,6 +108,7 @@ def compute_weekly_aggregate(week_start_date, zone_id=None):
     positive = sum(1 for p in posts if p.sentiment_label == 'positive')
     neutral = sum(1 for p in posts if p.sentiment_label == 'neutral')
     negative = sum(1 for p in posts if p.sentiment_label == 'negative')
+    emotion_distribution = _emotion_distribution(posts)
 
     # Compute average sentiment score
     scores = [p.sentiment_score for p in posts if p.sentiment_score is not None]
@@ -117,6 +127,7 @@ def compute_weekly_aggregate(week_start_date, zone_id=None):
         existing.negative_count = negative
         existing.avg_sentiment = avg_sentiment
         existing.week_end = week_end_date
+        existing.emotion_distribution = emotion_distribution
         aggregate = existing
     else:
         aggregate = WeeklyAggregate(
@@ -129,6 +140,7 @@ def compute_weekly_aggregate(week_start_date, zone_id=None):
             negative_count=negative,
             avg_sentiment=avg_sentiment
         )
+        aggregate.emotion_distribution = emotion_distribution
         db.session.add(aggregate)
 
     db.session.commit()

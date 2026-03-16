@@ -45,6 +45,10 @@ Phase 6 transforms Pulse from a feature-complete MVP into a platform that can ha
 
 **Overall Phase 6 Progress:** 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩 100% / 100%
 
+## Mood Model Update
+
+Phase 6 now uses `cardiffnlp/twitter-xlm-roberta-base-emotion` for French-language post analysis. Posts keep the existing coarse `sentiment_label` for positive/neutral/negative trend charts, but they also store `emotion_label` and `emotion_display` so campus mood widgets can show a richer breakdown such as `joy`, `fear`, and `anger`.
+
 ---
 
 ## 📋 PHASE 6A: MUST HAVE (Days 1–5)

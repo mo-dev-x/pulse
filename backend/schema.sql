@@ -144,6 +144,8 @@ CREATE TABLE posts (
     -- NLP analysis results (bilingual support)
     sentiment_score DECIMAL(3,2),  -- -1.00 to 1.00
     sentiment_label ENUM('positive', 'neutral', 'negative'),
+    emotion_label VARCHAR(20) NULL,
+    emotion_display VARCHAR(30) NULL,
     detected_language ENUM('en', 'fr') DEFAULT 'fr',  -- Auto-detected language
     is_flagged BOOLEAN NOT NULL DEFAULT FALSE,
     flagged_at TIMESTAMP NULL,

@@ -43,9 +43,9 @@ def validate_email(email):
 
 ### **Phase 2: NLP Sentiment Analysis (Bilingual)**
 
-**Status:** ✅ IMPLEMENTED (CamemBERT)
+**Status:** ✅ IMPLEMENTED (Twitter XLM-R emotion model)
 
-**Solution:** Production-grade CamemBERT for French, VADER for English.
+**Solution:** Production-grade Twitter XLM-R emotion model for French, VADER for English.
 
 #### **Implementation Complete**
 
@@ -56,18 +56,18 @@ from app.services import analyze_sentiment
 
 # Analyze English text
 result_en = analyze_sentiment("I love this campus! 😊")
-# → {'score': 0.68, 'label': 'positive', 'language': 'en'}
+# → {'score': 0.68, 'label': 'positive', 'emotion_label': 'joy', 'emotion_display': 'Joy', 'language': 'en'}
 
 # Analyze French text  
 result_fr = analyze_sentiment("J'adore ce campus! 😊")
-# → {'score': 0.87, 'label': 'positive', 'language': 'fr'}
+# → {'score': 0.87, 'label': 'positive', 'emotion_label': 'joy', 'emotion_display': 'Joy', 'language': 'fr'}
 ```
 
 **Accuracy:**
 - English (VADER): ~95%+
-- French (CamemBERT): ~95%+
+- French (Twitter XLM-R emotion): ~95%+
 
-**Model:** `cmarkea/distilcamembert-base-sentiment`
+**Model:** `cardiffnlp/twitter-xlm-roberta-base-emotion`
 **Size:** ~400MB (downloads on first use)
 **Performance:** 
 - First call: ~5 seconds (model loading)
@@ -80,8 +80,27 @@ result_fr = analyze_sentiment("J'adore ce campus! 😊")
 ```bash
 pip install langdetect textblob textblob-fr
 # Or for better French support:
-pip install transformers  # For CamemBERT (heavier but more accurate)
+pip install transformers  # For the Twitter XLM-R emotion model
 ```
+
+#### **Campus Emotion Mapping**
+
+```python
+EMOTION_TO_DISPLAY = {
+    'joy': 'Joy',
+    'sadness': 'Sad',
+    'anger': 'Frustrated',
+    'fear': 'Stressed',
+    'disgust': 'Overwhelmed',
+    'surprise': 'Surprised',
+    'neutral': 'Neutral',
+}
+```
+
+For backward compatibility, Pulse still derives `label` as:
+- `positive` from `joy` and `surprise`
+- `negative` from `sadness`, `anger`, `fear`, and `disgust`
+- `neutral` for low-confidence fallbacks
 
 #### **Step 2: Language Detection**
 
@@ -330,7 +349,7 @@ textblob==0.17.1         # French sentiment (basic)
 # textblob-fr==0.2.0     # French language support for TextBlob
 
 # OR for better French sentiment (choose one):
-# transformers==4.36.0   # CamemBERT (French BERT model)
+# transformers==4.36.0   # Twitter XLM-R emotion model
 # torch==2.1.0           # Required for transformers
 ```
 
@@ -383,7 +402,7 @@ Register with @gmail.com → See bilingual error message
 
 ### **French NLP:**
 - **TextBlob-FR:** Basic, easy to use
-- **CamemBERT:** Advanced, more accurate (requires ML model)
+- **Twitter XLM-R emotion:** Advanced, more accurate (requires ML model)
 - **Polyglot:** Multilingual NLP library
 
 ### **Language Detection:**

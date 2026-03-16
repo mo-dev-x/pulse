@@ -255,6 +255,8 @@ def create_post():
             is_anonymous=is_anonymous,
             sentiment_score=sentiment_result['score'],
             sentiment_label=sentiment_result['label'],
+            emotion_label=sentiment_result.get('emotion_label'),
+            emotion_display=sentiment_result.get('emotion_display'),
             detected_language=sentiment_result['language']
         )
 

@@ -1,6 +1,6 @@
 """
-Post Model - Content with Sentiment Analysis
-Supports both public and anonymous posting
+Post Model - Content with sentiment and emotion analysis.
+Supports both public and anonymous posting.
 """
 
 from datetime import datetime, timezone
@@ -30,6 +30,8 @@ class Post(db.Model):
         db.Enum('positive', 'neutral', 'negative', name='sentiment_enum'),
         nullable=True
     )
+    emotion_label = db.Column(db.String(20), nullable=True)
+    emotion_display = db.Column(db.String(30), nullable=True)
     detected_language = db.Column(db.String(2), nullable=True)  # 'en' or 'fr'
     is_flagged = db.Column(db.Boolean, default=False, nullable=False)
     flagged_at = db.Column(db.DateTime, nullable=True)
@@ -67,7 +69,9 @@ class Post(db.Model):
             'content': self.content,
             'is_anonymous': self.is_anonymous,
             'sentiment': self.sentiment_label,
-            'sentiment_score': round(self.sentiment_score, 2) if self.sentiment_score else None,
+            'sentiment_score': round(self.sentiment_score, 2) if self.sentiment_score is not None else None,
+            'emotion_label': self.emotion_label,
+            'emotion_display': self.emotion_display,
             'detected_language': self.detected_language,
             'is_flagged': self.is_flagged,
             'hidden_by_mod': self.hidden_by_mod,
