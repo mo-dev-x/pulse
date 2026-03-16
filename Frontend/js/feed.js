@@ -1,8 +1,10 @@
 import { requireAuth, apiFetch, logout } from "./auth.js";
 
-console.log("feed.js loaded");
+let currentUser = null;
+let currentPosts = [];
+let zoneAutocomplete = null;
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
   // 1) protect the page (if the function exists...faskhtha)
   requireAuth();
   // 2) setup small UI ths
@@ -16,10 +18,49 @@ document.addEventListener("DOMContentLoaded", () => {
   renderMessages();
 
   // 4) load posts
-  loadFeed();
+  // loadFeed();
+  await initFeedPage();
 });
 
-let zoneAutocomplete = null;
+async function initFeedPage() {
+  try {
+    showState("Loading feed...");
+    await loadCurrentUser();
+    await loadFeed();
+  } catch (err) {
+    showState(err.message || "Failed to load feed.");
+  }
+}
+
+async function loadCurrentUser() {
+  const data = await apiFetch("/api/auth/me", { method: "GET" });
+  currentUser = data.user;
+  renderCurrentUser(currentUser);
+}
+
+function renderCurrentUser(user) {
+  const nameEl = document.getElementById("meName");
+  const handleEl = document.getElementById("meHandle");
+
+  const sidebarAvatar = document.getElementById("sidebarAvatar");
+  const topbarAvatar = document.getElementById("topbarAvatar");
+  const composerAvatar = document.getElementById("composerAvatar");
+
+  const displayName = user?.display_name || user?.username || "Pulse User";
+  const username = user?.username || "user";
+
+  if (meName) meName.textContent = displayName;
+  if (meHandle) meHandle.textContent = `@${username}`;
+
+  const avatarUrl = user?.profile_picture
+    ? `/uploads/${user.profile_picture}`
+    : `https://i.pravatar.cc/100?u=${encodeURIComponent(username)}`;
+
+  if (topbarAvatar) topbarAvatar.src = avatarUrl;
+  if (sidebarAvatar) sidebarAvatar.src = avatarUrl;
+  if (composerAvatar) composerAvatar.src = avatarUrl;
+
+}
 
 /* --------------- USER MENU (avatar dropdown) -------------- */
 
@@ -151,33 +192,34 @@ function hideCreateError() {
 }
 
 /* --------------- FEED ---------------- */
-  async function loadFeed() {
-    showState("Loading feed…");
+async function loadFeed() {
+  showState("Loading feed...");
 
-    const feedEl = document.getElementById("feed");
-    if (!feedEl) return;
-    feedEl.innerHTML = "";
+  const feedEl = document.getElementById("feed");
+  if (!feedEl) return;
 
-    try {
-      const data = await apiFetch("/api/posts/feed", { method: "GET" });
+  feedEl.innerHTML = "";
 
-      let posts = [];
-      if (Array.isArray(data)) posts = data;
-      else if (Array.isArray(data?.posts)) posts = data.posts;
-      else if (Array.isArray(data?.data?.posts)) posts = data.data.posts;
+  try {
+    const data = await apiFetch("/api/posts/feed", { method: "GET" });
+    const posts = data.posts || [];
 
-      if (!posts.length) {
-        showState("No posts yet. Follow users to see posts in your feed.");
-        return;
-      }
+    currentPosts = posts.map(normalizePost);
 
-      hideState();
-      posts.forEach((p) => feedEl.appendChild(renderPostCard(normalizePost(p))));
-    } catch (err) {
-      console.error("Feed loading failed:", err);
-      showState(err.message || "Failed to load feed.");
+    if (!currentPosts.length) {
+      showState(data.message || "No posts yet. Follow users to see posts in your feed.");
+      return;
     }
+
+    hideState();
+
+    currentPosts.forEach((post) => {
+      feedEl.appendChild(renderPostCard(post));
+    });
+  } catch (err) {
+    showState(err.message || "Failed to load feed.");
   }
+}
   // } catch (err) {
   //   console.warn("Backend failed, using demo posts:", err.message);
   // }
@@ -192,49 +234,50 @@ function normalizePost(p) {
   const firstImage = media.find((m) => m.file_type === "image");
   const firstVideo = media.find((m) => m.file_type === "video");
 
+  const isAnonymous = Boolean(p.is_anonymous);
+  const author = p.author || {};
+  const zone = p.zone || null;
+
+  const authorName = isAnonymous
+    ? (author.pseudonym || "Anonymous")
+    : (author.display_name || author.username || "User");
+
+  const handle = isAnonymous
+    ? "@anonymous"
+    : (author.username ? `@${author.username}` : "@user");
+
+  const mine = isAnonymous
+    ? Boolean(author.is_you)
+    : Boolean(currentUser && author.id === currentUser.id);
+
+  const avatarSeed = isAnonymous
+    ? `anon-${p.id}`
+    : (author.username || author.display_name || p.id);
+
+  const avatarUrl = !isAnonymous && author.profile_picture
+    ? `/uploads/${author.profile_picture}`
+    : `https://i.pravatar.cc/80?u=${encodeURIComponent(avatarSeed)}`;
+
   return {
-    id: p.id ?? p.post_id ?? crypto.randomUUID(),
-    username:
-      p.username ??
-      p.user?.username ??
-      p.author?.username ??
-      (p.is_anonymous ? "Anonymous" : "User"),
-    handle:
-      p.handle ??
-      p.user?.handle ??
-      p.author?.handle ??
-      (p.username ? `@${p.username}` : "@user"),
-    zone:
-      p.zone_name ??
-      p.zone?.name ??
-      p.zone ??
-      "Zone",
-    time: p.created_at ?? p.timestamp ?? "Just now",
-    sentiment:
-      p.sentiment ??
-      p.sentiment_label ??
-      "neutral",
-    text:
-      p.text ??
-      p.content ??
-      "",
-    imageUrl:
-      p.image_url ??
-      p.imageUrl ??
-      firstImage?.file_path ??
-      "",
-    videoUrl:
-      p.video_url ??
-      p.videoUrl ??
-      firstVideo?.file_path ??
-      "",
-    mine: Boolean(p.mine ?? p.is_owner ?? false),
+    id: p.id,
+    text: p.content || "",
+    isAnonymous,
+    authorName,
+    handle,
+    avatarUrl,
+    zoneName: zone?.name || "Campus",
+    zoneType: zone?.type || "",
+    time: p.created_at || "",
+    sentiment: p.sentiment || "neutral",
+    imageUrl: firstImage ? `/${firstImage.file_path.replace(/^\/+/, "")}` : "",
+    videoUrl: firstVideo ? `/${firstVideo.file_path.replace(/^\/+/, "")}` : "",
+    mine,
     reactions: {
       like: p.reactions?.["❤️"] ?? 0,
       wow: p.reactions?.["🔥"] ?? 0,
       sad: p.reactions?.["🥲"] ?? 0,
     },
-    myReaction: p.my_reaction ?? null,
+    myReaction: p.my_reaction || null,
     reactionCount: p.reaction_count ?? 0,
   };
 }
@@ -256,14 +299,15 @@ function renderPostCard(post) {
   card.innerHTML = `
     <div class="post-head">
       <div class="post-user">
-        <img class="avatar" src="https://i.pravatar.cc/80?u=${encodeURIComponent(
-          post.handle
-        )}" alt="User"/>
+        <img class="avatar" src="${escapeAttr(post.avatarUrl)}" alt="User" />
         <div class="post-meta">
-          <div class="u">${escapeHtml(post.username)}
+          <div class="u">
+            ${escapeHtml(post.authorName)}
             <span class="badge ${badge.cls}">${badge.label}</span>
           </div>
-          <div class="m">${escapeHtml(post.zone)} • ${escapeHtml(post.time)}</div>
+          <div class="m">
+            ${escapeHtml(post.handle)} • ${escapeHtml(post.zoneName)} • ${escapeHtml(post.time)}
+          </div>
         </div>
       </div>
 
@@ -287,11 +331,12 @@ function renderPostCard(post) {
         <button class="react-btn" data-react="sad">🥲 <span>${post.reactions.sad ?? 0}</span></button>
       </div>
 
-      <button class="iconbtn" title="Share"><i class="uil uil-share"></i></button>
+      <button class="iconbtn" title="Share">
+        <i class="uil uil-share"></i>
+      </button>
     </div>
   `;
 
-  //1 event listener for the whole card
   card.addEventListener("click", async (e) => {
     const btn = e.target.closest("button");
     if (!btn) return;
@@ -300,11 +345,11 @@ function renderPostCard(post) {
     const react = btn.dataset.react;
 
     if (action === "delete") {
-      await onDeletePost(post.id, card);
+      await onDeletePost(post.id);
     }
 
     if (react) {
-      await onReact(post.id, react, btn);
+      await onReact(post.id, react);
     }
   });
 
@@ -342,38 +387,47 @@ async function onReact(postId, type, btn) {
   const emoji = emojiMap[type];
   if (!emoji) return;
 
+  // try {
+  //   const data = await apiFetch(`/api/posts/${postId}/react`, {
+  //     method: "POST",
+  //     body: JSON.stringify({ emoji }),
+  //   });
+
+  //   await loadFeed(); // reload feed to get updated reactions
+
+  //   const card = btn.closest(".post");
+  //   if (!card) return;
+
+  //   const reactionButtons = card.querySelectorAll("[data-react]");
+  //   reactionButtons.forEach((reactionBtn) => {
+  //     const reactionType = reactionBtn.dataset.react;
+  //     const reactionEmoji = emojiMap[reactionType];
+  //     const span = reactionBtn.querySelector("span");
+  //     if (span) {
+  //       span.textContent = String(data?.counts?.[reactionEmoji] ?? 0);
+  //     }
+  //   });
   try {
-    const data = await apiFetch(`/api/posts/${postId}/react`, {
+    await apiFetch(`/api/posts/${postId}/react`, {
       method: "POST",
       body: JSON.stringify({ emoji }),
     });
 
-    const card = btn.closest(".post");
-    if (!card) return;
-
-    const reactionButtons = card.querySelectorAll("[data-react]");
-    reactionButtons.forEach((reactionBtn) => {
-      const reactionType = reactionBtn.dataset.react;
-      const reactionEmoji = emojiMap[reactionType];
-      const span = reactionBtn.querySelector("span");
-      if (span) {
-        span.textContent = String(data?.counts?.[reactionEmoji] ?? 0);
-      }
-    });
+    await loadFeed();
   } catch (err) {
-    console.error("React failed:", err);
+    // console.error("React failed:", err);
     alert(err.message || "Reaction failed");
   }
 }
 
-async function onDeletePost(postId, cardEl) {
+async function onDeletePost(postId) {
   if (!confirm("Delete this post?")) return;
 
   try {
-    if (typeof apiFetch !== "function") throw new Error("apiFetch not found");
-
     await apiFetch(`/api/posts/${postId}`, { method: "DELETE" });
-    cardEl.remove();
+    // cardEl.remove(); w kent param
+    await loadFeed(); // reload feed after deletion
+
   } catch (err) {
     alert("Delete failed: " + err.message);
   }
@@ -383,47 +437,56 @@ async function onDeletePost(postId, cardEl) {
 async function onCreatePostSubmit(e) {
   e.preventDefault();
   hideCreateError();
-
   const text = document.getElementById("postText").value.trim();
+  const anonymous = document.getElementById("anonymousToggle").checked;
+  const zoneId = document.getElementById("zoneId").value;
+  const imageInput = document.getElementById("imageFile");
+  const img = imageInput ? imageInput.files[0] : null;
+
+
   if (text.length < 10) {
     showCreateError("Text must be at least 10 characters.");
     return;
   }
 
-  const anonymous = document.getElementById("anonymousToggle").checked;
-
-  const zoneId = document.getElementById("zoneId").value;
-  
-  const imageInput = document.getElementById("imageFile");
-  const img = imageInput ? imageInput.files[0] : null;
+  const submitBtn = e.target.querySelector('button[type="submit"]');
 
   try {
+    if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Posting...";
+  }
     const fd = new FormData();
     fd.append("content", text);
     fd.append("is_anonymous", String(anonymous));
     if (zoneId) fd.append("zone_id", zoneId);
     if (img) fd.append("image", img);
 
-    const result = await apiFetch("/api/posts", {
+    await apiFetch("/api/posts", {
       method: "POST",
       body: fd,
     });
 
-    console.log("Post created:", result);
-
     const modal = document.getElementById("createModal");
+    const form = document.getElementById("createForm");
+
     if (modal) {
       modal.classList.remove("open");
       modal.setAttribute("aria-hidden", "true");
     }
 
-    document.getElementById("createForm").reset();
+    if (form) form.reset();
     updateCharCount();
 
-    loadFeed();
+    await loadFeed();
   } catch (err) {
-    console.error("Create post failed:", err);
     showCreateError(err.message || "Create post failed");
+
+  }finally { //prevents double submit
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Post";
+    }
   }
 }
 
@@ -487,63 +550,63 @@ function renderStories() {
 }
 
 /* --------------DEMO POSTS ---------------- */
-function demoPosts() {
-  return [
-    {
-      id: "p1",
-      username: "Lana Rose",
-      handle: "@lanarose",
-      zone: "Zone 1 • Library",
-      time: "12 minutes ago",
-      sentiment: "neutral",
-      text: "Midterm week is loud in my head even when the library is silent. If you’re struggling too: you’re not alone 🤍",
-      imageUrl: "",
-      videoUrl: "",
-      mine: false,
-      reactions: { like: 128, wow: 44, sad: 19 },
-    },
-    {
-      id: "p2",
-      username: "Anonymous",
-      handle: "@anon",
-      zone: "Zone 3 • Study Rooms",
-      time: "30 minutes ago",
-      sentiment: "negative",
-      text: "I feel overwhelmed lately. Not failing… just constantly behind. If someone has tips to manage stress, please share.",
-      imageUrl: "",
-      videoUrl: "",
-      mine: false,
-      reactions: { like: 52, wow: 6, sad: 31 },
-    },
-        {
-      id: "p2b",
-      username: "Dina A.",
-      handle: "@dinaa",
-      zone: "Zone 6 • PEPS Gym",
-      time: "40 minutes ago",
-      sentiment: "positive",
-      text: "I forced myself to do a 15-minute walk outside and it genuinely reset my brain. If you’re stuck, try a tiny move — it helps 🌿",
-      imageUrl: "",
-      videoUrl: "",
-      mine: false,
-      reactions: { like: 63, wow: 14, sad: 1 }
-    },
-    {
-      id: "p2c",
-      username: "Campus Notice",
-      handle: "@pulse",
-      zone: "Zone 2 • Cafeteria",
-      time: "50 minutes ago",
-      sentiment: "neutral",
-      text: "FYI: cafeteria is extra crowded today around noon. If you want a calmer break, try going a bit earlier or later 🕒",
-      imageUrl: "",
-      videoUrl: "",
-      mine: false,
-      reactions: { like: 18, wow: 3, sad: 0 }
-    },
+// function demoPosts() {
+//   return [
+//     {
+//       id: "p1",
+//       username: "Lana Rose",
+//       handle: "@lanarose",
+//       zone: "Zone 1 • Library",
+//       time: "12 minutes ago",
+//       sentiment: "neutral",
+//       text: "Midterm week is loud in my head even when the library is silent. If you’re struggling too: you’re not alone 🤍",
+//       imageUrl: "",
+//       videoUrl: "",
+//       mine: false,
+//       reactions: { like: 128, wow: 44, sad: 19 },
+//     },
+//     {
+//       id: "p2",
+//       username: "Anonymous",
+//       handle: "@anon",
+//       zone: "Zone 3 • Study Rooms",
+//       time: "30 minutes ago",
+//       sentiment: "negative",
+//       text: "I feel overwhelmed lately. Not failing… just constantly behind. If someone has tips to manage stress, please share.",
+//       imageUrl: "",
+//       videoUrl: "",
+//       mine: false,
+//       reactions: { like: 52, wow: 6, sad: 31 },
+//     },
+//         {
+//       id: "p2b",
+//       username: "Dina A.",
+//       handle: "@dinaa",
+//       zone: "Zone 6 • PEPS Gym",
+//       time: "40 minutes ago",
+//       sentiment: "positive",
+//       text: "I forced myself to do a 15-minute walk outside and it genuinely reset my brain. If you’re stuck, try a tiny move — it helps 🌿",
+//       imageUrl: "",
+//       videoUrl: "",
+//       mine: false,
+//       reactions: { like: 63, wow: 14, sad: 1 }
+//     },
+//     {
+//       id: "p2c",
+//       username: "Campus Notice",
+//       handle: "@pulse",
+//       zone: "Zone 2 • Cafeteria",
+//       time: "50 minutes ago",
+//       sentiment: "neutral",
+//       text: "FYI: cafeteria is extra crowded today around noon. If you want a calmer break, try going a bit earlier or later 🕒",
+//       imageUrl: "",
+//       videoUrl: "",
+//       mine: false,
+//       reactions: { like: 18, wow: 3, sad: 0 }
+//     },
 
-  ];
-}
+//   ];
+// }
 
 /* -------------- SAFE USE HTML ---------------- */
 function escapeHtml(str) {
