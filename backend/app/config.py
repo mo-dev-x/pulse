@@ -58,6 +58,20 @@ class Config:
 
     # Frontend integration
     FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+    _default_cors_origins = [
+        'http://127.0.0.1:8000',
+        'http://localhost:8000',
+        'http://127.0.0.1:5501',
+        'http://localhost:5501',
+    ]
+    _configured_cors_origins = [
+        origin.strip()
+        for origin in os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
+        if origin.strip()
+    ]
+    if FRONTEND_URL:
+        _configured_cors_origins.append(FRONTEND_URL)
+    CORS_ALLOWED_ORIGINS = list(dict.fromkeys(_default_cors_origins + _configured_cors_origins))
 
     # SMTP configuration
     SMTP_HOST = os.getenv('SMTP_HOST')

@@ -81,7 +81,10 @@ def create_app(config_name='development'):
     db.init_app(app)
     jwt.init_app(app)
     cache.init_app(app)
-    CORS(app)
+    CORS(
+        app,
+        resources={r"/api/*": {"origins": app.config.get('CORS_ALLOWED_ORIGINS', [])}},
+    )
     limiter.init_app(app)
 
     @jwt.token_in_blocklist_loader
