@@ -121,21 +121,6 @@ class ProductionConfig(Config):
     DEBUG = False
     TESTING = False
     SQLALCHEMY_ECHO = False
-    
-    # In production, these MUST be set via environment variables
-    @property
-    def SECRET_KEY(self):
-        secret = os.getenv('SECRET_KEY')
-        if not secret or secret == 'dev-secret-key-change-in-production':
-            raise ValueError("SECRET_KEY must be set in production environment")
-        return secret
-    
-    @property
-    def JWT_SECRET_KEY(self):
-        jwt_secret = os.getenv('JWT_SECRET_KEY')
-        if not jwt_secret or jwt_secret == 'dev-jwt-secret-change-in-production':
-            raise ValueError("JWT_SECRET_KEY must be set in production environment")
-        return jwt_secret
 
 
 class TestingConfig(Config):
