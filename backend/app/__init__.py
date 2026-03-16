@@ -82,8 +82,12 @@ def create_app(config_name='development'):
     jwt.init_app(app)
     cache.init_app(app)
     CORS(
-        app,
-        resources={r"/api/*": {"origins": app.config.get('CORS_ALLOWED_ORIGINS', [])}},
+    app,
+    resources={r"/api/*": {"origins": app.config.get('CORS_ALLOWED_ORIGINS', [])}},
+    supports_credentials=True,
+    allow_headers=["Content-Type", "Authorization"],
+    expose_headers=["Authorization"],
+    methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     )
     limiter.init_app(app)
 
