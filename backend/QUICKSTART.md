@@ -369,6 +369,24 @@ python tests/test_nlp_camembert.py
 
 ## 🎯 STEP 7: MANUAL API TESTING
 
+### **Frontend / Deployed API URL**
+
+Your frontend teammate can use the deployed Railway backend here:
+
+```text
+https://pulse-backend.up.railway.app/
+```
+
+Example API base:
+
+```text
+https://pulse-backend.up.railway.app/api
+```
+
+Use the local `http://127.0.0.1:5000` URLs below only for local development.
+
+---
+
 ### **Test Registration**
 
 ```bash

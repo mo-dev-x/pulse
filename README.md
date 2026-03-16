@@ -119,6 +119,7 @@ python3 -m http.server 8000
 ### Frontend Configuration
 
 - **Backend API URL:** `http://127.0.0.1:5000`
+- **Deployed Backend API URL:** `https://pulse-backend.up.railway.app/`
 - **Frontend URL:** `http://127.0.0.1:8000`
 - **JWT Storage:** LocalStorage key `pulse_token`
 - **Auth Method:** Bearer token in Authorization header
@@ -166,12 +167,11 @@ cd pulse/backend
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# 3. Install PyTorch (CPU version)
-# PyTorch installed separately to avoid GPU CUDA libraries (~4GB)
-pip install torch --index-url https://download.pytorch.org/whl/cpu
-
-# 4. Install remaining dependencies
+# 3. Install lightweight backend dependencies
 pip install -r requirements.txt
+
+# 4. Optional: install ML dependencies for advanced French sentiment
+pip install -r requirements-ml.txt
 
 # 5. Set up environment variables
 cp .env.template .env
@@ -185,6 +185,8 @@ python run.py
 ```
 
 **Backend runs on:** `http://127.0.0.1:5000`
+
+**Deployed backend:** `https://pulse-backend.up.railway.app/`
 
 **See [backend/QUICKSTART.md](backend/QUICKSTART.md) for detailed backend setup.**
 
@@ -554,6 +556,8 @@ BACKGROUND_JOBS_ENABLED=false
 
 # Frontend (hardcoded in auth.js)
 BACKEND_URL=http://127.0.0.1:5000
+# Production backend
+BACKEND_URL=https://pulse-backend.up.railway.app
 JWT_STORAGE_KEY=pulse_token
 ```
 
@@ -590,6 +594,8 @@ JWT_STORAGE_KEY=pulse_token
 - [ ] JWT tokens use secure cookies (not localStorage)
 - [ ] Session timeout implemented
 - [ ] Rate limiting on auth endpoints
+
+**Current deployed backend:** `https://pulse-backend.up.railway.app/`
 
 ---
 
@@ -645,6 +651,8 @@ For questions or issues, please contact the development team or open an issue in
 **Backend:**
 - API Base: http://127.0.0.1:5000
 - Health Check: http://127.0.0.1:5000/api/auth/me (with token)
+- Production API Base: https://pulse-backend.up.railway.app/
+- Production Health Check: https://pulse-backend.up.railway.app/api/auth/me
 
 **Documentation:**
 - Frontend Guide: [Frontend/QUICKSTART.md](Frontend/QUICKSTART.md)
