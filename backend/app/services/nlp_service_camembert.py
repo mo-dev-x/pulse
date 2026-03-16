@@ -10,10 +10,15 @@ Perfect for social media-style wellness posts.
 """
 
 import re
-import torch
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from langdetect import detect, LangDetectException
+
+try:
+    import torch
+    from transformers import AutoTokenizer, AutoModelForSequenceClassification
+    TORCH_AVAILABLE = True
+except ImportError:
+    TORCH_AVAILABLE = False
 
 
 class FrenchTwitterNLPService:
@@ -41,6 +46,7 @@ class FrenchTwitterNLPService:
         self._french_tokenizer = None
         self._french_model = None
         self._french_device = None
+        self._use_french_fallback = not TORCH_AVAILABLE
     
     def _load_camembert(self):
         """
@@ -49,31 +55,41 @@ class FrenchTwitterNLPService:
         This is expensive (~500MB download + GPU/CPU setup)
         so we only load when first needed
         """
-        if self._french_model is not None:
+        if self._french_model is not None or self._use_french_fallback:
             return  # Already loaded
-        
+
+        if not TORCH_AVAILABLE:
+            print("⚠️  torch/transformers not available — French posts will use VADER fallback")
+            self._use_french_fallback = True
+            return
+
         print("🧠 Loading French sentiment model...")
         print("   (This may take a minute on first run)")
-        
+
         try:
-            # Use multilingual Twitter sentiment model (supports French)
-            # Perfect for social media posts!
             model_name = "cardiffnlp/twitter-xlm-roberta-base-sentiment"
-            
             self._french_tokenizer = AutoTokenizer.from_pretrained(model_name)
             self._french_model = AutoModelForSequenceClassification.from_pretrained(model_name)
-            
-            # Use GPU if available
             self._french_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             self._french_model.to(self._french_device)
-            self._french_model.eval()  # Set to evaluation mode
-            
+            self._french_model.eval()
             print(f"✅ French sentiment model loaded successfully on {self._french_device}")
-            
         except Exception as e:
             print(f"⚠️  Failed to load French sentiment model: {e}")
             print("   Falling back to basic French sentiment analysis")
-            raise
+            self._use_french_fallback = True
+
+    def _analyze_french_fallback(self, text):
+        """
+        Lightweight fallback when the transformer model is unavailable.
+
+        This keeps deployment environments like Railway working even when
+        torch/model downloads are not possible.
+        """
+        result = self.analyze_english(text)
+        result['language'] = 'fr'
+        result['fallback'] = 'vader'
+        return result
     
     def clean_text(self, text):
         """
@@ -152,6 +168,9 @@ class FrenchTwitterNLPService:
         # Load model if not already loaded
         if self._french_model is None:
             self._load_camembert()
+
+        if self._use_french_fallback or self._french_model is None or self._french_tokenizer is None:
+            return self._analyze_french_fallback(text)
         
         try:
             # Tokenize text
