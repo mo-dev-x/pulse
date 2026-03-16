@@ -151,55 +151,91 @@ function hideCreateError() {
 }
 
 /* --------------- FEED ---------------- */
-async function loadFeed() {
-  showState("Loading feed…");
+  async function loadFeed() {
+    showState("Loading feed…");
 
-  const feedEl = document.getElementById("feed");
-  if (!feedEl) return;
-  feedEl.innerHTML = "";
+    const feedEl = document.getElementById("feed");
+    if (!feedEl) return;
+    feedEl.innerHTML = "";
 
-  //try backend first
-  try {
-    if (typeof apiFetch !== "function") throw new Error("apiFetch not found");
+    try {
+      const data = await apiFetch("/api/posts/feed", { method: "GET" });
 
-    const data = await apiFetch("/api/posts/feed", { method: "GET" });
+      let posts = [];
+      if (Array.isArray(data)) posts = data;
+      else if (Array.isArray(data?.posts)) posts = data.posts;
+      else if (Array.isArray(data?.data?.posts)) posts = data.data.posts;
 
-    //sometimes backend returns different shapes
-    let posts = [];
-    if (Array.isArray(data)) posts = data;
-    else if (Array.isArray(data?.posts)) posts = data.posts;
-    else if (Array.isArray(data?.data?.posts)) posts = data.data.posts;
+      if (!posts.length) {
+        showState("No posts yet. Follow users to see posts in your feed.");
+        return;
+      }
 
-    if (!posts.length) {
-      showState("No posts yet.");
-      return;
+      hideState();
+      posts.forEach((p) => feedEl.appendChild(renderPostCard(normalizePost(p))));
+    } catch (err) {
+      console.error("Feed loading failed:", err);
+      showState(err.message || "Failed to load feed.");
     }
-
-    hideState();
-    posts.forEach((p) => feedEl.appendChild(renderPostCard(normalizePost(p))));
-    return;
-  } catch (err) {
-    console.warn("Backend failed, using demo posts:", err.message);
   }
-
+  // } catch (err) {
+  //   console.warn("Backend failed, using demo posts:", err.message);
+  // }
   //fallback demo
-  hideState();
-  demoPosts().forEach((p) => feedEl.appendChild(renderPostCard(p)));
-}
+  // hideState();
+  // demoPosts().forEach((p) => feedEl.appendChild(renderPostCard(p)));
+
 
 function normalizePost(p) {
+  const media = Array.isArray(p.media) ? p.media : [];
+
+  const firstImage = media.find((m) => m.file_type === "image");
+  const firstVideo = media.find((m) => m.file_type === "video");
+
   return {
     id: p.id ?? p.post_id ?? crypto.randomUUID(),
-    username: p.username ?? p.user?.username ?? "Anonymous",
-    handle: p.handle ?? (p.username ? `@${p.username}` : "@anon"),
-    zone: p.zone_name ?? p.zone ?? "Zone",
+    username:
+      p.username ??
+      p.user?.username ??
+      p.author?.username ??
+      (p.is_anonymous ? "Anonymous" : "User"),
+    handle:
+      p.handle ??
+      p.user?.handle ??
+      p.author?.handle ??
+      (p.username ? `@${p.username}` : "@user"),
+    zone:
+      p.zone_name ??
+      p.zone?.name ??
+      p.zone ??
+      "Zone",
     time: p.created_at ?? p.timestamp ?? "Just now",
-    sentiment: p.sentiment ?? "neutral",
-    text: p.text ?? p.content ?? "",
-    imageUrl: p.image_url ?? p.imageUrl ?? "",
-    videoUrl: p.video_url ?? p.videoUrl ?? "",
+    sentiment:
+      p.sentiment ??
+      p.sentiment_label ??
+      "neutral",
+    text:
+      p.text ??
+      p.content ??
+      "",
+    imageUrl:
+      p.image_url ??
+      p.imageUrl ??
+      firstImage?.file_path ??
+      "",
+    videoUrl:
+      p.video_url ??
+      p.videoUrl ??
+      firstVideo?.file_path ??
+      "",
     mine: Boolean(p.mine ?? p.is_owner ?? false),
-    reactions: p.reactions ?? { like: 0, wow: 0, sad: 0 },
+    reactions: {
+      like: p.reactions?.["❤️"] ?? 0,
+      wow: p.reactions?.["🔥"] ?? 0,
+      sad: p.reactions?.["🥲"] ?? 0,
+    },
+    myReaction: p.my_reaction ?? null,
+    reactionCount: p.reaction_count ?? 0,
   };
 }
 
@@ -297,20 +333,36 @@ function renderMedia(post) {
 
 /*------------ REACTIONS (+ DELETE) -------------- */
 async function onReact(postId, type, btn) {
-  // quick UI update
-  const span = btn.querySelector("span");
-  if (span) span.textContent = String((Number(span.textContent) || 0) + 1);
+  const emojiMap = {
+    like: "❤️",
+    wow: "🔥",
+    sad: "🥲",
+  };
 
-  // call backend if possible
+  const emoji = emojiMap[type];
+  if (!emoji) return;
+
   try {
-    if (typeof apiFetch !== "function") return;
-
-    await apiFetch(`/api/posts/${postId}/react`, {
+    const data = await apiFetch(`/api/posts/${postId}/react`, {
       method: "POST",
-      body: JSON.stringify({ type }),
+      body: JSON.stringify({ emoji }),
+    });
+
+    const card = btn.closest(".post");
+    if (!card) return;
+
+    const reactionButtons = card.querySelectorAll("[data-react]");
+    reactionButtons.forEach((reactionBtn) => {
+      const reactionType = reactionBtn.dataset.react;
+      const reactionEmoji = emojiMap[reactionType];
+      const span = reactionBtn.querySelector("span");
+      if (span) {
+        span.textContent = String(data?.counts?.[reactionEmoji] ?? 0);
+      }
     });
   } catch (err) {
-    console.warn("React failed:", err.message);
+    console.error("React failed:", err);
+    alert(err.message || "Reaction failed");
   }
 }
 
@@ -339,30 +391,39 @@ async function onCreatePostSubmit(e) {
   }
 
   const anonymous = document.getElementById("anonymousToggle").checked;
+
   const zoneId = document.getElementById("zoneId").value;
+  
   const imageInput = document.getElementById("imageFile");
   const img = imageInput ? imageInput.files[0] : null;
 
   try {
-    if (typeof apiFetch !== "function") throw new Error("apiFetch not found");
-
     const fd = new FormData();
     fd.append("content", text);
     fd.append("is_anonymous", String(anonymous));
     if (zoneId) fd.append("zone_id", zoneId);
     if (img) fd.append("image", img);
 
-    await apiFetch("/api/posts", { method: "POST", body: fd });
+    const result = await apiFetch("/api/posts", {
+      method: "POST",
+      body: fd,
+    });
 
-    //close modal
-    document.getElementById("createModal").classList.remove("open");
-    if (zoneAutocomplete) zoneAutocomplete.clearSelection();
-    document.getElementById("zoneId").value = "";
+    console.log("Post created:", result);
 
-    // refresh
+    const modal = document.getElementById("createModal");
+    if (modal) {
+      modal.classList.remove("open");
+      modal.setAttribute("aria-hidden", "true");
+    }
+
+    document.getElementById("createForm").reset();
+    updateCharCount();
+
     loadFeed();
   } catch (err) {
-    showCreateError(err.message);
+    console.error("Create post failed:", err);
+    showCreateError(err.message || "Create post failed");
   }
 }
 
