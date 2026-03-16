@@ -1,11 +1,21 @@
-console.log("auth.js loaded");
+// console.log("auth.js loaded");
 
-export const API = "http://127.0.0.1:5000";
+// export const API = "https://pulse-backend.up.railway.app";
+
+function getApiBaseUrl() {
+  return localStorage.getItem("useRemoteApi") === "true"
+    ? "https://pulse-backend.up.railway.app"
+    : "http://127.0.0.1:5000";
+}
+
+export const API = getApiBaseUrl();
 
 const PERSISTENT_TOKEN_KEY = "pulse_token";
 const SESSION_TOKEN_KEY = "pulse_session_token";
 
 export function saveToken(token, rememberMe = true) {
+  if (!token) return;
+
   if (rememberMe) {
     localStorage.setItem(PERSISTENT_TOKEN_KEY, token);
     sessionStorage.removeItem(SESSION_TOKEN_KEY);
@@ -23,22 +33,26 @@ export function getToken() {
 }
 
 export function isLoggedIn() {
-  return getToken() !== null;
+  return !!getToken();
+}
+
+export function clearToken() {
+  localStorage.removeItem(PERSISTENT_TOKEN_KEY);
+  sessionStorage.removeItem(SESSION_TOKEN_KEY);
 }
 
 export function logout() {
-  localStorage.removeItem(PERSISTENT_TOKEN_KEY);
-  sessionStorage.removeItem(SESSION_TOKEN_KEY);
+  clearToken();
   window.location.href = "login.html";
 }
 
-export function requireAuth() {
+export function requireAuth() {  //mch solide
   if (!isLoggedIn()) {
     window.location.href = "login.html";
   }
 }
 
-export function redirectIfLoggedIn() {
+export function redirectIfLoggedIn() {     //mch solide
   if (isLoggedIn()) {
     window.location.href = "feed.html";
   }
