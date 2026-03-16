@@ -26,11 +26,11 @@ class Config:
     JWT_ALGORITHM = 'HS256'
     
     # Database Configuration
-    DB_HOST = os.getenv('DB_HOST', 'localhost')
-    DB_PORT = int(os.getenv('DB_PORT', 3306))
-    DB_NAME = os.getenv('DB_NAME', 'pulse_db')
-    DB_USER = os.getenv('DB_USER', 'root')
-    DB_PASSWORD = os.getenv('DB_PASSWORD', '')
+    DB_HOST = os.getenv('MYSQLHOST', 'localhost')
+    DB_PORT = int(os.getenv('MYSQLPORT', 3306))
+    DB_NAME = os.getenv('MYSQLDATABASE', 'pulse_db')
+    DB_USER = os.getenv('MYSQLUSER', 'root')
+    DB_PASSWORD = os.getenv('MYSQLPASSWORD', '')
     
     # SQLAlchemy Configuration
     SQLALCHEMY_DATABASE_URI = (
