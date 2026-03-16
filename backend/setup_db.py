@@ -20,6 +20,36 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+def setup_database():
+    """
+    Non-interactive DB setup for cloud deployment
+    """
+    creds = {
+        'host': os.getenv('MYSQLHOST'),
+        'port': int(os.getenv('MYSQLPORT', 3306)),
+        'user': os.getenv('MYSQLUSER'),
+        'password': os.getenv('MYSQLPASSWORD'),
+        'db_name': os.getenv('MYSQLDATABASE')
+    }
+
+    connection = pymysql.connect(
+        host=creds['host'],
+        port=creds['port'],
+        user=creds['user'],
+        password=creds['password'],
+        database=creds['db_name']
+    )
+
+    cursor = connection.cursor()
+    cursor.execute("SHOW TABLES")
+    tables = cursor.fetchall()
+
+    if tables:
+        print("✅ Tables already exist → skipping schema setup")
+        return
+
+    print("🚀 First deployment → creating schema")
+    execute_schema(creds)
 
 def print_header(text):
     """Print formatted header"""
@@ -35,11 +65,11 @@ def get_db_credentials():
     print_header("DATABASE CREDENTIALS")
     
     # Try to get from .env first
-    host = os.getenv('DB_HOST', 'localhost')
-    port = int(os.getenv('DB_PORT', 3306))
-    user = os.getenv('DB_USER')
-    password = os.getenv('DB_PASSWORD')
-    db_name = os.getenv('DB_NAME', 'pulse_db')
+    host = os.getenv('MYSQLHOST')
+    port = int(os.getenv('MYSQLPORT', 3306))
+    user = os.getenv('MYSQLUSER')
+    password = os.getenv('MYSQLPASSWORD')
+    db_name = os.getenv('MYSQLDATABASE')
     
     # If not in .env, ask user
     if not user:
@@ -120,7 +150,8 @@ def execute_schema(creds):
     """
     print_header("EXECUTING SCHEMA")
     
-    schema_file = 'schema.sql'
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    schema_file = os.path.join(BASE_DIR, 'schema.sql')
     
     if not os.path.exists(schema_file):
         print(f"❌ Schema file '{schema_file}' not found")

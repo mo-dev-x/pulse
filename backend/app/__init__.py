@@ -87,6 +87,12 @@ def create_app(config_name='development'):
     )
     limiter.init_app(app)
 
+    # AUTO CREATE DATABASE TABLES ON START (Railway)
+    if config_name == "production":
+        with app.app_context():
+            from setup_db import setup_database
+            setup_database()
+
     @jwt.token_in_blocklist_loader
     def is_token_revoked(jwt_header, jwt_payload):
         from app.models.session import Session
