@@ -21,16 +21,22 @@
                 <i class="uil uil-search"></i>
                 <input id="globalSearch" type="search" placeholder="Search for posts, campus' news and friends" />
             </div>
+            <div id="searchResults" class="search-results">
+            </div>
         </div>
 
         <div class="topbar-right">
             <button id="btnOpenCreateTop" class="btn btn-accent">Create</button>
 
             <div class="userchip" id="userChip">
-                <img class="avatar" id="topbarAvatar" src="https://i.pravatar.cc/80?img=12" alt="Profile" />
+                <a href="profile.html" class="topbar-profile-link" id="topbarProfileLink" aria-label="Go to profile">
+                    <img class="avatar" id="topbarAvatar" src="https://i.pravatar.cc/80?img=12" alt="Profile" />
+                </a>
+
                 <span class="caret">▾</span>
 
                 <div class="menu" id="userMenu">
+                    <a class="menu-link" href="profile.html">View Profile</a>
                     <button id="btnLogout" class="menu-item">Logout</button>
                 </div>
             </div>
@@ -42,13 +48,15 @@
         <!-- LEFT SIDEBARRRRRRR -->
         <aside class="sidebar">
             <div class="panel profile">
-                <div class="profile-row">
-                    <img class="avatar-lg" id="sidebarAvatar" src="https://i.pravatar.cc/100?img=12" alt="You" />
-                    <div>
-                        <div class="name" id="meName">Loading..</div>
-                        <div class="handle" id="meHandle">@loading</div>
+                <a href="profile.html" class="profile-link">
+                    <div class="profile-row">
+                        <img class="avatar-lg" id="sidebarAvatar" src="https://i.pravatar.cc/100?img=12" alt="You" />
+                        <div>
+                            <div class="name" id="meName">Loading...</div>
+                            <div class="handle" id="meHandle">@loading</div>
+                        </div>
                     </div>
-                </div>
+                </a>
             </div>
 
             <nav class="panel nav">
@@ -88,13 +96,13 @@
 
             <!-- STORIESSSSSSSSSSS -->
             <section class="stories panel">
-            <div class="stories-head">
-                <h3 class="stories-title">Campus Pulse</h3>
-            </div>
+                <div class="stories-head">
+                    <h3 class="stories-title">Campus Pulse</h3>
+                </div>
 
-            <div class="stories-row" id="storiesRow">
-                <!-- injected by JS -->
-            </div>
+                <div class="stories-row" id="storiesRow">
+                    <!-- injected by JS -->
+                </div>
             </section>
 
 
@@ -160,7 +168,7 @@
                         <button class="btn btn-accent btn-sm">Accept</button>
                     </div>
                 </div>
-                                <div class="request-card">
+                <div class="request-card">
                     <div class="req-left">
                         <img class="avatar" src="https://i.pravatar.cc/80?img=31" alt="Requester" />
                         <div>
@@ -191,29 +199,63 @@
                     required></textarea>
                 <div class="counter"><span id="charCount">0</span>/500</div>
 
-                <div class="row">
-                    <label class="checkbox">
+                <!-- <div class="row">
+                    <label class="checkbox checkbox-right">
                         <input id="anonymousToggle" type="checkbox" />
                         <span>Post anonymously</span>
-                    </label>
+                    </label> -->
 
-                    <div class="zone-picker">
+                <!-- <div class="zone-picker">
                         <input id="zoneSearch" class="select" type="text" placeholder="Search campus zone..." autocomplete="off" />
+                        <input id="zoneId" type="hidden" />
+                        <div id="zoneResults" class="zone-results"></div>
+                    </div> -->
+                <!-- 
+                    <div class="row">
+                        <div class="zone-picker">
+                            <input id="zoneSearch" class="select" type="text" placeholder="Search campus zone..." autocomplete="off" />
+                            <input id="zoneId" type="hidden" />
+                            <div id="zoneResults" class="zone-results"></div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <label class="file">
+                            <i class="uil uil-camera"></i>Image
+                            <input id="imageFile" type="file" accept="image/*" />
+                        </label>
+                    </div>
+                                    
+                   
+                    <label class="file">
+                        <i class="uil uil-video"></i>Video
+                        <input id="videoFile" type="file" accept="video/*" />
+                    </label> -->
+                <!-- </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-ghost" id="btnCancel">Cancel</button>
+                    <button type="submit" class="btn btn-accent">Post</button>
+                </div> -->
+                <div class="row row-zone-top">
+                    <div class="zone-picker">
+                        <input id="zoneSearch" class="select" type="text" placeholder="Search campus zone..."
+                            autocomplete="off" />
                         <input id="zoneId" type="hidden" />
                         <div id="zoneResults" class="zone-results"></div>
                     </div>
                 </div>
 
-                <div class="row">
+                <div class="row row-bottom">
                     <label class="file">
                         <i class="uil uil-camera"></i>Image
                         <input id="imageFile" type="file" accept="image/*" />
                     </label>
-                    <!--
-                    <label class="file">
-                        <i class="uil uil-video"></i>Video
-                        <input id="videoFile" type="file" accept="video/*" />
-                    </label> -->
+
+                    <label class="checkbox checkbox-bottom-right">
+                        <input id="anonymousToggle" type="checkbox" />
+                        <span>Post anonymously</span>
+                    </label>
                 </div>
 
                 <div class="modal-actions">

@@ -16,11 +16,143 @@ document.addEventListener("DOMContentLoaded", async () => {
   // 3) show top parts
   renderStories();
   renderMessages();
+  //show search results
+  setupGlobalUserSearch();
 
   // 4) load posts
   // loadFeed();
   await initFeedPage();
 });
+
+
+function setupGlobalUserSearch() {
+  const input = document.getElementById("globalSearch");
+  const resultsEl = document.getElementById("searchResults");
+
+  if (!input || !resultsEl) return;
+
+  let debounceTimer = null;
+
+  input.addEventListener("input", () => {
+    const query = input.value.trim();
+
+    clearTimeout(debounceTimer);
+
+    if (query.length < 2) {
+      hideSearchResults();
+      return;
+    }
+
+    debounceTimer = setTimeout(async () => {
+      await searchUsers(query);
+    }, 250);
+  });
+
+  document.addEventListener("click", (e) => {
+    const insideSearch =
+      input.contains(e.target) ||
+      resultsEl.contains(e.target);
+
+    if (!insideSearch) {
+      hideSearchResults();
+    }
+  });
+}
+
+async function searchUsers(query) {
+  const resultsEl = document.getElementById("searchResults");
+  if (!resultsEl) return;
+
+  try {
+    const data = await apiFetch(`/api/search/users?q=${encodeURIComponent(query)}`, {
+      method: "GET",
+    });
+
+    const users = data.users || [];
+    renderSearchResults(users);
+  } catch (err) {
+    resultsEl.style.display = "block";
+    resultsEl.innerHTML = `<div class="search-empty">${escapeHtml(err.message || "Search failed")}</div>`;
+  }
+}
+
+function renderSearchResults(users) {
+  const resultsEl = document.getElementById("searchResults");
+  if (!resultsEl) return;
+
+  const filteredUsers = users.filter((user) => user.username !== currentUser?.username);
+
+  if (!filteredUsers.length) {
+    resultsEl.style.display = "block";
+    resultsEl.innerHTML = `<div class="search-empty">No users found</div>`;
+    return;
+  }
+
+  resultsEl.style.display = "block";
+  resultsEl.innerHTML = users.map((user) => {
+    const avatarUrl = user.profile_picture
+      ? `/uploads/${user.profile_picture}`
+      : `https://i.pravatar.cc/80?u=${encodeURIComponent(user.username)}`;
+
+    return `
+      <div class="search-result-item">
+        <div class="search-result-left">
+          <img class="avatar" src="${escapeAttr(avatarUrl)}" alt="User" />
+          <div>
+            <div class="search-result-name">${escapeHtml(user.display_name || user.username)}</div>
+            <div class="search-result-handle">@${escapeHtml(user.username)}</div>
+          </div>
+        </div>
+        <button class="btn btn-accent btn-sm" data-follow-user="${escapeAttr(user.username)}">
+          Follow
+        </button>
+      </div>
+    `;
+  }).join("");
+
+  resultsEl.querySelectorAll("[data-follow-user]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const username = btn.dataset.followUser;
+      await followUser(username, btn);
+    });
+  });
+}
+
+function hideSearchResults() {
+  const resultsEl = document.getElementById("searchResults"); //mnbench lro7i
+  if (!resultsEl) return;
+
+  resultsEl.style.display = "none";
+  resultsEl.innerHTML = "";
+}
+
+async function followUser(username, btn) {
+  try {
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Following...";
+    }
+
+    const data = await apiFetch(`/api/follow/@${encodeURIComponent(username)}`, {
+      method: "POST",
+    });
+
+    if (btn) {
+      btn.textContent = "Following";
+    }
+
+    alert(data.message || `You are now following @${username}`);
+    hideSearchResults();
+    await loadFeed();
+  } catch (err) {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "Follow";
+    }
+    alert(err.message || "Follow failed");
+  }
+}
+
 
 async function initFeedPage() {
   try {
@@ -67,11 +199,16 @@ function renderCurrentUser(user) {
 function setupUserMenu() {
   const chip = document.getElementById("userChip");
   const btnLogout = document.getElementById("btnLogout");
+  const profileLink = document.getElementById("topbarProfileLink");
 
   if (!chip) return;
 
   chip.addEventListener("click", (e) => {
-    chip.classList.toggle("open"); // open/close menu
+    if (profileLink && profileLink.contains(e.target)) {
+      return;
+    }
+
+    chip.classList.toggle("open");
     e.stopPropagation();
   });
 
@@ -82,7 +219,6 @@ function setupUserMenu() {
     btnLogout.addEventListener("click", (e) => {
       e.stopPropagation();
       logout();
-      // window.location.href = "login.html";
     });
   }
 }
@@ -377,7 +513,7 @@ function renderMedia(post) {
 }
 
 /*------------ REACTIONS (+ DELETE) -------------- */
-async function onReact(postId, type, btn) {
+async function onReact(postId, type) {
   const emojiMap = {
     like: "❤️",
     wow: "🔥",
@@ -387,26 +523,6 @@ async function onReact(postId, type, btn) {
   const emoji = emojiMap[type];
   if (!emoji) return;
 
-  // try {
-  //   const data = await apiFetch(`/api/posts/${postId}/react`, {
-  //     method: "POST",
-  //     body: JSON.stringify({ emoji }),
-  //   });
-
-  //   await loadFeed(); // reload feed to get updated reactions
-
-  //   const card = btn.closest(".post");
-  //   if (!card) return;
-
-  //   const reactionButtons = card.querySelectorAll("[data-react]");
-  //   reactionButtons.forEach((reactionBtn) => {
-  //     const reactionType = reactionBtn.dataset.react;
-  //     const reactionEmoji = emojiMap[reactionType];
-  //     const span = reactionBtn.querySelector("span");
-  //     if (span) {
-  //       span.textContent = String(data?.counts?.[reactionEmoji] ?? 0);
-  //     }
-  //   });
   try {
     await apiFetch(`/api/posts/${postId}/react`, {
       method: "POST",
@@ -415,7 +531,6 @@ async function onReact(postId, type, btn) {
 
     await loadFeed();
   } catch (err) {
-    // console.error("React failed:", err);
     alert(err.message || "Reaction failed");
   }
 }
@@ -437,6 +552,8 @@ async function onDeletePost(postId) {
 async function onCreatePostSubmit(e) {
   e.preventDefault();
   hideCreateError();
+  const form = document.getElementById("createForm");
+
   const text = document.getElementById("postText").value.trim();
   const anonymous = document.getElementById("anonymousToggle").checked;
   const zoneId = document.getElementById("zoneId").value;
@@ -449,6 +566,10 @@ async function onCreatePostSubmit(e) {
     return;
   }
 
+  if (text.length > 500) {
+    showCreateError("Text must not exceed 500 characters.");
+    return;
+  }
   const submitBtn = e.target.querySelector('button[type="submit"]');
 
   try {
@@ -462,13 +583,13 @@ async function onCreatePostSubmit(e) {
     if (zoneId) fd.append("zone_id", zoneId);
     if (img) fd.append("image", img);
 
-    await apiFetch("/api/posts", {
+    const result = await apiFetch("/api/posts", {
       method: "POST",
       body: fd,
     });
+    alert(result.message || "Post created successfully."); //lezm ttna7a baad !
 
     const modal = document.getElementById("createModal");
-    const form = document.getElementById("createForm");
 
     if (modal) {
       modal.classList.remove("open");
@@ -476,9 +597,13 @@ async function onCreatePostSubmit(e) {
     }
 
     if (form) form.reset();
-    updateCharCount();
+    if (zoneAutocomplete) zoneAutocomplete.clearSelection();
+    const hiddenZoneId = document.getElementById("zoneId");
+    if (hiddenZoneId) hiddenZoneId.value = "";
 
+    updateCharCount();
     await loadFeed();
+
   } catch (err) {
     showCreateError(err.message || "Create post failed");
 

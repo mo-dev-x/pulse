@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>PULSE — Profile</title>
+
+    <link rel="stylesheet" href="https://unicons.iconscout.com/release/v4.0.8/css/line.css">
+    <link rel="stylesheet" href="css/feed.css">
+    <link rel="stylesheet" href="css/profile.css">
+</head>
+
+<body>
+    <!-- TOP BAR -->
+    <header class="topbar">
+        <div class="topbar-left">
+            <div class="brand">PULSE</div>
+        </div>
+
+        <div class="topbar-center">
+            <div class="search">
+                <i class="uil uil-search"></i>
+                <input id="globalSearch" type="search" placeholder="Search people, posts and campus vibes" />
+            </div>
+        </div>
+
+        <div class="topbar-right">
+            <button id="btnOpenCreateTop" class="btn btn-accent">Create</button>
+
+            <div class="userchip" id="userChip">
+                <img class="avatar" id="topbarAvatar" src="https://i.pravatar.cc/80?img=12" alt="Profile" />
+                <span class="caret">▾</span>
+
+                <div class="menu" id="userMenu">
+                    <a class="menu-link" href="profile.html">View Profile</a>
+                    <button class="menu-item" id="btnEditProfileMenu">Edit Profile</button>
+                    <button class="menu-item" id="btnLogout">Logout</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- APP -->
+    <div class="app">
+        <!-- LEFT SIDEBAR -->
+        <aside class="sidebar">
+            <div class="panel profile">
+                <div class="profile-row">
+                    <img class="avatar-lg" id="sidebarAvatar" src="https://i.pravatar.cc/100?img=12" alt="You" />
+                    <div>
+                        <div class="name" id="sidebarName">Loading...</div>
+                        <div class="handle" id="sidebarHandle">@loading</div>
+                    </div>
+                </div>
+            </div>
+
+            <nav class="panel nav">
+                <a class="nav-item" href="feed.html">
+                    <span><i class="uil uil-home"></i></span>Home
+                </a>
+
+                <a class="nav-item" href="#">
+                    <span><i class="uil uil-compass"></i></span>Explore
+                </a>
+
+                <a class="nav-item" href="#">
+                    <i class="uil uil-map-marker"></i>
+                    <span>Campus Map</span>
+                </a>
+
+                <a class="nav-item" href="dashboard.html">
+                    <i class="uil uil-smile"></i>
+                    <span>Mood Dashboard</span>
+                </a>
+
+                <a class="nav-item" href="#">
+                    <i class="uil uil-palette"></i>
+                    <span>Theme</span>
+                </a>
+
+                <a class="nav-item" href="#">
+                    <i class="uil uil-setting"></i>
+                    <span>Settings</span>
+                </a>
+
+                <a class="nav-item active" href="profile.html">
+                    <i class="uil uil-user"></i>
+                    <span>Profile</span>
+                </a>
+
+                <button id="btnOpenCreateLeft" class="btn btn-full btn-accent">Create Post</button>
+            </nav>
+        </aside>
+
+        <!-- MAIN -->
+        <main class="main">
+            <!-- PROFILE HERO -->
+            <section class="panel profile-hero">
+                <div class="profile-cover"></div>
+
+                <div class="profile-hero-content">
+                    <div class="profile-avatar-wrap">
+                        <img id="profileAvatar" class="profile-avatar-xl" src="https://i.pravatar.cc/180?img=12" alt="Profile avatar" />
+                    </div>
+
+                    <div class="profile-main-info">
+                        <div class="profile-name-row">
+                            <div>
+                                <h1 class="profile-display-name" id="profileDisplayName">Rockie</h1>
+                                <div class="profile-handle" id="profileHandle">@rockie</div>
+                            </div>
+
+                            <div class="profile-hero-actions">
+                                <button class="btn btn-ghost" id="btnFollowers">
+                                    <i class="uil uil-users-alt"></i> Followers
+                                </button>
+                                <button class="btn btn-ghost" id="btnEditProfile">
+                                    <i class="uil uil-edit"></i> Edit Profile
+                                </button>
+                            </div>
+                        </div>
+
+                        <p class="profile-bio" id="profileBio">
+                            Student at ULaval. Loves campus life.
+                        </p>
+
+                        <div class="profile-stats">
+                            <div class="stat-card">
+                                <div class="stat-value" id="statPosts">0</div>
+                                <div class="stat-label">Posts</div>
+                            </div>
+
+                            <div class="stat-card">
+                                <div class="stat-value" id="statFollowers">0</div>
+                                <div class="stat-label">Followers</div>
+                            </div>
+
+                            <div class="stat-card">
+                                <div class="stat-value" id="statFollowing">0</div>
+                                <div class="stat-label">Following</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-tabs">
+                    <button class="profile-tab active" data-tab="posts">Posts</button>
+                    <button class="profile-tab" data-tab="media">Media</button>
+                    <button class="profile-tab" data-tab="about">About</button>
+                </div>
+            </section>
+
+            <!-- POSTS TAB -->
+            <section class="profile-tab-panel active" id="tab-posts">
+                <div class="feed" id="profilePostsFeed"></div>
+                <div class="state" id="profilePostsState">Loading posts…</div>
+            </section>
+
+            <!-- MEDIA TAB -->
+            <section class="profile-tab-panel" id="tab-media">
+                <div class="panel media-panel">
+                    <div class="media-grid" id="mediaGrid"></div>
+                    <div class="state" id="mediaState">Loading media…</div>
+                </div>
+            </section>
+
+            <!-- ABOUT TAB -->
+            <section class="profile-tab-panel" id="tab-about">
+                <div class="about-grid">
+                    <section class="panel about-card">
+                        <h3 class="about-title">About</h3>
+                        <div class="about-list">
+                            <div class="about-item">
+                                <span class="about-k">Display name</span>
+                                <span class="about-v" id="aboutName">Rockie</span>
+                            </div>
+
+                            <div class="about-item">
+                                <span class="about-k">Username</span>
+                                <span class="about-v" id="aboutHandle">@rockie</span>
+                            </div>
+
+                            <div class="about-item">
+                                <span class="about-k">Faculty</span>
+                                <span class="about-v" id="aboutFaculty">Software Engineering</span>
+                            </div>
+
+                            <div class="about-item">
+                                <span class="about-k">Favorite zone</span>
+                                <span class="about-v" id="aboutZone">PEPS</span>
+                            </div>
+
+                            <div class="about-item">
+                                <span class="about-k">Joined</span>
+                                <span class="about-v" id="aboutJoined">March 2026</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="panel about-card">
+                        <h3 class="about-title">Pulse summary</h3>
+                        <div class="summary-list">
+                            <div class="summary-box">
+                                <div class="summary-emoji">😊</div>
+                                <div>
+                                    <div class="summary-main" id="summaryMood">Mostly Happy</div>
+                                    <div class="summary-sub">Current overall vibe</div>
+                                </div>
+                            </div>
+
+                            <div class="summary-box">
+                                <div class="summary-emoji">📍</div>
+                                <div>
+                                    <div class="summary-main" id="summaryZone">PEPS</div>
+                                    <div class="summary-sub">Most posted zone</div>
+                                </div>
+                            </div>
+
+                            <div class="summary-box">
+                                <div class="summary-emoji">📝</div>
+                                <div>
+                                    <div class="summary-main" id="summaryPostCount">0 posts</div>
+                                    <div class="summary-sub">Published on Pulse</div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </section>
+        </main>
+
+        <!-- RIGHT COLUMN -->
+        <aside class="right profile-right">
+            <section class="panel mini-profile-card">
+                <div class="mini-profile-head">
+                    <h3>Profile details</h3>
+                    <button class="iconbtn" id="btnEditSide" title="Edit profile">
+                        <i class="uil uil-edit"></i>
+                    </button>
+                </div>
+
+                <div class="mini-profile-body">
+                    <div class="mini-row">
+                        <span class="mini-label">Faculty</span>
+                        <span class="mini-value" id="sideFaculty">Software Engineering</span>
+                    </div>
+
+                    <div class="mini-row">
+                        <span class="mini-label">Favorite zone</span>
+                        <span class="mini-value" id="sideZone">PEPS</span>
+                    </div>
+
+                    <div class="mini-row">
+                        <span class="mini-label">Joined</span>
+                        <span class="mini-value" id="sideJoined">March 2026</span>
+                    </div>
+
+                    <div class="mini-row">
+                        <span class="mini-label">Mood</span>
+                        <span class="mini-value" id="sideMood">Mostly Happy</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel mini-profile-card">
+                <div class="mini-profile-head">
+                    <h3>Quick actions</h3>
+                </div>
+
+                <div class="quick-actions">
+                    <button class="btn btn-ghost btn-full" id="btnShareProfile">
+                        <i class="uil uil-share-alt"></i> Share profile
+                    </button>
+                    <button class="btn btn-ghost btn-full" id="btnViewFeed">
+                        <i class="uil uil-estate"></i> Back to feed
+                    </button>
+                </div>
+            </section>
+        </aside>
+    </div>
+
+    <script type="module" src="js/profile.js"></script>
+</body>
+
+</html>

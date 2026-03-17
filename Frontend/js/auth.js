@@ -1,13 +1,12 @@
 // console.log("auth.js loaded");
 
-// export const API = "https://pulse-backend.up.railway.app";
+// export const API = "https://pulse-seven-blond.vercel.app";
 
-export const API = (
-  window.location.hostname === "localhost" ||
-  window.location.hostname === "127.0.0.1"
-) ? "http://127.0.0.1:5000"
-  : "https://pulse-backend.up.railway.app";
-
+function getApiBaseUrl() {
+  return localStorage.getItem("useRemoteApi") === "true"
+    ? "https://pulse-seven-blond.vercel.app"
+    : "http://127.0.0.1:5000";
+}
 
 const PERSISTENT_TOKEN_KEY = "pulse_token";
 const SESSION_TOKEN_KEY = "pulse_session_token";
