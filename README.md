@@ -143,13 +143,13 @@ python3 -m http.server 8000
 | Phase | Status | Completion |
 |-------|--------|------------|
 | **Phase 1:** Foundation | ✅ Complete | 100% |
-| **Phase 2:** Auth Integration | ✅ Complete | 90% |
-| **Phase 3:** Feed UI | 🟡 In Progress | 60% |
-| **Phase 4:** Feed API Integration | 🟠 Next | 0% |
+| **Phase 2:** Auth Integration | ✅ Complete | 100% |
+| **Phase 3:** Feed UI | ✅ Complete | 100% |
+| **Phase 4:** Feed API Integration | 🟡 In Progress | ~60% |
 | **Phase 5:** UX Polish | 🔵 Later | 0% |
 | **Phase 6:** Advanced UI integrations | 🔵 Later | 0% |
 
-**Current:** Frontend is still catching up to the newer backend platform features.
+**Current:** Feed API integration (reactions, comments, full wiring) is the active focus.
 
 **See [Frontend/QUICKSTART.md](Frontend/QUICKSTART.md) for detailed frontend documentation.**
 
@@ -496,15 +496,17 @@ Currently manual testing via browser:
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| Login Page | ✅ Complete | JWT auth working |
+| Login Page | ✅ Complete | JWT auth, password toggle working |
 | Register Page | ✅ Complete | Email validation working |
-| Feed Layout | 🟡 In Progress | Sidebar + navbar done |
-| Feed Posts | 🟠 Next | Will use `GET /api/posts/feed` |
-| Post Creation | 🔵 Planned | Phase 4 |
-| User Profiles | 🔵 Planned | Phase 4 |
+| Feed Layout | ✅ Complete | Sidebar, navbar, right panel done |
+| Feed Posts | ✅ Complete | Post cards with author, zone, sentiment badge |
+| Post Composer | ✅ Complete | Zone picker, anon toggle, image upload UI |
+| Profile Page | 🟡 Partial | Page exists, full wiring pending |
+| Post Creation | 🟡 In Progress | Modal done, API integration ongoing |
+| Reactions / Comments | 🟠 Next | Backend ready, frontend wiring pending |
 | Analytics Dashboard | 🔵 Planned | Uses existing backend analytics APIs |
 
-**Overall Progress:** ~65%
+**Overall Progress:** ~60%
 
 ---
 
@@ -661,9 +663,9 @@ For questions or issues, please contact the development team or open an issue in
 
 ---
 
-**Last Updated:** March 15, 2026  
+**Last Updated:** 2026-03-18  
 **Backend Status:** Phase 6 Complete  
-**Frontend Status:** Phase 2 Complete (90%), Phase 3 In Progress (60%)  
+**Frontend Status:** Phases 1–3 Complete · Phase 4 In Progress (~60%)  
 **Repository:** [github.com/mo-dev-x/pulse](https://github.com/mo-dev-x/pulse)
 
 ---

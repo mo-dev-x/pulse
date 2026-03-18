@@ -27,14 +27,14 @@
 | Phase | Status | Completion |
 |---|---|---:|
 | Phase 1: Frontend Foundation | ✅ Complete | 100% |
-| Phase 2: Auth Integration (Login + Register + Token) | ✅ Mostly Complete | 90% |
-| Phase 3: Feed UI (Layout + Components) | 🟡 In Progress | 60% |
-| Phase 4: Feed API Integration (Posts) | 🟠 Next | 0% |
+| Phase 2: Auth Integration (Login + Register + Token) | ✅ Complete | 100% |
+| Phase 3: Feed UI (Layout + Components) | ✅ Complete | 100% |
+| Phase 4: Feed API Integration (Posts) | 🟡 In Progress | ~60% |
 | Phase 5: UX Polish (toasts/spinners/empty states) | 🔵 Later | 0% |
 | Phase 6: Map + Mood Analytics UI | 🔵 Later | 0% |
 
-**Overall Progress:** 🟩🟩🟩🟩🟩🟩⬜⬜⬜⬜ **~65%**  
-**Current Focus:** Feed page — **sidebar + navbar done**, now building the **middle feed section** (posts list + cards).
+**Overall Progress:** 🟩🟩🟩🟩🟩🟩⬜⬜⬜⬜ **~60%**  
+**Current Focus:** Feed API integration — posts loading and wiring reactions/comments to backend.
 
 ---
 
@@ -64,7 +64,7 @@ Frontend/
 * ✅ ES Modules enabled (`type="module"`) and working via HTTP server
 * ✅ Consistent design theme (calm supportive UI, blue/purple gradient background)
 
-### ✅ Phase 2 — Auth Integration (Mostly Complete)
+### ✅ Phase 2 — Auth Integration (Complete)
 
 **Core helpers**
 
@@ -76,6 +76,7 @@ Frontend/
 * ✅ `POST /api/auth/login`
 * ✅ Saves JWT → redirect to `feed.html`
 * ✅ Displays backend error messages (invalid credentials, etc.)
+* ✅ Password show/hide toggle
 
 **Register**
 
@@ -87,13 +88,22 @@ Frontend/
 
 * ✅ `localStorage.getItem("pulse_token")` returns JWT
 * ✅ `GET /api/auth/me` works with `Authorization: Bearer <token>`
+* ✅ Logout button implemented (clears token + redirects to login)
 
-### 🟡 Phase 3 — Feed UI (In Progress)
+### ✅ Phase 3 — Feed UI (Complete)
 
-* ✅ `feed.html` created (skeleton)
-* ✅ Navbar created
-* ✅ Sidebar created
-* 🟡 Middle feed section in progress (posts layout + cards)
+* ✅ `feed.html` created — full page structure
+* ✅ Topbar created (search bar, create button, user chip + menu)
+* ✅ Sidebar created (profile panel + nav links + Create Post button)
+* ✅ Middle feed section — posts list + post cards (author, zone, timestamp, sentiment badge)
+* ✅ Post composer modal (text, char counter, zone picker, anonymous toggle, image upload)
+* ✅ Right panel — messages section + follow requests section
+* ✅ "Campus Pulse" stories card (neon ring, emotion tiles)
+* ✅ Loading / empty state (`#stateBox`)
+* ✅ Auth guard (redirects to login if no token)
+* ✅ `feed.css` full glassmorphism dark theme with responsive breakpoints
+* ✅ `zone_autocomplete.js` integrated in composer
+* ✅ `profile.html` + `profile.js` + `profile.css` — basic profile page
 
 ---
 
@@ -200,42 +210,39 @@ Refresh `feed.html`
 * ✅ “API is not defined” — fixed by defining/exporting API base in `auth.js`
 * ✅ Port already in use — frontend moved to port **8000**
 * ✅ Token visibility confusion — verified key `pulse_token`
+* ✅ Logout button — implemented (clears token + redirects to login)
+* ✅ Feed posts layout — post cards built
 
 ### ⚠️ Current
 
-* ⚠️ Logout button not implemented yet (manual token removal works)
-* ⚠️ Feed route protection must stay active (avoid commented module import)
-* ⚠️ Feed posts API integration not started yet
+* ⚠️ Feed reactions / comments not fully wired to backend yet
+* ⚠️ Image upload in composer — UI present, backend wiring pending
+* ⚠️ Token refresh not implemented (24h expiration, then manual re-login needed)
+* ⚠️ 401 interceptor in `apiFetch` not yet added
 
 ---
 
 ## ✅ Next Steps (Ordered To-Do)
 
-### Phase 2 — Finish Auth (last 10%)
+### Phase 2 — Auth (Complete ✅)
 
-* [ ] Add **Logout** button (clear `pulse_token` → redirect `login.html`)
-* [ ] Decide register success flow:
+* [x] Logout button (clears `pulse_token` → redirect `login.html`)
+* [x] Register success → auto-login or redirect to login
+* [x] Protected-route check on all private pages
 
-  * [ ] Option A: auto-login → save token → go feed
-  * [ ] Option B: redirect to login after successful register
-* [ ] Ensure protected-route check is finalized on all private pages
+### Phase 3 — Feed UI (Complete ✅)
 
-### Phase 3 — Feed UI (current)
+* [x] Middle feed layout (posts container)
+* [x] Post card component (author/anonymous label, zone, timestamp, sentiment badge)
+* [x] Empty state (“No posts yet”)
+* [x] Loading state (spinner/skeleton)
 
-* [ ] Build middle feed layout (posts container)
-* [ ] Create Post Card component:
+### Phase 4 — Feed API Integration (current)
 
-  * [ ] author/anonymous label
-  * [ ] zone + timestamp
-  * [ ] sentiment badge (🟢🟡🔴)
-  * [ ] content text
-* [ ] Add empty state (“No posts yet”)
-* [ ] Add loading state (spinner/skeleton)
-
-### Phase 4 — Feed API Integration (next major)
-
-* [ ] `GET /api/posts/feed` (Authorization: `Bearer <token>`)
-* [ ] Render posts dynamically
+* [ ] `GET /api/posts/feed` fully wired (Authorization: `Bearer <token>`)
+* [ ] Render posts dynamically from API data
+* [ ] Reactions wired to `POST /api/posts/<id>/react`
+* [ ] Comments wired to `GET/POST /api/posts/<id>/comments`
 * [ ] Handle errors:
 
   * [ ] 401 → logout + redirect login
@@ -249,11 +256,14 @@ Refresh `feed.html`
 * [x] Login wired (backend call + token saved)
 * [x] Token stored under `pulse_token`
 * [x] `/api/auth/me` works with Bearer token
-* [ ] Feed accessible only when authenticated (token exists)
-* [ ] Logout exists (token clear + redirect)
+* [x] Feed accessible only when authenticated (token exists)
+* [x] Logout exists (token clear + redirect)
+* [x] Post cards rendered with author, zone, timestamp, sentiment badge
+* [ ] Reactions / comments wired to backend
+* [ ] Full error handling (401 interceptor)
 
-**Last Achievement:** Auth integration working end-to-end (JWT stored + `/api/auth/me` verified) ✅
-**Next Milestone:** Feed UI complete + connect `GET /api/posts/feed` 🚀
+**Last Achievement:** Feed UI complete — layout, post cards, composer modal, auth guard all working ✅  
+**Next Milestone:** Wire remaining feed interactions (reactions, comments) and complete API integration 🚀
 
 ```
 ```
