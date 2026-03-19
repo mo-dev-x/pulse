@@ -23,17 +23,20 @@
                 <i class="uil uil-search"></i>
                 <input id="globalSearch" type="search" placeholder="Search people, posts and campus vibes" />
             </div>
+            <div id="searchResults" class="search-results"></div>
         </div>
 
         <div class="topbar-right">
             <button id="btnOpenCreateTop" class="btn btn-accent">Create</button>
 
             <div class="userchip" id="userChip">
-                <img class="avatar" id="topbarAvatar" src="https://i.pravatar.cc/80?img=12" alt="Profile" />
+                <a href="profile.html" class="topbar-profile-link" id="topbarProfileLink" aria-label="Go to my profile">
+                    <img class="avatar" id="topbarAvatar" src="https://i.pravatar.cc/80?img=12" alt="Profile" />
+                </a>
                 <span class="caret">▾</span>
 
                 <div class="menu" id="userMenu">
-                    <a class="menu-link" href="profile.html">View Profile</a>
+                    <a class="menu-link" href="profile.html">View My Profile</a>
                     <button class="menu-item" id="btnEditProfileMenu">Edit Profile</button>
                     <button class="menu-item" id="btnLogout">Logout</button>
                 </div>
@@ -46,13 +49,15 @@
         <!-- LEFT SIDEBAR -->
         <aside class="sidebar">
             <div class="panel profile">
-                <div class="profile-row">
-                    <img class="avatar-lg" id="sidebarAvatar" src="https://i.pravatar.cc/100?img=12" alt="You" />
-                    <div>
-                        <div class="name" id="sidebarName">Loading...</div>
-                        <div class="handle" id="sidebarHandle">@loading</div>
+                <a href="profile.html" class="profile-link">
+                    <div class="profile-row">
+                        <img class="avatar-lg" id="sidebarAvatar" src="https://i.pravatar.cc/100?img=12" alt="You" />
+                        <div>
+                            <div class="name" id="sidebarName">Loading...</div>
+                            <div class="handle" id="sidebarHandle">@loading</div>
+                        </div>
                     </div>
-                </div>
+                </a>
             </div>
 
             <nav class="panel nav">
@@ -74,10 +79,10 @@
                     <span>Mood Dashboard</span>
                 </a>
 
-                <a class="nav-item" href="#">
+                <!-- <a class="nav-item" href="#">
                     <i class="uil uil-palette"></i>
                     <span>Theme</span>
-                </a>
+                </a> -->
 
                 <a class="nav-item" href="#">
                     <i class="uil uil-setting"></i>
@@ -89,7 +94,7 @@
                     <span>Profile</span>
                 </a>
 
-                <button id="btnOpenCreateLeft" class="btn btn-full btn-accent">Create Post</button>
+                <button id="btnViewFeedLeft" class="btn btn-full btn-accent">Back to Feed</button>
             </nav>
         </aside>
 
@@ -97,33 +102,40 @@
         <main class="main">
             <!-- PROFILE HERO -->
             <section class="panel profile-hero">
-                <div class="profile-cover"></div>
+                <div class="profile-cover" id="profileCover"></div>
 
                 <div class="profile-hero-content">
                     <div class="profile-avatar-wrap">
-                        <img id="profileAvatar" class="profile-avatar-xl" src="https://i.pravatar.cc/180?img=12" alt="Profile avatar" />
+                        <img id="profileAvatar" class="profile-avatar-xl" src="https://i.pravatar.cc/180?img=12"
+                            alt="Profile avatar" />
                     </div>
 
                     <div class="profile-main-info">
                         <div class="profile-name-row">
                             <div>
-                                <h1 class="profile-display-name" id="profileDisplayName">Rockie</h1>
-                                <div class="profile-handle" id="profileHandle">@rockie</div>
+                                <h1 class="profile-display-name" id="profileDisplayName">Loading...</h1>
+                                <div class="profile-handle" id="profileHandle">@loading</div>
                             </div>
-
                             <div class="profile-hero-actions">
                                 <button class="btn btn-ghost" id="btnFollowers">
                                     <i class="uil uil-users-alt"></i> Followers
                                 </button>
+
+                                <button class="btn btn-ghost" id="btnFollowing">
+                                    <i class="uil uil-user-plus"></i> Following
+                                </button>
+
+                                <button class="btn btn-accent hidden" id="btnFollowToggle">
+                                    <i class="uil uil-user-plus"></i> Follow
+                                </button>
+
                                 <button class="btn btn-ghost" id="btnEditProfile">
                                     <i class="uil uil-edit"></i> Edit Profile
                                 </button>
                             </div>
                         </div>
 
-                        <p class="profile-bio" id="profileBio">
-                            Student at ULaval. Loves campus life.
-                        </p>
+                        <p class="profile-bio" id="profileBio">Loading bio...</p>
 
                         <div class="profile-stats">
                             <div class="stat-card">
@@ -150,6 +162,14 @@
                     <button class="profile-tab" data-tab="about">About</button>
                 </div>
             </section>
+            <section class="panel pinned-panel" id="pinnedPanel">
+                <div class="panel-title">
+                    <span>Pinned post</span>
+                </div>
+
+                <div id="pinnedPostBox"></div>
+                <div class="state" id="pinnedState">No pinned post yet.</div>
+            </section>
 
             <!-- POSTS TAB -->
             <section class="profile-tab-panel active" id="tab-posts">
@@ -170,58 +190,78 @@
                 <div class="about-grid">
                     <section class="panel about-card">
                         <h3 class="about-title">About</h3>
+
                         <div class="about-list">
                             <div class="about-item">
                                 <span class="about-k">Display name</span>
-                                <span class="about-v" id="aboutName">Rockie</span>
+                                <span class="about-v" id="aboutName">—</span>
                             </div>
 
                             <div class="about-item">
                                 <span class="about-k">Username</span>
-                                <span class="about-v" id="aboutHandle">@rockie</span>
+                                <span class="about-v" id="aboutHandle">@—</span>
                             </div>
 
                             <div class="about-item">
-                                <span class="about-k">Faculty</span>
-                                <span class="about-v" id="aboutFaculty">Software Engineering</span>
+                                <span class="about-k">Location</span>
+                                <span class="about-v" id="aboutLocation">—</span>
                             </div>
 
                             <div class="about-item">
-                                <span class="about-k">Favorite zone</span>
-                                <span class="about-v" id="aboutZone">PEPS</span>
+                                <span class="about-k">Website</span>
+                                <span class="about-v" id="aboutWebsite">—</span>
+                            </div>
+
+                            <div class="about-item">
+                                <span class="about-k">Visibility</span>
+                                <span class="about-v" id="aboutVisibility">—</span>
+                            </div>
+
+                            <div class="about-item" id="aboutEmailRow">
+                                <span class="about-k">Email</span>
+                                <span class="about-v" id="aboutEmail">—</span>
                             </div>
 
                             <div class="about-item">
                                 <span class="about-k">Joined</span>
-                                <span class="about-v" id="aboutJoined">March 2026</span>
+                                <span class="about-v" id="aboutJoined">—</span>
                             </div>
                         </div>
                     </section>
 
                     <section class="panel about-card">
-                        <h3 class="about-title">Pulse summary</h3>
+                        <h3 class="about-title">Profile summary</h3>
+
                         <div class="summary-list">
-                            <div class="summary-box">
-                                <div class="summary-emoji">😊</div>
-                                <div>
-                                    <div class="summary-main" id="summaryMood">Mostly Happy</div>
-                                    <div class="summary-sub">Current overall vibe</div>
-                                </div>
-                            </div>
-
-                            <div class="summary-box">
-                                <div class="summary-emoji">📍</div>
-                                <div>
-                                    <div class="summary-main" id="summaryZone">PEPS</div>
-                                    <div class="summary-sub">Most posted zone</div>
-                                </div>
-                            </div>
-
                             <div class="summary-box">
                                 <div class="summary-emoji">📝</div>
                                 <div>
-                                    <div class="summary-main" id="summaryPostCount">0 posts</div>
-                                    <div class="summary-sub">Published on Pulse</div>
+                                    <div class="summary-main" id="summaryPublicPosts">0 public posts</div>
+                                    <div class="summary-sub">Visible on profile</div>
+                                </div>
+                            </div>
+
+                            <div class="summary-box" id="summaryAnonymousRow">
+                                <div class="summary-emoji">🕶️</div>
+                                <div>
+                                    <div class="summary-main" id="summaryAnonymousPosts">0 anonymous posts</div>
+                                    <div class="summary-sub">Visible only to you</div>
+                                </div>
+                            </div>
+
+                            <div class="summary-box">
+                                <div class="summary-emoji">👥</div>
+                                <div>
+                                    <div class="summary-main" id="summaryFollowers">0 followers</div>
+                                    <div class="summary-sub">People following this profile</div>
+                                </div>
+                            </div>
+
+                            <div class="summary-box">
+                                <div class="summary-emoji">➡️</div>
+                                <div>
+                                    <div class="summary-main" id="summaryFollowing">0 following</div>
+                                    <div class="summary-sub">People this profile follows</div>
                                 </div>
                             </div>
                         </div>
@@ -242,23 +282,23 @@
 
                 <div class="mini-profile-body">
                     <div class="mini-row">
-                        <span class="mini-label">Faculty</span>
-                        <span class="mini-value" id="sideFaculty">Software Engineering</span>
+                        <span class="mini-label">Visibility</span>
+                        <span class="mini-value" id="sideVisibility">—</span>
                     </div>
 
                     <div class="mini-row">
-                        <span class="mini-label">Favorite zone</span>
-                        <span class="mini-value" id="sideZone">PEPS</span>
+                        <span class="mini-label">Location</span>
+                        <span class="mini-value" id="sideLocation">—</span>
+                    </div>
+
+                    <div class="mini-row">
+                        <span class="mini-label">Website</span>
+                        <span class="mini-value" id="sideWebsite">—</span>
                     </div>
 
                     <div class="mini-row">
                         <span class="mini-label">Joined</span>
-                        <span class="mini-value" id="sideJoined">March 2026</span>
-                    </div>
-
-                    <div class="mini-row">
-                        <span class="mini-label">Mood</span>
-                        <span class="mini-value" id="sideMood">Mostly Happy</span>
+                        <span class="mini-value" id="sideJoined">—</span>
                     </div>
                 </div>
             </section>
@@ -279,6 +319,59 @@
             </section>
         </aside>
     </div>
+
+    <!-- PEOPLE MODAL -->
+    <div class="modal" id="peopleModal" aria-hidden="true">
+        <div class="modal-card modal-card-small" role="dialog" aria-modal="true" aria-label="People list">
+            <div class="modal-head">
+                <div class="modal-title" id="peopleModalTitle">People</div>
+                <button id="btnClosePeopleModal" class="iconbtn" aria-label="Close">✖️</button>
+            </div>
+
+            <div class="modal-body">
+                <div class="people-list" id="peopleList"></div>
+                <div class="state" id="peopleState">Loading…</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- EDIT PROFILE MODAL -->
+    <div class="modal" id="editProfileModal" aria-hidden="true">
+        <div class="modal-card" role="dialog" aria-modal="true" aria-label="Edit profile">
+            <div class="modal-head">
+                <div class="modal-title">Edit Profile</div>
+                <button id="btnCloseEditModal" class="iconbtn" aria-label="Close">✖️</button>
+            </div>
+
+            <form id="editProfileForm" class="modal-body">
+                <label class="label" for="editDisplayName">Display name</label>
+                <input id="editDisplayName" class="select full-input" type="text" maxlength="100" required />
+
+                <label class="label" for="editBio">Bio</label>
+                <textarea id="editBio" class="textarea" maxlength="500" placeholder="Write a small bio..."></textarea>
+
+                <label class="label" for="editAvatarFile">Profile picture</label>
+                <label class="file">
+                    <i class="uil uil-image"></i>Choose image
+                    <input id="editAvatarFile" type="file" accept="image/*" />
+                </label>
+
+                <div class="avatar-preview-wrap">
+                    <img id="editAvatarPreview" class="avatar-preview" src="https://i.pravatar.cc/120?img=12"
+                        alt="Avatar preview" />
+                </div>
+
+                <div class="error" id="editProfileError" style="display:none;"></div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-ghost" id="btnCancelEdit">Cancel</button>
+                    <button type="submit" class="btn btn-accent">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="true"></div>
 
     <script type="module" src="js/profile.js"></script>
 </body>

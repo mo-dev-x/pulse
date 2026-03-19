@@ -6,8 +6,8 @@ blueprints, and error handlers.
 """
 
 from datetime import datetime, timezone
-
-from flask import Flask, jsonify, request
+import os
+from flask import Flask, app, jsonify, request, send_from_directory
 from flask_caching import Cache
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
@@ -67,6 +67,14 @@ def create_app(config_name='development'):
     # Load configuration
     app.config.from_object(config[config_name])
 
+    #faten did this
+    base_dir = os.path.abspath(os.path.join(app.root_path, '..'))
+    upload_root = os.path.join(base_dir, 'uploads')
+
+    app.config['UPLOAD_FOLDER'] = upload_root
+    app.config['PROFILE_UPLOAD_FOLDER'] = os.path.join(upload_root, 'profiles')
+    app.config['HEADER_UPLOAD_FOLDER'] = os.path.join(upload_root, 'headers')
+
     # Development visibility: make missing SMTP obvious early.
     if config_name != 'testing':
         smtp_host = app.config.get('SMTP_HOST')
@@ -114,6 +122,11 @@ def create_app(config_name='development'):
     
     # Register blueprints
     register_blueprints(app)
+
+    #Faten did this - serve uploaded files (profile pics, post media, etc.)
+    @app.route('/uploads/<path:filename>')
+    def serve_uploaded_file(filename):
+        return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
     
     # Register error handlers
     register_error_handlers(app)

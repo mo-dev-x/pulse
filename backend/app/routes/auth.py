@@ -90,6 +90,13 @@ def _resize_and_save_image(file_obj, destination_path, max_size):
     image.thumbnail(max_size)
     image.save(destination_path, format='JPEG', optimize=True, quality=85)
 
+#Faten did this
+def _get_upload_root():
+    upload_root = current_app.config.get('UPLOAD_FOLDER')
+    if not upload_root:
+        upload_root = os.path.join(current_app.root_path, '..', 'uploads')
+    return os.path.abspath(upload_root)
+
 
 @bp.route('/register', methods=['POST'])
 def register():
@@ -1020,7 +1027,9 @@ def upload_profile_picture():
     if not user:
         return jsonify({'error': get_localized_message(request, 'user_not_found')}), 404
 
-    upload_folder = current_app.config.get('PROFILE_UPLOAD_FOLDER', 'uploads/profiles')
+    # upload_folder = current_app.config.get('PROFILE_UPLOAD_FOLDER', 'uploads/profiles') Faten did this
+    upload_folder = os.path.join(_get_upload_root(), 'profiles')
+
     filename, error = _handle_image_upload(
         user=user,
         request_key='file',
@@ -1040,8 +1049,13 @@ def upload_profile_picture():
     except Exception:
         current_app.logger.warning('Meilisearch user upsert failed for user_id=%s', user.id)
 
+    # if old_filename:
+    #     old_path = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'uploads/'), old_filename)
+    #     if os.path.exists(old_path):
+    #         os.remove(old_path)
+    #Faten did this 
     if old_filename:
-        old_path = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'uploads/'), old_filename)
+        old_path = os.path.join(_get_upload_root(), old_filename)
         if os.path.exists(old_path):
             os.remove(old_path)
 
@@ -1061,7 +1075,9 @@ def upload_header_image():
     if not user:
         return jsonify({'error': get_localized_message(request, 'user_not_found')}), 404
 
-    upload_folder = current_app.config.get('HEADER_UPLOAD_FOLDER', 'uploads/headers')
+    # upload_folder = current_app.config.get('HEADER_UPLOAD_FOLDER', 'uploads/headers') Faten did this
+    upload_folder = os.path.join(_get_upload_root(), 'headers')
+    
     filename, error = _handle_image_upload(
         user=user,
         request_key='file',

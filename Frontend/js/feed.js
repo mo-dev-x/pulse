@@ -113,13 +113,13 @@ function renderSearchResults(users) {
 
     return `
       <div class="search-result-item">
-        <div class="search-result-left">
+        <a class="search-result-left search-result-link" href="profile.html?u=${encodeURIComponent(user.username)}">
           <img class="avatar" src="${escapeAttr(avatarUrl)}" alt="User" />
           <div>
             <div class="search-result-name">${escapeHtml(user.display_name || user.username)}</div>
             <div class="search-result-handle">@${escapeHtml(user.username)}</div>
           </div>
-        </div>
+        </a>
         <button class="btn btn-accent btn-sm" data-follow-user="${escapeAttr(user.username)}">
           Follow
         </button>
@@ -619,7 +619,7 @@ async function onDeletePost(postId) {
     await loadCurrentFeed();
 
   } catch (err) {
-    showToast("Delete failed: " + err.message, "error");
+    showToast(err.message || "Delete failed", "error");
   }
 }
 
