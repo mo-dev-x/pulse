@@ -106,8 +106,6 @@
             </section>
 
 
-
-
             <!-- COMPOSERRRRRR -->
             <section class="composer panel">
                 <img class="avatar" id="composerAvatar" src="https://i.pravatar.cc/80?img=12" alt="You" />
@@ -115,6 +113,12 @@
                     What’s on your mind ?
                 </button>
                 <button id="btnOpenCreateSmall" class="btn btn-accent btn-sm">Post</button>
+            </section>
+
+            <section class="panel feed-switcher">
+                <button class="feed-filter active" data-feed-mode="home">Home Feed</button>
+                <button class="feed-filter" data-feed-mode="myPosts">My Posts</button>
+                <button class="feed-filter" data-feed-mode="myAnonymous">My Anonymous</button>
             </section>
 
             <!-- FEED LISTTTTTTTTT -->
@@ -267,6 +271,7 @@
             </form>
         </div>
     </div>
+    <div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="true"></div>
 
     <script src="js/zone_autocomplete.js"></script>
     <script type="module" src="js/feed.js"></script>

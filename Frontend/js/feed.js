@@ -1,8 +1,24 @@
-import { requireAuth, apiFetch, logout } from "./auth.js";
+import { requireAuth, apiFetch, logout, getAssetUrl } from "./auth.js";
 
 let currentUser = null;
 let currentPosts = [];
 let zoneAutocomplete = null;
+let currentFeedMode = "home";
+
+const FEED_MODES = {
+  home: {
+    endpoint: "/api/posts/feed",
+    emptyMessage: "No posts yet. Follow users to see posts in your feed.",
+  },
+  myPosts: {
+    endpoint: "/api/posts/me",
+    emptyMessage: "You don’t have any public posts yet.",
+  },
+  myAnonymous: {
+    endpoint: "/api/posts/me/anonymous",
+    emptyMessage: "You don’t have any anonymous posts yet.",
+  },
+};
 
 document.addEventListener("DOMContentLoaded", async () => {
   // 1) protect the page (if the function exists...faskhtha)
@@ -12,12 +28,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupModal();
   setupCharCounter();
   setupZonePicker();
+  setupFeedModeSwitch();
+  //show search results
+  setupGlobalUserSearch();
 
   // 3) show top parts
   renderStories();
   renderMessages();
-  //show search results
-  setupGlobalUserSearch();
 
   // 4) load posts
   // loadFeed();
@@ -89,9 +106,9 @@ function renderSearchResults(users) {
   }
 
   resultsEl.style.display = "block";
-  resultsEl.innerHTML = users.map((user) => {
+  resultsEl.innerHTML = filteredUsers.map((user) => {
     const avatarUrl = user.profile_picture
-      ? `/uploads/${user.profile_picture}`
+      ? getAssetUrl(user.profile_picture)
       : `https://i.pravatar.cc/80?u=${encodeURIComponent(user.username)}`;
 
     return `
@@ -141,15 +158,18 @@ async function followUser(username, btn) {
       btn.textContent = "Following";
     }
 
-    alert(data.message || `You are now following @${username}`);
+    showToast(data.message || `You are now following @${username}`, "success");
     hideSearchResults();
-    await loadFeed();
+
+    if (currentFeedMode === "home") {
+      await loadCurrentFeed();
+    }
   } catch (err) {
     if (btn) {
       btn.disabled = false;
       btn.textContent = "Follow";
     }
-    alert(err.message || "Follow failed");
+    showToast(err.message || "Follow failed", "error");
   }
 }
 
@@ -158,7 +178,7 @@ async function initFeedPage() {
   try {
     showState("Loading feed...");
     await loadCurrentUser();
-    await loadFeed();
+    await loadCurrentFeed();
   } catch (err) {
     showState(err.message || "Failed to load feed.");
   }
@@ -181,11 +201,11 @@ function renderCurrentUser(user) {
   const displayName = user?.display_name || user?.username || "Pulse User";
   const username = user?.username || "user";
 
-  if (meName) meName.textContent = displayName;
-  if (meHandle) meHandle.textContent = `@${username}`;
+  if (nameEl) nameEl.textContent = displayName;
+  if (handleEl) handleEl.textContent = `@${username}`;
 
   const avatarUrl = user?.profile_picture
-    ? `/uploads/${user.profile_picture}`
+    ? getAssetUrl(user.profile_picture)
     : `https://i.pravatar.cc/100?u=${encodeURIComponent(username)}`;
 
   if (topbarAvatar) topbarAvatar.src = avatarUrl;
@@ -298,6 +318,27 @@ function updateCharCount() {
   count.textContent = String(textarea.value.length);
 }
 
+function setupFeedModeSwitch() {
+  const buttons = document.querySelectorAll("[data-feed-mode]");
+
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const mode = btn.dataset.feedMode;
+      if (!FEED_MODES[mode] || mode === currentFeedMode) return;
+
+      currentFeedMode = mode;
+      updateFeedModeUi();
+      await loadCurrentFeed();
+    });
+  });
+}
+
+function updateFeedModeUi() {
+  document.querySelectorAll("[data-feed-mode]").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.feedMode === currentFeedMode);
+  });
+}
+
 /* -------------- STATE (Loading/Empty) ---------------- */
 function showState(text) {
   const box = document.getElementById("stateBox");
@@ -326,24 +367,39 @@ function hideCreateError() {
   el.textContent = "";
   el.style.display = "none";
 }
+function showToast(message, type = "info") {
+  const container = document.getElementById("toastContainer");
+  if (!container) return;
+
+  const toast = document.createElement("div");
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+
+  container.appendChild(toast);
+
+  setTimeout(() => {
+    toast.remove();
+  }, 2600);
+}
 
 /* --------------- FEED ---------------- */
-async function loadFeed() {
-  showState("Loading feed...");
-
+async function loadCurrentFeed() {
   const feedEl = document.getElementById("feed");
   if (!feedEl) return;
+
+  const modeConfig = FEED_MODES[currentFeedMode];
+  if (!modeConfig) return;
 
   feedEl.innerHTML = "";
 
   try {
-    const data = await apiFetch("/api/posts/feed", { method: "GET" });
+    const data = await apiFetch(modeConfig.endpoint, { method: "GET" });
     const posts = data.posts || [];
 
     currentPosts = posts.map(normalizePost);
 
     if (!currentPosts.length) {
-      showState(data.message || "No posts yet. Follow users to see posts in your feed.");
+      showState(data.message || modeConfig.emptyMessage);
       return;
     }
 
@@ -391,7 +447,7 @@ function normalizePost(p) {
     : (author.username || author.display_name || p.id);
 
   const avatarUrl = !isAnonymous && author.profile_picture
-    ? `/uploads/${author.profile_picture}`
+    ? getAssetUrl(author.profile_picture)
     : `https://i.pravatar.cc/80?u=${encodeURIComponent(avatarSeed)}`;
 
   return {
@@ -402,16 +458,16 @@ function normalizePost(p) {
     handle,
     avatarUrl,
     zoneName: zone?.name || "Campus",
-    zoneType: zone?.type || "",
-    time: p.created_at || "",
+    timeRaw: p.created_at || "",
+    timeLabel: formatRelativeTime(p.created_at),
     sentiment: p.sentiment || "neutral",
-    imageUrl: firstImage ? `/${firstImage.file_path.replace(/^\/+/, "")}` : "",
-    videoUrl: firstVideo ? `/${firstVideo.file_path.replace(/^\/+/, "")}` : "",
+    imagePath: firstImage?.file_path || "",
+    videoPath: firstVideo?.file_path || "",
     mine,
     reactions: {
-      like: p.reactions?.["❤️"] ?? 0,
-      wow: p.reactions?.["🔥"] ?? 0,
-      sad: p.reactions?.["🥲"] ?? 0,
+      love: p.reactions?.["❤️"] ?? 0,
+      fire: p.reactions?.["🔥"] ?? 0,
+      sad: p.reactions?.["😢"] ?? 0,
     },
     myReaction: p.my_reaction || null,
     reactionCount: p.reaction_count ?? 0,
@@ -442,7 +498,7 @@ function renderPostCard(post) {
             <span class="badge ${badge.cls}">${badge.label}</span>
           </div>
           <div class="m">
-            ${escapeHtml(post.handle)} • ${escapeHtml(post.zoneName)} • ${escapeHtml(post.time)}
+            ${escapeHtml(post.handle)} • ${escapeHtml(post.zoneName)} • ${escapeHtml(post.timeLabel)}
           </div>
         </div>
       </div>
@@ -462,9 +518,17 @@ function renderPostCard(post) {
 
     <div class="post-actions">
       <div class="actions-left reaction">
-        <button class="react-btn" data-react="like">❤️ <span>${post.reactions.like ?? 0}</span></button>
-        <button class="react-btn" data-react="wow">🔥 <span>${post.reactions.wow ?? 0}</span></button>
-        <button class="react-btn" data-react="sad">🥲 <span>${post.reactions.sad ?? 0}</span></button>
+        <button class="react-btn ${post.myReaction === "❤️" ? "is-active" : ""}" data-emoji="❤️">
+          ❤️ <span>${post.reactions.love ?? 0}</span>
+        </button>
+
+        <button class="react-btn ${post.myReaction === "🔥" ? "is-active" : ""}" data-emoji="🔥">
+          🔥 <span>${post.reactions.fire ?? 0}</span>
+        </button>
+
+        <button class="react-btn ${post.myReaction === "😢" ? "is-active" : ""}" data-emoji="😢">
+          😢 <span>${post.reactions.sad ?? 0}</span>
+        </button>
       </div>
 
       <button class="iconbtn" title="Share">
@@ -478,14 +542,15 @@ function renderPostCard(post) {
     if (!btn) return;
 
     const action = btn.dataset.action;
-    const react = btn.dataset.react;
+    const emoji = btn.dataset.emoji;
 
     if (action === "delete") {
       await onDeletePost(post.id);
+      return;
     }
 
-    if (react) {
-      await onReact(post.id, react);
+    if (emoji) {
+      await onReact(post.id, emoji);
     }
   });
 
@@ -493,45 +558,55 @@ function renderPostCard(post) {
 }
 
 function renderMedia(post) {
-  if (post.imageUrl) {
+  if (post.imagePath) {
     return `
       <div class="post-media">
-        <img src="${escapeAttr(post.imageUrl)}" alt="Post media"
-          onerror="this.closest('.post-media').innerHTML='<div style=&quot;padding:14px;color:rgba(229,231,235,.65)&quot;>Media unavailable ❌</div>';"/>
-      </div>`;
+        <img
+          src="${escapeAttr(getAssetUrl(post.imagePath))}"
+          alt="Post media"
+          onerror="this.closest('.post-media').innerHTML='<div style=&quot;padding:14px;color:rgba(229,231,235,.65)&quot;>Media unavailable ❌</div>';"
+        />
+      </div>
+    `;
   }
 
-  if (post.videoUrl) {
+  if (post.videoPath) {
     return `
       <div class="post-media">
-        <video controls src="${escapeAttr(post.videoUrl)}"
-          onerror="this.closest('.post-media').innerHTML='<div style=&quot;padding:14px;color:rgba(229,231,235,.65)&quot;>Media unavailable ❌</div>';"></video>
-      </div>`;
+        <video
+          controls
+          src="${escapeAttr(getAssetUrl(post.videoPath))}"
+          onerror="this.closest('.post-media').innerHTML='<div style=&quot;padding:14px;color:rgba(229,231,235,.65)&quot;>Media unavailable ❌</div>';"
+        ></video>
+      </div>
+    `;
   }
-
   return "";
 }
 
 /*------------ REACTIONS (+ DELETE) -------------- */
-async function onReact(postId, type) {
-  const emojiMap = {
-    like: "❤️",
-    wow: "🔥",
-    sad: "🥲",
-  };
+async function onReact(postId, emoji) {
+  const post = currentPosts.find((p) => p.id === postId);
+  if (!post) return;
 
-  const emoji = emojiMap[type];
-  if (!emoji) return;
+  const isRemoving = post.myReaction === emoji;
 
   try {
-    await apiFetch(`/api/posts/${postId}/react`, {
-      method: "POST",
-      body: JSON.stringify({ emoji }),
-    });
-
-    await loadFeed();
+    if (isRemoving) {
+      await apiFetch(`/api/posts/${postId}/react`, {
+        method: "DELETE",
+      });
+      showToast("Reaction removed", "success");
+    } else {
+      await apiFetch(`/api/posts/${postId}/react`, {
+        method: "POST",
+        body: JSON.stringify({ emoji }),
+      });
+      showToast("Reaction updated", "success");
+    }
+    await loadCurrentFeed();
   } catch (err) {
-    alert(err.message || "Reaction failed");
+    showToast(err.message || "Reaction failed", "error");
   }
 }
 
@@ -540,11 +615,11 @@ async function onDeletePost(postId) {
 
   try {
     await apiFetch(`/api/posts/${postId}`, { method: "DELETE" });
-    // cardEl.remove(); w kent param
-    await loadFeed(); // reload feed after deletion
+    showToast("Post deleted", "success");
+    await loadCurrentFeed();
 
   } catch (err) {
-    alert("Delete failed: " + err.message);
+    showToast("Delete failed: " + err.message, "error");
   }
 }
 
@@ -587,8 +662,6 @@ async function onCreatePostSubmit(e) {
       method: "POST",
       body: fd,
     });
-    alert(result.message || "Post created successfully."); //lezm ttna7a baad !
-
     const modal = document.getElementById("createModal");
 
     if (modal) {
@@ -602,7 +675,13 @@ async function onCreatePostSubmit(e) {
     if (hiddenZoneId) hiddenZoneId.value = "";
 
     updateCharCount();
-    await loadFeed();
+    if (currentFeedMode === "home") {
+      currentFeedMode = anonymous ? "myAnonymous" : "myPosts";
+      updateFeedModeUi();
+    }
+
+    showToast(result.message || "Post created successfully.", "success");
+    await loadCurrentFeed();
 
   } catch (err) {
     showCreateError(err.message || "Create post failed");
@@ -674,64 +753,30 @@ function renderStories() {
   `;
 }
 
-/* --------------DEMO POSTS ---------------- */
-// function demoPosts() {
-//   return [
-//     {
-//       id: "p1",
-//       username: "Lana Rose",
-//       handle: "@lanarose",
-//       zone: "Zone 1 • Library",
-//       time: "12 minutes ago",
-//       sentiment: "neutral",
-//       text: "Midterm week is loud in my head even when the library is silent. If you’re struggling too: you’re not alone 🤍",
-//       imageUrl: "",
-//       videoUrl: "",
-//       mine: false,
-//       reactions: { like: 128, wow: 44, sad: 19 },
-//     },
-//     {
-//       id: "p2",
-//       username: "Anonymous",
-//       handle: "@anon",
-//       zone: "Zone 3 • Study Rooms",
-//       time: "30 minutes ago",
-//       sentiment: "negative",
-//       text: "I feel overwhelmed lately. Not failing… just constantly behind. If someone has tips to manage stress, please share.",
-//       imageUrl: "",
-//       videoUrl: "",
-//       mine: false,
-//       reactions: { like: 52, wow: 6, sad: 31 },
-//     },
-//         {
-//       id: "p2b",
-//       username: "Dina A.",
-//       handle: "@dinaa",
-//       zone: "Zone 6 • PEPS Gym",
-//       time: "40 minutes ago",
-//       sentiment: "positive",
-//       text: "I forced myself to do a 15-minute walk outside and it genuinely reset my brain. If you’re stuck, try a tiny move — it helps 🌿",
-//       imageUrl: "",
-//       videoUrl: "",
-//       mine: false,
-//       reactions: { like: 63, wow: 14, sad: 1 }
-//     },
-//     {
-//       id: "p2c",
-//       username: "Campus Notice",
-//       handle: "@pulse",
-//       zone: "Zone 2 • Cafeteria",
-//       time: "50 minutes ago",
-//       sentiment: "neutral",
-//       text: "FYI: cafeteria is extra crowded today around noon. If you want a calmer break, try going a bit earlier or later 🕒",
-//       imageUrl: "",
-//       videoUrl: "",
-//       mine: false,
-//       reactions: { like: 18, wow: 3, sad: 0 }
-//     },
+function formatRelativeTime(dateLike) {
+  const d = new Date(dateLike);
+  if (Number.isNaN(d.getTime())) return "Recently";
 
-//   ];
-// }
+  const diffMs = Date.now() - d.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+
+  if (diffSec < 60) return "Just now";
+
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+
+  const diffDay = Math.floor(diffHr / 24);
+  if (diffDay < 7) return `${diffDay}d ago`;
+
+  return d.toLocaleDateString([], {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
 /* -------------- SAFE USE HTML ---------------- */
 function escapeHtml(str) {
@@ -746,18 +791,18 @@ function escapeAttr(str) {
   return escapeHtml(str).replaceAll("`", "&#096;");
 }
 
-/* ------------- OPTIONAL notifications (only if exists) ---------------- */
-const notificationsBtn = document.getElementById("notifications");
-const popup = document.getElementById("notification-popup");
+// /* ------------- OPTIONAL notifications (only if exists) ---------------- */
+// const notificationsBtn = document.getElementById("notifications");
+// const popup = document.getElementById("notification-popup");
 
-if (notificationsBtn && popup) {
-  notificationsBtn.addEventListener("click", (e) => {
-    e.preventDefault();
-    popup.classList.toggle("show");
-  });
+// if (notificationsBtn && popup) {
+//   notificationsBtn.addEventListener("click", (e) => {
+//     e.preventDefault();
+//     popup.classList.toggle("show");
+//   });
 
-  document.addEventListener("click", (e) => {
-    const inside = notificationsBtn.contains(e.target) || popup.contains(e.target);
-    if (!inside) popup.classList.remove("show");
-  });
-}
+//   document.addEventListener("click", (e) => {
+//     const inside = notificationsBtn.contains(e.target) || popup.contains(e.target);
+//     if (!inside) popup.classList.remove("show");
+//   });
+// }

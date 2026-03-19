@@ -8,9 +8,32 @@ function getApiBaseUrl() {
     : "http://127.0.0.1:5000";
 }
 export const API = getApiBaseUrl();
+window.PULSE_API_BASE = API;
 
 const PERSISTENT_TOKEN_KEY = "pulse_token";
 const SESSION_TOKEN_KEY = "pulse_session_token";
+
+export function buildApiUrl(path = "") {
+  if (!path) return API;
+  if (/^https?:\/\//i.test(path)) return path;
+
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${API}${normalizedPath}`;
+}
+
+export function getAssetUrl(path, fallback = "") {
+  if (!path) return fallback;
+  if (/^https?:\/\//i.test(path)) return path;
+
+  const clean = String(path).replace(/^\/+/, "");
+  if (!clean) return fallback;
+
+  if (clean.startsWith("uploads/")) {
+    return `${API}/${clean}`;
+  }
+
+  return `${API}/uploads/${clean}`;
+}
 
 export function saveToken(token, rememberMe = true) {
   if (!token) return;
@@ -58,7 +81,7 @@ export function redirectIfLoggedIn() {     //mch solide
 }
 
 export async function apiFetch(path, options = {}) {
-  const url = API + path;
+  const url = buildApiUrl(path);
 
   const headers = { ...(options.headers || {}) };
   const token = getToken();

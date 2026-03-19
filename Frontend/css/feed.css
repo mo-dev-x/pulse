@@ -1099,3 +1099,91 @@ body::before{
   gap: 12px;
   align-items: center;
 }
+/* -----------------------------
+   FEED SWITCHER
+------------------------------ */
+.feed-switcher{
+  padding: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.feed-filter{
+  border: none;
+  cursor: pointer;
+  border-radius: 999px;
+  padding: 10px 14px;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.10);
+  color: var(--text);
+  font-weight: 800;
+  transition: background .15s ease, transform .15s ease, border-color .15s ease;
+}
+
+.feed-filter:hover{
+  background: rgba(255,255,255,0.06);
+  transform: translateY(-1px);
+}
+
+.feed-filter.active{
+  background: rgba(255,77,125,0.15);
+  border-color: rgba(255,77,125,0.25);
+}
+
+/* Active reaction */
+.react-btn.is-active{
+  background: rgba(255,77,125,0.12);
+  border-color: rgba(255,77,125,0.28);
+}
+
+/* -----------------------------
+   TOASTS
+------------------------------ */
+.toast-container{
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.toast{
+  min-width: 240px;
+  max-width: 360px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  color: var(--text);
+  background: rgba(16, 16, 28, 0.96);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: 0 20px 45px rgba(0,0,0,0.35);
+  backdrop-filter: blur(14px);
+  pointer-events: auto;
+  animation: toastIn .18s ease;
+}
+
+.toast.success{
+  border-color: rgba(34,197,94,0.28);
+}
+
+.toast.error{
+  border-color: rgba(239,68,68,0.30);
+}
+
+.toast.info{
+  border-color: rgba(59,130,246,0.28);
+}
+
+@keyframes toastIn{
+  from{
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to{
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
