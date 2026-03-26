@@ -4,16 +4,20 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>PULSE — Register</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/login.css">
 </head>
 
 <body>
   <main class="page">
     <section class="card">
+      <button type="button" class="lang-toggle" data-lang-toggle>FR</button>
       <div class="brand">
         <div>
-          <h1>PULSE</h1>
-          <p>Create your account</p>
+          <h1 data-i18n="app.brand">PULSE</h1>
+          <p data-i18n="auth.register.title">Create your account</p>
         </div>
       </div>
 
@@ -23,17 +27,17 @@
 
         <!-- username -->
         <div class="field">
-          <label class="label" for="username">Username</label>
+          <label class="label" for="username" data-i18n="auth.register.username">Username</label>
           <input class="input" id="username" type="text" placeholder="yourname" required>
         </div>
 
         <div class="field">
-          <label class="label" for="email">Email (@ulaval.ca)</label>
+          <label class="label" for="email" data-i18n="auth.register.email">Email (@ulaval.ca)</label>
           <input class="input" id="email" type="email" placeholder="name@ulaval.ca" required>
         </div>
 
         <div class="field">
-          <label class="label" for="password">Password</label>
+          <label class="label" for="password" data-i18n="auth.register.password">Password</label>
           <div class="password-wrapper">
             <input class="input" id="password" type="password" placeholder="••••••••" required>
             <button type="button" id="togglePassword" class="toggle-password" aria-label="Toggle password visibility">
@@ -42,11 +46,11 @@
           </div>
         </div>
 
-        <button class="btn btn-primary" type="submit">Create account</button>
+        <button class="btn btn-primary" type="submit" data-i18n="auth.register.submit">Create account</button>
 
         <p class="bottom">
-          Already have an account?
-          <a class="link" href="login.html">Login</a>
+          <span data-i18n="auth.register.have_account">Already have an account?</span>
+          <a class="link" href="login.html" data-i18n="auth.register.login">Login</a>
         </p>
       </form>
     </section>

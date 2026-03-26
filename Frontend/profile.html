@@ -12,6 +12,7 @@
 </head>
 
 <body>
+    <div id="offlineBanner" class="error" hidden>You are offline. Profile data may be stale.</div>
     <!-- TOP BAR -->
     <header class="topbar">
         <div class="topbar-left">
@@ -65,26 +66,38 @@
                     <span><i class="uil uil-home"></i></span>Home
                 </a>
 
-                <a class="nav-item" href="#">
+                <a class="nav-item" href="discover.html">
                     <span><i class="uil uil-compass"></i></span>Explore
                 </a>
 
-                <a class="nav-item" href="#">
+                <a class="nav-item" href="zone.html">
                     <i class="uil uil-map-marker"></i>
-                    <span>Campus Map</span>
+                    <span>Zones</span>
                 </a>
 
-                <a class="nav-item" href="dashboard.html">
+                <a class="nav-item" href="analytics.html">
                     <i class="uil uil-smile"></i>
                     <span>Mood Dashboard</span>
                 </a>
 
-                <!-- <a class="nav-item" href="#">
+                <a class="nav-item" href="messages.html">
+                    <i class="uil uil-envelope"></i>
+                    <span>Messages</span>
+                    <span class="inline-badge" data-message-badge hidden>0</span>
+                </a>
+
+                <a class="nav-item" href="notifications.html">
+                    <i class="uil uil-bell"></i>
+                    <span>Notifications</span>
+                    <span class="inline-badge" data-notification-badge hidden>0</span>
+                </a>
+
+                <button class="nav-item" type="button" data-theme-toggle aria-label="Toggle theme">
                     <i class="uil uil-palette"></i>
                     <span>Theme</span>
-                </a> -->
+                </button>
 
-                <a class="nav-item" href="#">
+                <a class="nav-item" href="settings.html">
                     <i class="uil uil-setting"></i>
                     <span>Settings</span>
                 </a>
@@ -123,6 +136,10 @@
 
                                 <button class="btn btn-ghost" id="btnFollowing">
                                     <i class="uil uil-user-plus"></i> Following
+                                </button>
+
+                                <button class="btn btn-ghost" id="btnFriends">
+                                    <i class="uil uil-heart"></i> Friends
                                 </button>
 
                                 <button class="btn btn-accent hidden" id="btnFollowToggle">
@@ -354,6 +371,12 @@
                 <label class="file">
                     <i class="uil uil-image"></i>Choose image
                     <input id="editAvatarFile" type="file" accept="image/*" />
+                </label>
+
+                <label class="label" for="editHeaderFile">Header image</label>
+                <label class="file">
+                    <i class="uil uil-panorama-h-alt"></i>Choose header
+                    <input id="editHeaderFile" type="file" accept="image/*" />
                 </label>
 
                 <div class="avatar-preview-wrap">

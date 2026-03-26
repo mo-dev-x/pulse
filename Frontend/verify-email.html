@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PULSE — Verify Email</title>
+  <link rel="stylesheet" href="css/variables.css" />
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/components.css" />
+  <link rel="stylesheet" href="css/login.css" />
+</head>
+<body>
+  <main class="page">
+    <section class="card">
+      <button type="button" class="lang-toggle" data-lang-toggle>FR</button>
+      <div class="brand">
+        <div>
+          <h1 data-i18n="auth.verify.title">Verify your email</h1>
+          <p data-i18n="auth.verify.subtitle">Check your inbox and click the verification link to unlock posting and comments.</p>
+        </div>
+      </div>
+
+      <p class="auth-note"><strong data-i18n="auth.verify.email_label">Pending email</strong>: <span id="pendingEmail">—</span></p>
+      <p id="statusBox" class="msg" style="display:none;"></p>
+
+      <div class="card-actions">
+        <button id="resendVerification" class="btn" type="button" data-i18n="auth.verify.resend">Resend verification email</button>
+        <button id="continueToFeed" class="btn btn-ghost" type="button" data-i18n="auth.verify.continue">Continue to feed</button>
+        <a class="link bottom" href="login.html" data-i18n="auth.verify.back">Back to login</a>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="js/verify_email.js"></script>
+</body>
+</html>

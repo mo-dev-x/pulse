@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PULSE — Zone Feed</title>
+  <link rel="stylesheet" href="https://unicons.iconscout.com/release/v4.0.8/css/line.css">
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/feed.css">
+</head>
+<body>
+  <div id="offlineBanner" class="error" hidden>You are offline. Zone activity may be outdated.</div>
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="brand">PULSE</div>
+    </div>
+    <div class="topbar-center">
+      <div class="search">
+        <i class="uil uil-search"></i>
+        <input id="zoneLookup" type="search" placeholder="Search a campus zone" />
+      </div>
+      <div id="zoneLookupResults" class="search-results"></div>
+    </div>
+    <div class="topbar-right">
+      <button class="iconbtn" data-theme-toggle aria-label="Toggle theme">☀️</button>
+      <a class="btn btn-ghost" href="messages.html">Messages <span class="inline-badge" data-message-badge hidden>0</span></a>
+      <a class="btn btn-ghost" href="notifications.html">Alerts <span class="inline-badge" data-notification-badge hidden>0</span></a>
+      <a class="btn btn-ghost" href="feed.html">Back to feed</a>
+    </div>
+  </header>
+
+  <div class="app">
+    <aside class="sidebar">
+      <div class="panel profile">
+        <a href="feed.html" class="profile-link">
+          <div class="profile-row">
+            <img class="avatar-lg" id="zoneSidebarAvatar" src="https://i.pravatar.cc/100?img=12" alt="You" />
+            <div>
+              <div class="name" id="zoneSidebarName">Loading...</div>
+              <div class="handle" id="zoneSidebarHandle">@loading</div>
+            </div>
+          </div>
+        </a>
+      </div>
+    </aside>
+
+    <main class="main">
+      <section class="panel">
+        <div class="panel-title">
+          <span id="zoneTitle">Zone feed</span>
+        </div>
+        <div class="state" id="zoneMeta">Pick a zone to see its public posts.</div>
+      </section>
+
+      <section class="feed" id="zoneFeed"></section>
+      <div class="state" id="zoneState">Loading zone feed…</div>
+    </main>
+  </div>
+
+  <script type="module" src="js/zone.js"></script>
+</body>
+</html>

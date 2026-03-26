@@ -1,21 +1,6 @@
  /*0) THEME COLORS...*/
 
 :root{
-  /* Background & surfaces*/
-  --bg: #05060d;
-  --panel: rgba(20, 18, 33, 0.72);
-  --panel2: rgba(20, 18, 33, 0.88);
-  --border: rgba(255,255,255,0.08);
-
-  /* Text */
-  --text: rgba(255,255,255,0.92);
-  --muted: rgba(255,255,255,0.60);
-
-  /* Accents (pinkbuttons) */
-  --accent: #ff4d7d;
-  --accent2: #ff6aa1;
-
-  /* Shape */
   --radius: 18px;
 }
 
@@ -27,13 +12,13 @@ html, body { height: 100%; }
 
 /* i) Base solid color*/
 html{
-  background: #05060d; /* or var(--bg)*/
+  background: var(--bg);
 }
 
 body{
   margin: 0;
   min-height: 100vh;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-family: var(--font-sans);
   color: var(--text);
 
   /* IMPORTANT do nott paint gradients here do it on body::... (scroll!)*/
@@ -53,10 +38,10 @@ body::before{
   pointer-events: none;
 
   background:
-    radial-gradient(900px 520px at 18% 15%, rgba(124, 58, 237, 0.22), transparent 60%),
-    radial-gradient(820px 480px at 78% 18%, rgba(255, 77, 125, 0.18), transparent 62%),
-    radial-gradient(1000px 620px at 55% 120%, rgba(59, 130, 246, 0.10), transparent 55%),
-    linear-gradient(180deg, #05060d 0%, #070816 55%, #05060d 100%);
+    radial-gradient(900px 520px at 18% 15%, var(--bg-grad-1), transparent 60%),
+    radial-gradient(820px 480px at 78% 18%, var(--bg-grad-2), transparent 62%),
+    radial-gradient(1000px 620px at 55% 120%, var(--bg-grad-3), transparent 55%),
+    linear-gradient(180deg, var(--bg-grad-base-top) 0%, var(--bg-grad-base-mid) 55%, var(--bg-grad-base-bottom) 100%);
 
   /*prevents “scroll seam” on some browsers */
   transform: translateZ(0);
@@ -75,10 +60,10 @@ body::before{
   gap: 18px;
   padding: 14px 18px;
 
-  background: rgba(8, 8, 16, 0.78);
+  background: var(--topbar-bg);
   backdrop-filter: blur(18px);
 
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid var(--border);
 }
 
 .brand{
@@ -100,8 +85,8 @@ body::before{
   padding: 10px 12px;
   border-radius: 999px;
 
-  background: rgba(0,0,0,0.35);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--search-bg);
+  border: 1px solid var(--border);
 }
 
 .search.small{
@@ -263,12 +248,18 @@ body::before{
 
 .nav-item{
   display:flex;
+  align-items:center;
+  width: 100%;
   gap: 10px;
   padding: 10px 12px;
   border-radius: 14px;
+  border: none;
   color: var(--text);
   text-decoration:none;
   opacity: 0.92;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
 }
 .nav-item:hover{ background: rgba(255,255,255,0.06); }
 
@@ -438,6 +429,7 @@ body::before{
 
 .post-meta .u{ font-weight: 900; }
 .post-meta .m{ font-size: 12px; color: var(--muted); margin-top: 2px; }
+.dot-sep{ opacity: 0.6; margin: 0 4px; }
 
 .badge{
   display:inline-flex;
@@ -474,8 +466,9 @@ body::before{
 
 .post-actions{
   display:flex;
-  align-items:center;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
   margin-top: 10px;
 }
 .actions-left{ display:flex; gap: 10px; align-items:center; }
@@ -496,6 +489,152 @@ body::before{
   cursor:pointer;
 }
 .react-btn:hover{ background: rgba(255,255,255,0.06); }
+
+.reaction-grid{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.post-secondary-actions{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap: 10px;
+}
+
+.bookmark-active{
+  border-color: rgba(255,77,125,0.28);
+  background: rgba(255,77,125,0.12);
+}
+
+.zone-pill{
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.04);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.zone-pill:disabled{
+  opacity: 0.6;
+  cursor: default;
+}
+
+.comment-block{
+  display:none;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+.comment-block.open{
+  display:block;
+}
+
+.reply-context{
+  margin-bottom: 8px;
+  color: rgba(255,255,255,0.72);
+  font-size: 12px;
+}
+
+.comment-form{
+  display:grid;
+  gap: 10px;
+}
+
+.comment-input{
+  width: 100%;
+  min-height: 88px;
+  resize: vertical;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(0,0,0,0.22);
+  color: var(--text);
+  padding: 12px;
+}
+
+.comment-form-actions{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.comment-form-buttons{
+  display:flex;
+  gap: 10px;
+}
+
+.comment-state{
+  color: var(--muted);
+  padding: 8px 0;
+}
+
+.comment-list{
+  display:grid;
+  gap: 10px;
+}
+
+.comment-item,
+.comment-reply{
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+  padding: 12px;
+}
+
+.comment-row{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 10px;
+}
+
+.comment-author{
+  font-weight: 800;
+}
+
+.comment-meta{
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.comment-content{
+  margin-top: 8px;
+  color: rgba(255,255,255,0.88);
+  line-height: 1.45;
+}
+
+.comment-actions-inline{
+  display:flex;
+  gap: 8px;
+}
+
+.inline-link{
+  border: none;
+  background: transparent;
+  color: #9ec5ff;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0;
+}
+
+.danger-link{
+  color: #fca5a5;
+}
+
+.comment-replies{
+  display:grid;
+  gap: 8px;
+  margin-top: 10px;
+  padding-left: 16px;
+}
 
 .state{
   text-align:center;
@@ -1191,4 +1330,15 @@ body::before{
   color: inherit;
   text-decoration: none;
   flex: 1;
+}
+
+@media (max-width: 700px){
+  .post-secondary-actions{
+    justify-content:flex-start;
+  }
+
+  .comment-form-actions{
+    align-items:flex-start;
+    flex-direction:column;
+  }
 }

@@ -1,17 +1,24 @@
-// console.log("auth.js loaded");
-
-// export const API = "https://pulse-seven-blond.vercel.app";
-
 function getApiBaseUrl() {
   return localStorage.getItem("useRemoteApi") === "true"
-    ?"https://pulse-backend.up.railway.app"
+    ? "https://pulse-backend.up.railway.app"
     : "http://127.0.0.1:5000";
 }
+
 export const API = getApiBaseUrl();
 window.PULSE_API_BASE = API;
 
 const PERSISTENT_TOKEN_KEY = "pulse_token";
 const SESSION_TOKEN_KEY = "pulse_session_token";
+const USER_KEY = "pulse_user";
+const PUBLIC_ROUTES = new Set([
+  "/login.html",
+  "/register.html",
+  "/forgot-password.html",
+  "/reset-password.html",
+  "/verify-email.html",
+  "/index.html",
+  "/",
+]);
 
 export function buildApiUrl(path = "") {
   if (!path) return API;
@@ -54,6 +61,20 @@ export function getToken() {
   );
 }
 
+export function saveCurrentUser(user) {
+  if (!user) return;
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+}
+
+export function getCurrentUser() {
+  try {
+    const raw = localStorage.getItem(USER_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
 export function isLoggedIn() {
   return !!getToken();
 }
@@ -63,36 +84,79 @@ export function clearToken() {
   sessionStorage.removeItem(SESSION_TOKEN_KEY);
 }
 
-export function logout() {
+export function clearAuthState() {
   clearToken();
-  window.location.href = "login.html";
+  localStorage.removeItem(USER_KEY);
 }
 
-export function requireAuth() {  //mch solide
+function shouldRedirectToLogin() {
+  if (typeof window === "undefined") return false;
+  return !PUBLIC_ROUTES.has(window.location.pathname);
+}
+
+export async function logout({ redirectTo = "login.html" } = {}) {
+  const token = getToken();
+
+  try {
+    if (token) {
+      await fetch(buildApiUrl("/api/auth/logout"), {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Accept-Language": localStorage.getItem("pulse_lang") || "en",
+        },
+      });
+    }
+  } catch {
+    // Best-effort logout; client-side cleanup remains the source of truth here.
+  } finally {
+    clearAuthState();
+    if (typeof window !== "undefined") {
+      window.location.href = redirectTo;
+    }
+  }
+}
+
+export function requireAuth() {
   if (!isLoggedIn()) {
     window.location.href = "login.html";
   }
 }
 
-export function redirectIfLoggedIn() {     //mch solide
+export function redirectIfLoggedIn() {
   if (isLoggedIn()) {
     window.location.href = "feed.html";
   }
 }
 
+function parseResponsePayload(res, contentType) {
+  if (contentType.includes("application/json")) {
+    return res.json();
+  }
+  return res.text();
+}
+
+function resolveErrorMessage(payload, fallback = "API error") {
+  if (typeof payload === "object" && payload) {
+    return payload.message || payload.error || fallback;
+  }
+  return payload || fallback;
+}
+
 export async function apiFetch(path, options = {}) {
   const url = buildApiUrl(path);
-
-  const headers = { ...(options.headers || {}) };
   const token = getToken();
+  const headers = {
+    "Accept-Language": localStorage.getItem("pulse_lang") || "en",
+    ...(options.headers || {}),
+  };
 
   if (token) {
-    headers["Authorization"] = "Bearer " + token;
+    headers.Authorization = `Bearer ${token}`;
   }
 
   const isFormData = options.body instanceof FormData;
-
-  if (!isFormData && !headers["Content-Type"]) {
+  if (!isFormData && options.body && !headers["Content-Type"]) {
     headers["Content-Type"] = "application/json";
   }
 
@@ -102,21 +166,19 @@ export async function apiFetch(path, options = {}) {
     headers,
   });
 
-  let data = {};
   const contentType = res.headers.get("content-type") || "";
+  const payload = await parseResponsePayload(res, contentType);
 
-  if (contentType.includes("application/json")) {
-    data = await res.json();
-  } else {
-    data = await res.text();
+  if (res.status === 401) {
+    clearAuthState();
+    if (!options.skipAuthRedirect && shouldRedirectToLogin()) {
+      window.location.href = "login.html?reason=session-expired";
+    }
   }
 
   if (!res.ok) {
-    if (typeof data === "object") {
-      throw new Error(data.message || data.error || "API error");
-    }
-    throw new Error(data || "API error");
+    throw new Error(resolveErrorMessage(payload));
   }
 
-  return data;
+  return payload;
 }

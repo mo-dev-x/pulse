@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PULSE — Discover</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/feed.css">
+  <link rel="stylesheet" href="css/analytics.css">
+</head>
+<body>
+  <div id="offlineBanner" class="error" hidden>You are offline. Discovery feed is unavailable.</div>
+  <header class="topbar">
+    <div class="topbar-left"><div class="brand">PULSE</div></div>
+    <div class="topbar-center">
+      <div class="search small">
+        <i class="uil uil-filter"></i>
+        <select id="discoverSentiment" class="select">
+          <option value="">All moods</option>
+          <option value="positive">Positive</option>
+          <option value="neutral">Neutral</option>
+          <option value="negative">Negative</option>
+        </select>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <button class="iconbtn" data-theme-toggle aria-label="Toggle theme">☀️</button>
+      <a class="btn btn-ghost" href="feed.html">Feed</a>
+    </div>
+  </header>
+  <div class="app">
+    <main class="main">
+      <section class="panel analytics-card">
+        <div class="panel-title"><span>Discovery</span></div>
+        <div class="state" id="discoverState">Loading discovery feed...</div>
+      </section>
+      <section id="discoverFeed" class="feed"></section>
+    </main>
+    <aside class="right">
+      <section class="panel analytics-card">
+        <div class="panel-title"><span>Trending zones</span></div>
+        <div id="discoverTrending" class="activity-feed"></div>
+      </section>
+    </aside>
+  </div>
+  <script type="module" src="js/discover.js"></script>
+</body>
+</html>

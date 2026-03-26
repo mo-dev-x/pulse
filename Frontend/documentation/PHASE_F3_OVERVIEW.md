@@ -2,12 +2,14 @@
 
 **Pulse Frontend — Vanilla JS · Université Laval**
 
-**Status:** 🔵 Planning  
+**Status:** ✅ Implemented in code
 **Priority:** High — Social graph is core to Pulse identity  
 **Estimated Time:** 4–5 days  
 **Depends on:** Phase F1 (design system, auth), Phase F2 (post card component)
 
 > **Design principle for Phase F3:** The profile is the human face of Pulse. Every student should feel ownership over their page. Make the follow action feel instant — optimistic UI is mandatory here.
+
+> **Implementation note:** The public profile, own-profile edit flow, followers/following/friends modals, and zone feed are implemented. The current follow/unfollow behaviour refreshes profile state instead of doing a fully optimistic update, and avatar upload works with preview but not upload progress UI.
 
 ---
 
@@ -26,22 +28,32 @@
 
 | Component | Priority | Status | Est. Days |
 |-----------|----------|--------|-----------|
-| Public profile page | Must Have | 🔵 Not started | 1.5 |
-| Own profile + edit | Must Have | 🔵 Not started | 1 |
-| Follow / unfollow | Must Have | 🔵 Not started | 0.5 |
-| Followers / Following lists | Should Have | 🔵 Not started | 0.5 |
-| Friends list | Should Have | 🔵 Not started | 0.5 |
-| Zone feed page | Should Have | 🔵 Not started | 0.5 |
-| Avatar upload | Nice to Have | 🔵 Not started | 0.5 |
+| Public profile page | Must Have | ✅ Implemented | 1.5 |
+| Own profile + edit | Must Have | ✅ Implemented | 1 |
+| Follow / unfollow | Must Have | ✅ Implemented with refresh-based follow state updates | 0.5 |
+| Followers / Following lists | Should Have | ✅ Implemented | 0.5 |
+| Friends list | Should Have | ✅ Implemented | 0.5 |
+| Zone feed page | Should Have | ✅ Implemented | 0.5 |
+| Avatar upload | Nice to Have | ✅ Implemented with preview | 0.5 |
 
-**Overall Phase F3 Progress:** 🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥 0%
+**Overall Phase F3 Progress:** 🟩🟩🟩🟩🟩🟩🟩🟩🟩⬜ ~95%
+
+## 🧩 SHIPPED IMPLEMENTATION
+
+| Area | Shipped code |
+|------|--------------|
+| Profile page | `profile.html`, `css/profile.css`, `js/profile.js` |
+| Own-profile edit | Inline modal on `profile.html`, save flows in `js/profile.js` |
+| Social graph | Followers, following, and friends modals in `js/profile.js` |
+| Zone feed | `zone.html`, `js/zone.js` |
+| Notable deviation | Follow/unfollow reloads profile state rather than applying a fully optimistic update, and avatar upload has preview but no progress UI |
 
 ---
 
 ## 📋 COMPONENT 1: Public Profile Page
 
 **File:** `profile.html`, `js/profile.js`, `css/profile.css`  
-**Route:** `#profile?u=<username>`
+**Route:** `profile.html?u=<username>`
 
 ### Layout
 
@@ -94,16 +106,16 @@ const isOwnProfile = me?.username === username;
 ## 📋 COMPONENT 2: Own Profile Edit
 
 **File:** `js/profile.js` — edit modal or inline edit  
-**Route:** `#settings` or inline on `#profile`
+**Route:** Inline on `profile.html`
 
 ### Editable Fields
 
 | Field | Endpoint | Notes |
 |-------|----------|-------|
-| Display name | PATCH `/api/users/me` | 1–50 chars |
-| Bio | PATCH `/api/users/me` | 0–160 chars |
-| Profile visibility | PATCH `/api/users/me` | `public` / `private` |
-| Avatar | POST `/api/users/me/avatar` | Image upload |
+| Display name | PATCH `/api/auth/update-profile` | 1–100 chars |
+| Bio | PATCH `/api/auth/update-profile` | 0–500 chars |
+| Profile visibility | PATCH `/api/auth/privacy-settings` | `public` / `followers` / `private` |
+| Avatar | POST `/api/auth/upload-profile-pic` | Image upload |
 
 ### Edit Form Layout
 
@@ -215,7 +227,7 @@ async function toggleFollow(username, currentlyFollowing) {
 
 ## 📋 COMPONENT 5: Friends List
 
-**Route:** `#friends` or accessible from own profile
+**Route:** Accessible from own profile via modal
 
 Brief dedicated view — mutual follows displayed as a contact-book-style list.
 
@@ -267,9 +279,10 @@ Zone names are always bilingual — display both or choose based on user's `getL
 
 | Action | Method | Endpoint |
 |--------|--------|----------|
-| Get own profile | GET | `/api/users/me` |
-| Update own profile | PATCH | `/api/users/me` |
-| Upload avatar | POST | `/api/users/me/avatar` |
+| Get own profile | GET | `/api/auth/me` |
+| Update own profile | PATCH | `/api/auth/update-profile` |
+| Update privacy settings | PATCH | `/api/auth/privacy-settings` |
+| Upload avatar | POST | `/api/auth/upload-profile-pic` |
 | Get public profile | GET | `/api/users/@<username>` |
 | Get user's posts | GET | `/api/posts/@<username>` |
 | Follow | POST | `/api/follow/@<username>` |
@@ -286,20 +299,20 @@ Zone names are always bilingual — display both or choose based on user's `getL
 
 **Phase F3 Complete When:**
 
-- [ ] Public profile page loads correctly for any `@username` via hash route
-- [ ] Own profile detected — shows "Modifier" instead of "Suivre"
-- [ ] Follow button is optimistic — count updates instantly, reverts on error
-- [ ] "Abonné(e)" state shows dropdown with "Se désabonner" option
-- [ ] Edit profile form: display name, bio, visibility — saves to backend
-- [ ] Avatar upload works (image preview + upload progress)
-- [ ] Followers / Following modals load paginated lists
-- [ ] Each user in list shows correct follow state
-- [ ] Zone feed page loads posts filtered to selected zone
-- [ ] All text bilingual (FR / EN) throughout
+- [x] Public profile page loads correctly for any `@username`
+- [x] Own profile detection shows edit controls instead of follow controls
+- [~] Follow/unfollow works correctly, but not with the originally planned fully optimistic update
+- [~] The planned follower-state dropdown pattern is not implemented; the current UI uses direct buttons
+- [x] Edit profile form saves successfully
+- [~] Avatar upload works with preview, but not with upload-progress UI
+- [x] Followers / Following modals load correctly
+- [x] User lists render the expected identity/follow context
+- [x] Zone feed page loads posts filtered to the selected zone
+- [~] Bilingual coverage in the profile area is partial rather than complete
 
 ---
 
-**Last Updated:** 2026-03-16  
-**Status:** 🔵 Planning  
+**Last Updated:** 2026-03-26
+**Status:** ✅ Implemented in code
 **Blockers:** Phase F1 + F2 must be complete  
 **Depends on:** Backend Phase 3 (social, followers, zones) ✅ Complete

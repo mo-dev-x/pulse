@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PULSE — Search</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/feed.css">
+  <link rel="stylesheet" href="css/analytics.css">
+</head>
+<body data-page-search="true">
+  <div id="offlineBanner" class="error" hidden>You are offline. Search results may be outdated.</div>
+  <header class="topbar">
+    <div class="topbar-left"><div class="brand">PULSE</div></div>
+    <div class="topbar-center">
+      <div class="search">
+        <i class="uil uil-search"></i>
+        <input id="searchPageInput" type="search" placeholder="Search Pulse..." />
+      </div>
+    </div>
+    <div class="topbar-right">
+      <button class="iconbtn" data-theme-toggle aria-label="Toggle theme">☀️</button>
+      <a class="btn btn-ghost" href="feed.html">Feed</a>
+    </div>
+  </header>
+  <div class="app">
+    <main class="main">
+      <section class="panel analytics-card">
+        <div class="feed-switcher">
+          <button class="feed-filter active" data-search-type="all">All</button>
+          <button class="feed-filter" data-search-type="posts">Posts</button>
+          <button class="feed-filter" data-search-type="users">People</button>
+          <button class="feed-filter" data-search-type="zones">Zones</button>
+        </div>
+        <div id="searchSummary" class="state">Enter at least 2 characters to search.</div>
+      </section>
+      <div id="searchResultsPage"></div>
+      <div style="display:flex;justify-content:center;">
+        <button id="searchLoadMore" class="btn btn-ghost" hidden>Load more</button>
+      </div>
+    </main>
+  </div>
+  <script type="module" src="js/search.js"></script>
+</body>
+</html>

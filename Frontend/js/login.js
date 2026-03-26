@@ -1,80 +1,80 @@
-import { apiFetch, saveToken, redirectIfLoggedIn } from "./auth.js";
-
-// console.log("login.js loaded");
+import {
+  apiFetch,
+  saveCurrentUser,
+  saveToken,
+  redirectIfLoggedIn,
+} from "./auth.js";
+import { initLanguageControls, t } from "./i18n.js";
 
 const form = document.getElementById("loginForm");
 const errorEl = document.getElementById("error");
 const msgEl = document.getElementById("msg");
 const submitBtn = form?.querySelector('button[type="submit"]');
 
-function showError(msg) {
-  errorEl.textContent = msg;
+function showError(message) {
+  errorEl.textContent = message;
   errorEl.style.display = "block";
-}
-
-function hideError() {
-  errorEl.textContent = "";
-  errorEl.style.display = "none";
-}
-
-function showMsg(msg) {
-  msgEl.textContent = msg;
-  msgEl.style.display = "block";
-}
-
-function hideMsg() {
-  msgEl.textContent = "";
   msgEl.style.display = "none";
 }
 
-// if already logged in, go to feed
-redirectIfLoggedIn();
+function showMsg(message) {
+  msgEl.textContent = message;
+  msgEl.style.display = "block";
+  errorEl.style.display = "none";
+}
 
-form.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  hideError();
-  hideMsg();
+function setSubmitting(isSubmitting) {
+  if (!submitBtn) return;
+  submitBtn.disabled = isSubmitting;
+  submitBtn.textContent = isSubmitting ? t("common.loading") : t("auth.login.submit");
+}
 
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value;
-  const rememberMe = document.getElementById("rememberMe")?.checked ?? false;
-  submitBtn.disabled = true;
-  submitBtn.textContent = "Signing in...";
+document.addEventListener("DOMContentLoaded", () => {
+  initLanguageControls();
+  redirectIfLoggedIn();
 
-  try {
-    const data = await apiFetch("/api/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ email, password })
-    });
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("reason") === "session-expired") {
+    showError("Your session expired. Please sign in again.");
+  }
 
-    const token = data.token || data.access_token;
-    if (!token) {
-      throw new Error("No token returned by backend");
+  form?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+    const rememberMe = document.getElementById("rememberMe")?.checked ?? false;
+
+    setSubmitting(true);
+
+    try {
+      const data = await apiFetch("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+        skipAuthRedirect: true,
+      });
+
+      const token = data.token || data.access_token;
+      if (!token) {
+        throw new Error("No token returned by backend");
+      }
+
+      saveToken(token, rememberMe);
+      if (data.user) saveCurrentUser(data.user);
+      showMsg("Login successful. Redirecting...");
+      window.location.href = "feed.html";
+    } catch (error) {
+      showError(error.message || t("error.network"));
+    } finally {
+      setSubmitting(false);
     }
+  });
 
-    saveToken(token, rememberMe);
-    showMsg("Login successful. Redirecting...");
-    window.location.href = "feed.html";
-  } catch (err) {
-    console.error("Login failed:", err);
-    showError(err.message || "Login failed");
-  }finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = "Login";
-  }
+  const pw = document.getElementById("password");
+  const toggle = document.getElementById("togglePassword");
+  toggle?.addEventListener("click", () => {
+    const reveal = pw.type === "password";
+    pw.type = reveal ? "text" : "password";
+    toggle.classList.toggle("active", reveal);
+  });
 });
-
-//show/hide password
-const pw = document.getElementById("password");
-const toggle = document.getElementById("togglePassword");
-
-toggle?.addEventListener("click", () => {
-  if (pw.type === "password") {
-    pw.type = "text";
-    toggle.classList.add("active");
-  } else {
-    pw.type = "password";
-    toggle.classList.remove("active");
-  }
-});
-

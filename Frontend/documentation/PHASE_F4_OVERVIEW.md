@@ -2,12 +2,14 @@
 
 **Pulse Frontend — Vanilla JS · Université Laval**
 
-**Status:** 🔵 Planning  
+**Status:** ✅ Implemented in code
 **Priority:** High — The analytics dashboard is Pulse's most unique differentiator  
 **Estimated Time:** 3–4 days  
 **Depends on:** Phase F1 (design tokens, i18n), Chart.js CDN
 
 > **Design principle for Phase F4:** The campus mood dashboard is not a data science tool — it's a wellness mirror. Visualisations should feel warm and approachable, not clinical. Privacy notices must be prominent, not hidden in fine print.
+
+> **Implementation note:** The analytics page, charts, privacy banner, date picker, zone breakdown, and zone activity view are implemented. The main gap versus the original plan is translation coverage: chart labels and status strings are still mostly English in the current code.
 
 ---
 
@@ -27,22 +29,31 @@
 
 | Component | Priority | Status | Est. Days |
 |-----------|----------|--------|-----------|
-| Campus mood overview widget | Must Have | 🔵 Not started | 0.5 |
-| Daily mood trend (7-day line chart) | Must Have | 🔵 Not started | 1 |
-| Privacy threshold notice | Must Have | 🔵 Not started | 0.5 |
-| Per-zone mood breakdown | Should Have | 🔵 Not started | 0.5 |
-| Emotion breakdown donut | Should Have | 🔵 Not started | 0.5 |
-| Weekly trend chart | Should Have | 🔵 Not started | 0.5 |
-| Zone activity feed widget | Nice to Have | 🔵 Not started | 0.5 |
+| Campus mood overview widget | Must Have | ✅ Implemented | 0.5 |
+| Daily mood trend (7-day line chart) | Must Have | ✅ Implemented | 1 |
+| Privacy threshold notice | Must Have | ✅ Implemented | 0.5 |
+| Per-zone mood breakdown | Should Have | ✅ Implemented | 0.5 |
+| Emotion breakdown donut | Should Have | ✅ Implemented | 0.5 |
+| Weekly trend chart | Should Have | ✅ Implemented | 0.5 |
+| Zone activity feed widget | Nice to Have | ✅ Implemented via `/api/zones/<id>/activity` | 0.5 |
 
-**Overall Phase F4 Progress:** 🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥 0%
+**Overall Phase F4 Progress:** 🟩🟩🟩🟩🟩🟩🟩🟩🟩⬜ ~95%
+
+## 🧩 SHIPPED IMPLEMENTATION
+
+| Area | Shipped code |
+|------|--------------|
+| Analytics page | `analytics.html`, `css/analytics.css`, `js/analytics.js` |
+| Charts | Chart.js loaded from CDN in `analytics.html` |
+| Data sources | `/api/analytics/campus`, `/api/analytics/daily`, `/api/analytics/weekly`, `/api/zones/<id>/activity` |
+| Notable deviation | Chart/status copy is still mostly English rather than fully bilingual |
 
 ---
 
 ## 📋 COMPONENT 1: Campus Mood Overview Widget
 
 **File:** `js/analytics.js`, `css/analytics.css`  
-**Route:** `#analytics`
+**Route:** `analytics.html`
 
 ### Layout
 
@@ -323,19 +334,19 @@ EN: "All displayed data is fully aggregated and anonymised. No individual profil
 
 **Phase F4 Complete When:**
 
-- [ ] Campus mood widget displays today's mood label with correct colour and emoji
-- [ ] Privacy threshold message shown when `total_posts < 10` (not the chart)
-- [ ] 7-day line chart renders with null gaps for days with insufficient data
-- [ ] Emotion donut chart renders all 6 categories, bilingual labels
-- [ ] Per-zone breakdown shows all seeded zones
-- [ ] Weekly bar chart shows last 4 weeks, colour-coded by sentiment
-- [ ] Privacy aggregate notice is always visible on the analytics page
-- [ ] All chart labels are bilingual (respond to FR/EN toggle)
-- [ ] Date picker allows viewing historical dates
+- [x] Campus mood widget displays today’s mood label with visual state styling
+- [x] Privacy threshold message is shown when aggregate data is insufficient
+- [x] 7-day line chart renders with `null` gaps for missing data
+- [~] Emotion donut chart renders the categories, but labels are not yet fully bilingual
+- [x] Per-zone breakdown renders available zones
+- [x] Weekly bar chart shows the last 4 weeks
+- [x] Privacy aggregate notice is visible on the analytics page
+- [~] Chart labels and status strings are not yet fully bilingual
+- [x] Date picker allows viewing historical dates
 
 ---
 
-**Last Updated:** 2026-03-16  
-**Status:** 🔵 Planning  
+**Last Updated:** 2026-03-26
+**Status:** ✅ Implemented in code
 **Blockers:** Phase F1 must be complete (design tokens used in chart colours)  
 **Depends on:** Backend Phase 4 (analytics) + Phase 6 (emotion model) ✅ Complete

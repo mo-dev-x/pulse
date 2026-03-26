@@ -2,12 +2,14 @@
 
 **Pulse Frontend — Vanilla JS · Université Laval**
 
-**Status:** 🔵 Planning  
+**Status:** ✅ Implemented in code
 **Priority:** Critical — Core user loop  
 **Estimated Time:** 5–7 days  
 **Depends on:** Phase F1 complete (design system, i18n, auth)
 
 > **Design principle for Phase F2:** The feed is the heartbeat of Pulse. Every millisecond of perceived lag on the feed degrades the product. Use optimistic UI for reactions and loading skeletons for the initial render — never show a blank screen.
+
+> **Implementation note:** The feed, composer, reactions, comments, bookmarks, and media upload are implemented. The main differences from the original plan are that new-post creation refreshes the feed instead of prepending optimistically, and the documented 24h delete guard is not enforced in the current frontend.
 
 ---
 
@@ -28,16 +30,26 @@
 
 | Component | Priority | Status | Est. Days |
 |-----------|----------|--------|-----------|
-| Feed layout + infinite scroll | Must Have | 🔵 Not started | 1 |
-| Post composer | Must Have | 🔵 Not started | 1.5 |
-| Post card component | Must Have | 🔵 Not started | 1 |
-| Reaction picker | Must Have | 🔵 Not started | 0.5 |
-| Comment thread | Should Have | 🔵 Not started | 1 |
-| Bookmark toggle | Should Have | 🔵 Not started | 0.5 |
-| Delete post (24h guard) | Should Have | 🔵 Not started | 0.5 |
-| Image upload in composer | Nice to Have | 🔵 Not started | 0.5 |
+| Feed layout + infinite scroll | Must Have | ✅ Implemented | 1 |
+| Post composer | Must Have | ✅ Implemented | 1.5 |
+| Post card component | Must Have | ✅ Implemented inline in `feed.js` | 1 |
+| Reaction picker | Must Have | ✅ Implemented | 0.5 |
+| Comment thread | Should Have | ✅ Implemented | 1 |
+| Bookmark toggle | Should Have | ✅ Implemented | 0.5 |
+| Delete post (24h guard) | Should Have | ~ Delete is implemented, but no 24h frontend guard is enforced | 0.5 |
+| Image upload in composer | Nice to Have | ✅ Implemented | 0.5 |
 
-**Overall Phase F2 Progress:** 🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥 0%
+**Overall Phase F2 Progress:** 🟩🟩🟩🟩🟩🟩🟩🟩🟩⬜ ~95%
+
+## 🧩 SHIPPED IMPLEMENTATION
+
+| Area | Shipped code |
+|------|--------------|
+| Feed shell | `feed.html`, `css/feed.css`, `js/feed.js` |
+| Composer | Modal-based composer in `feed.html`, submit flow in `js/feed.js` |
+| Reactions/comments/bookmarks | Inline post card handlers in `js/feed.js` |
+| Zone picker | `js/zone_autocomplete.js` integrated into the composer |
+| Notable deviation | New post creation refreshes the feed instead of optimistic prepend, and the documented 24h delete guard is not enforced in the current frontend |
 
 ---
 
@@ -442,23 +454,23 @@ Backend: `DELETE /api/posts/<id>`
 
 **Phase F2 Complete When:**
 
-- [ ] Feed loads from `/api/posts/feed` with loading skeletons on first render
-- [ ] Infinite scroll loads next pages automatically
-- [ ] Empty feed state shows bilingual message + discovery link
-- [ ] Post composer opens, validates (min 10 / max 500 chars), submits public and anonymous posts
-- [ ] Zone picker autocompletes from backend zones list
-- [ ] Post cards render correctly for named and anonymous authors
-- [ ] Timestamps display in bilingual relative format (`il y a 5 min` / `5m ago`)
-- [ ] Reaction picker opens, user can add/change/remove reaction
-- [ ] Reaction counts are privacy-safe (no "who reacted" disclosure)
-- [ ] Comment thread toggles open/closed, user can post and delete own comments
-- [ ] Bookmark toggle is optimistic and persists on reload
-- [ ] Delete post: only own posts, only within 24h, confirm dialog
-- [ ] New post prepended to feed immediately on submit (optimistic)
+- [x] Feed loads from `/api/posts/feed` with loading skeletons on first render
+- [x] Infinite scroll loads next pages automatically
+- [~] Empty feed state exists, but it does not yet match the originally planned bilingual discovery CTA
+- [x] Post composer validates and submits public and anonymous posts
+- [x] Zone picker autocompletes from backend zone search
+- [x] Post cards render correctly for named and anonymous authors
+- [~] Relative timestamps are implemented, but not fully bilingual throughout
+- [x] Users can add, change, and remove reactions
+- [x] Reaction counts are privacy-safe
+- [x] Comment thread toggles open/closed, and users can post/delete their own comments
+- [x] Bookmark toggle persists on reload
+- [~] Delete is limited to the author in the UI, but the documented 24h guard/confirm flow is not implemented
+- [~] New post creation works by refreshing the feed rather than prepending optimistically
 
 ---
 
-**Last Updated:** 2026-03-16  
-**Status:** 🔵 Planning  
+**Last Updated:** 2026-03-26
+**Status:** ✅ Implemented in code
 **Blockers:** Phase F1 must be complete  
 **Depends on:** Backend Phases 2–3 (posts, reactions, comments, bookmarks) ✅ Complete

@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PULSE — Analytics</title>
+  <link rel="stylesheet" href="https://unicons.iconscout.com/release/v4.0.8/css/line.css">
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/feed.css">
+  <link rel="stylesheet" href="css/analytics.css">
+</head>
+<body>
+  <div id="offlineBanner" class="error" hidden>You are offline. Some live data may be unavailable.</div>
+  <header class="topbar">
+    <div class="topbar-left"><div class="brand">PULSE</div></div>
+    <div class="topbar-center">
+      <div class="search small">
+        <i class="uil uil-calendar-alt"></i>
+        <input id="analyticsDate" type="date" />
+      </div>
+    </div>
+    <div class="topbar-right">
+      <button class="iconbtn" data-theme-toggle aria-label="Toggle theme">☀️</button>
+      <a class="btn btn-ghost" href="feed.html">Feed</a>
+    </div>
+  </header>
+
+  <div class="app">
+    <main class="main">
+      <div class="analytics-grid">
+        <section class="panel analytics-card analytics-hero">
+          <div class="panel-title"><span>Campus mood</span></div>
+          <div id="privacyBanner" class="privacy-banner" hidden></div>
+          <div id="moodHero" class="mood-hero neutral">
+            <div class="mood-title" id="moodTitle">Loading...</div>
+            <div class="mood-subtitle" id="moodSubtitle">Preparing today’s campus snapshot.</div>
+          </div>
+          <div class="analytics-kpis">
+            <div class="kpi-box"><div class="kpi-label">Total posts</div><div class="kpi-value" id="kpiPosts">0</div></div>
+            <div class="kpi-box"><div class="kpi-label">Average sentiment</div><div class="kpi-value" id="kpiSentiment">0.00</div></div>
+            <div class="kpi-box"><div class="kpi-label">Top emotion</div><div class="kpi-value" id="kpiEmotion">—</div></div>
+          </div>
+        </section>
+
+        <section class="panel analytics-card chart-shell">
+          <div class="panel-title"><span>Emotion breakdown</span></div>
+          <canvas id="emotionChart"></canvas>
+        </section>
+
+        <section class="panel analytics-card chart-shell">
+          <div class="panel-title"><span>Daily mood trend</span></div>
+          <canvas id="dailyChart"></canvas>
+        </section>
+
+        <section class="panel analytics-card chart-shell">
+          <div class="panel-title"><span>Weekly trend</span></div>
+          <canvas id="weeklyChart"></canvas>
+        </section>
+      </div>
+
+      <div class="analytics-grid">
+        <section class="panel analytics-card">
+          <div class="panel-title"><span>Zone breakdown</span></div>
+          <div id="zoneBreakdown" class="zone-breakdown"></div>
+        </section>
+        <section class="panel analytics-card">
+          <div class="panel-title"><span id="activityTitle">Zone activity</span></div>
+          <div id="activityFeed" class="activity-feed"></div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <script type="module" src="js/analytics.js"></script>
+</body>
+</html>

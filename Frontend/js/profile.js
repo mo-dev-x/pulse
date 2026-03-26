@@ -1,4 +1,6 @@
 import { apiFetch, requireAuth, logout, getAssetUrl } from "./auth.js";
+import { initLanguageControls } from "./i18n.js";
+import { initOfflineBanner, initThemeToggle, initUnreadBadges } from "./theme.js";
 
 const els = {
   topbarAvatar: document.getElementById("topbarAvatar"),
@@ -52,6 +54,7 @@ const els = {
   btnShareProfile: document.getElementById("btnShareProfile"),
   btnFollowers: document.getElementById("btnFollowers"),
   btnFollowing: document.getElementById("btnFollowing"),
+  btnFriends: document.getElementById("btnFriends"),
   btnFollowToggle: document.getElementById("btnFollowToggle"),
   btnEditProfile: document.getElementById("btnEditProfile"),
   btnEditProfileMenu: document.getElementById("btnEditProfileMenu"),
@@ -68,6 +71,7 @@ const els = {
   editDisplayName: document.getElementById("editDisplayName"),
   editBio: document.getElementById("editBio"),
   editAvatarFile: document.getElementById("editAvatarFile"),
+  editHeaderFile: document.getElementById("editHeaderFile"),
   editAvatarPreview: document.getElementById("editAvatarPreview"),
   editProfileError: document.getElementById("editProfileError"),
   btnCloseEditModal: document.getElementById("btnCloseEditModal"),
@@ -85,6 +89,10 @@ let currentPinnedPostId = null;
 
 document.addEventListener("DOMContentLoaded", async () => {
   requireAuth();
+  initLanguageControls();
+  initThemeToggle();
+  initOfflineBanner();
+  initUnreadBadges();
   setupMenu();
   setupTabs();
   setupActions();
@@ -92,6 +100,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupGlobalUserSearch();
 
   try {
+    if (els.profilePostsFeed) {
+      els.profilePostsFeed.innerHTML = renderSkeletonCards(3);
+    }
+    if (els.mediaGrid) {
+      els.mediaGrid.innerHTML = renderSkeletonCards(2);
+    }
     await initProfilePage();
   } catch (err) {
     console.error("Profile page init error:", err);
@@ -225,6 +239,10 @@ function setupActions() {
     await openPeopleModal("following");
   });
 
+  els.btnFriends?.addEventListener("click", async () => {
+    await openPeopleModal("friends");
+  });
+
   els.btnFollowToggle?.addEventListener("click", async () => {
     await toggleFollowProfile();
   });
@@ -294,21 +312,32 @@ async function openPeopleModal(type) {
   els.peopleState.style.display = "block";
   els.peopleState.textContent = "Loading...";
 
-  els.peopleModalTitle.textContent =
-    type === "followers"
-      ? `Followers of @${profileUser.username}`
-      : `Following of @${profileUser.username}`;
+  if (type === "followers") {
+    els.peopleModalTitle.textContent = `Followers of @${profileUser.username}`;
+  } else if (type === "following") {
+    els.peopleModalTitle.textContent = `Following of @${profileUser.username}`;
+  } else {
+    els.peopleModalTitle.textContent = viewingOwnProfile
+      ? "Your friends"
+      : `Friends of @${profileUser.username}`;
+  }
 
   try {
-    const data = await apiFetch(`/api/users/@${encodeURIComponent(profileUser.username)}/${type}`, {
-      method: "GET",
-    });
+    const endpoint = type === "friends"
+      ? "/api/users/me/friends"
+      : `/api/users/@${encodeURIComponent(profileUser.username)}/${type}`;
+
+    const data = await apiFetch(endpoint, { method: "GET" });
 
     const people = data[type] || [];
 
     if (!people.length) {
       els.peopleState.textContent =
-        type === "followers" ? "No followers yet." : "No following yet.";
+        type === "followers"
+          ? "No followers yet."
+          : type === "following"
+            ? "No following yet."
+            : "No friends yet.";
       return;
     }
 
@@ -437,6 +466,7 @@ async function onEditProfileSubmit(e) {
   const name = (els.editDisplayName?.value || "").trim();
   const bio = (els.editBio?.value || "").trim();
   const avatarFile = els.editAvatarFile?.files?.[0] || null;
+  const headerFile = els.editHeaderFile?.files?.[0] || null;
   const submitBtn = els.editProfileForm?.querySelector('button[type="submit"]');
 
   if (!name) {
@@ -467,6 +497,16 @@ async function onEditProfileSubmit(e) {
       fd.append("file", avatarFile);
 
       await apiFetch("/api/auth/upload-profile-pic", {
+        method: "POST",
+        body: fd,
+      });
+    }
+
+    if (headerFile) {
+      const fd = new FormData();
+      fd.append("file", headerFile);
+
+      await apiFetch("/api/auth/upload-header", {
         method: "POST",
         body: fd,
       });
@@ -569,6 +609,10 @@ function renderViewedProfile() {
     els.btnFollowing.innerHTML = `<i class="uil uil-user-plus"></i> Following (${followingCount})`;
   }
 
+  if (els.btnFriends) {
+    els.btnFriends.innerHTML = `<i class="uil uil-heart"></i> Friends`;
+  }
+
   if (els.aboutName) els.aboutName.textContent = displayName;
   if (els.aboutHandle) els.aboutHandle.textContent = `@${username}`;
   if (els.aboutLocation) els.aboutLocation.textContent = location;
@@ -618,6 +662,7 @@ function updateProfileActions() {
   setHidden(els.btnEditProfile, !viewingOwnProfile);
   setHidden(els.btnEditProfileMenu, !viewingOwnProfile);
   setHidden(els.btnEditSide, !viewingOwnProfile);
+  setHidden(els.btnFriends, !viewingOwnProfile);
 
   if (els.btnFollowToggle && !viewingOwnProfile) {
     els.btnFollowToggle.innerHTML = isFollowing
@@ -738,6 +783,7 @@ function normalizePost(p) {
     authorName,
     handle,
     avatarUrl,
+    zoneId: zone?.id || null,
     zoneName: zone?.name || "Campus",
     timeRaw: p.created_at || "",
     timeLabel: formatRelativeTime(p.created_at),
@@ -768,7 +814,9 @@ function normalizePost(p) {
             <span class="badge ${badge.cls}">${badge.label}</span>
           </div>
           <div class="m">
-            ${escapeHtml(post.handle)} • ${escapeHtml(post.zoneName)} • ${escapeHtml(post.timeLabel)}          
+            ${escapeHtml(post.handle)} •
+            <button class="zone-pill" data-zone-name="${escapeAttr(post.zoneName)}">${escapeHtml(post.zoneName)}</button> •
+            ${escapeHtml(post.timeLabel)}
           </div>
         </div>
       </div>
@@ -812,6 +860,13 @@ function normalizePost(p) {
     if (pinBtn) {
       pinBtn.addEventListener("click", async () => {
         await onPinToggle(post);
+      });
+    }
+
+    const zoneBtn = card.querySelector("[data-zone-name]");
+    if (zoneBtn && post.zoneId) {
+      zoneBtn.addEventListener("click", () => {
+        window.location.href = `zone.html?id=${encodeURIComponent(post.zoneId)}`;
       });
     }
     return card;
@@ -937,6 +992,14 @@ function setupGlobalUserSearch() {
     }, 250);
   });
 
+  input.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    const query = input.value.trim();
+    if (query.length < 2) return;
+    event.preventDefault();
+    window.location.href = `search.html?q=${encodeURIComponent(query)}`;
+  });
+
   document.addEventListener("click", (e) => {
     const insideSearch = input.contains(e.target) || resultsEl.contains(e.target);
     if (!insideSearch) hideSearchResults();
@@ -997,6 +1060,16 @@ function hideSearchResults() {
 
   resultsEl.style.display = "none";
   resultsEl.innerHTML = "";
+}
+
+function renderSkeletonCards(count) {
+  return Array.from({ length: count }, () => `
+    <article class="skeleton-card">
+      <div class="skeleton-line short"></div>
+      <div class="skeleton-line"></div>
+      <div class="skeleton-line medium"></div>
+    </article>
+  `).join("");
 }
 
   function escapeHtml(value) {

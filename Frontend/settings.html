@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PULSE — Settings</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/feed.css">
+  <link rel="stylesheet" href="css/analytics.css">
+</head>
+<body>
+  <div id="offlineBanner" class="error" hidden>You are offline. Settings changes may fail.</div>
+  <header class="topbar">
+    <div class="topbar-left"><div class="brand">PULSE</div></div>
+    <div class="topbar-center"></div>
+    <div class="topbar-right">
+      <button class="iconbtn" data-theme-toggle aria-label="Toggle theme">☀️</button>
+      <a class="btn btn-ghost" href="feed.html">Feed</a>
+    </div>
+  </header>
+  <div class="app">
+    <main class="main">
+      <section class="panel analytics-card">
+        <div class="panel-title"><span>Settings</span></div>
+        <div class="feed-switcher">
+          <button class="feed-filter active" data-settings-tab="profile">Profile</button>
+          <button class="feed-filter" data-settings-tab="preferences">Preferences</button>
+          <button class="feed-filter" data-settings-tab="security">Security</button>
+        </div>
+      </section>
+
+      <section id="tab-profile" class="panel analytics-card settings-panel">
+        <form id="profileSettingsForm" class="modal-body">
+          <div id="settingsProfileMessage" class="msg" hidden></div>
+          <div class="settings-avatar-row">
+            <img id="settingsAvatarPreview" class="settings-avatar-preview" src="https://i.pravatar.cc/100?img=12" alt="Profile preview" />
+            <label class="file">
+              <i class="uil uil-camera"></i>Avatar
+              <input id="settingsAvatarFile" type="file" accept="image/*" />
+            </label>
+          </div>
+          <label class="label" for="settingsDisplayName">Display name</label>
+          <input id="settingsDisplayName" class="select" type="text" maxlength="100" />
+          <label class="label" for="settingsBio">Bio</label>
+          <textarea id="settingsBio" class="textarea" maxlength="500"></textarea>
+          <label class="label" for="settingsVisibility">Visibility</label>
+          <select id="settingsVisibility" class="select">
+            <option value="public">Public</option>
+            <option value="followers">Followers</option>
+            <option value="private">Private</option>
+          </select>
+          <label class="checkbox"><input id="settingsShowEmail" type="checkbox" /><span>Show email on public profile</span></label>
+          <button class="btn btn-accent" type="submit">Save profile</button>
+        </form>
+      </section>
+
+      <section id="tab-preferences" class="panel analytics-card settings-panel" hidden>
+        <form id="preferencesForm" class="modal-body">
+          <div id="settingsPreferencesMessage" class="msg" hidden></div>
+          <label class="label" for="settingsLanguage">Language</label>
+          <select id="settingsLanguage" class="select">
+            <option value="en">English</option>
+            <option value="fr">Francais</option>
+          </select>
+          <label class="label" for="settingsTheme">Theme</label>
+          <select id="settingsTheme" class="select">
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+            <option value="auto">Auto</option>
+          </select>
+          <label class="checkbox"><input id="emailNotifications" type="checkbox" /><span>Email notifications</span></label>
+          <label class="checkbox"><input id="pushNotifications" type="checkbox" /><span>Push notifications</span></label>
+          <button class="btn btn-accent" type="submit">Save preferences</button>
+          <button id="requestPushPermission" class="btn btn-ghost" type="button">Request push permission</button>
+        </form>
+      </section>
+
+      <section id="tab-security" class="panel analytics-card settings-panel" hidden>
+        <div class="modal-body">
+          <form id="passwordSettingsForm" class="card-actions" style="margin-bottom:18px;">
+            <div id="settingsSecurityMessage" class="msg" hidden></div>
+            <label class="label" for="currentPassword">Current password</label>
+            <input id="currentPassword" class="select" type="password" autocomplete="current-password" />
+            <label class="label" for="newPassword">New password</label>
+            <input id="newPassword" class="select" type="password" autocomplete="new-password" />
+            <button class="btn btn-accent" type="submit">Change password</button>
+          </form>
+          <div class="panel-title"><span>Active sessions</span></div>
+          <div id="sessionsList" class="notification-list"></div>
+          <button id="revokeAllSessions" class="btn btn-ghost" type="button">Revoke other sessions</button>
+
+          <div class="panel-title" style="margin-top:18px;"><span>Two-factor authentication</span></div>
+          <div id="twoFactorState" class="state">Loading 2FA status...</div>
+          <div class="card-actions">
+            <button id="enable2fa" class="btn btn-accent" type="button">Start 2FA setup</button>
+            <button id="verify2fa" class="btn btn-ghost" type="button">Verify current code</button>
+            <button id="disable2fa" class="btn btn-ghost" type="button">Disable 2FA</button>
+            <button id="regenBackupCodes" class="btn btn-ghost" type="button">Regenerate backup codes</button>
+          </div>
+          <div id="twoFactorSetup" class="privacy-banner" hidden></div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="js/settings.js"></script>
+</body>
+</html>

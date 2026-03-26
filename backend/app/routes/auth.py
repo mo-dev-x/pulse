@@ -724,6 +724,62 @@ def reset_password():
     return jsonify({'message': get_localized_message(request, 'password_reset_success')}), 200
 
 
+@bp.route('/change-password', methods=['POST'])
+@jwt_required()
+def change_password():
+    """Change the current user's password using their existing password."""
+    user_id = int(get_jwt_identity())
+    user = db.session.get(User, user_id)
+    if not user:
+        return jsonify({'error': get_localized_message(request, 'user_not_found')}), 404
+
+    data = request.get_json() or {}
+    current_password = data.get('current_password') or ''
+    new_password = data.get('new_password') or ''
+
+    if not current_password or not new_password:
+        return jsonify({
+            'error': get_localized_message(request, 'validation_error'),
+            'message': 'Current password and new password are required'
+        }), 400
+
+    if not user.check_password(current_password):
+        return jsonify({
+            'error': get_localized_message(request, 'auth_failed'),
+            'message': 'Current password is incorrect'
+        }), 401
+
+    if current_password == new_password:
+        return jsonify({
+            'error': get_localized_message(request, 'validation_error'),
+            'message': 'New password must be different from the current password'
+        }), 400
+
+    if not User.validate_password_strength(new_password):
+        return jsonify({
+            'error': get_localized_message(request, 'validation_error'),
+            'message': get_localized_message(request, 'password_weak')
+        }), 400
+
+    try:
+        user.set_password(new_password)
+        db.session.commit()
+    except ValueError as exc:
+        db.session.rollback()
+        return jsonify({
+            'error': get_localized_message(request, 'validation_error'),
+            'message': str(exc)
+        }), 400
+    except Exception:
+        db.session.rollback()
+        return jsonify({
+            'error': get_localized_message(request, 'server_error'),
+            'message': get_localized_message(request, 'server_error')
+        }), 500
+
+    return jsonify({'message': 'Password changed successfully'}), 200
+
+
 def _resolve_account_type(claims):
     """Map OIDC affiliation-like claims to local account_type enum."""
     affiliation = str(

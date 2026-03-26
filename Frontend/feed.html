@@ -1,15 +1,19 @@
 <!doctype html>
 <html lang="en">
 
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>PULSE — Feed</title>
-    <link rel="stylesheet" href="https://unicons.iconscout.com/release/v4.0.8/css/line.css">
-    <link rel="stylesheet" href="css/feed.css">
-</head>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>PULSE — Feed</title>
+        <link rel="stylesheet" href="https://unicons.iconscout.com/release/v4.0.8/css/line.css">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/base.css">
+        <link rel="stylesheet" href="css/components.css">
+        <link rel="stylesheet" href="css/feed.css">
+    </head>
 
 <body>
+    <div id="offlineBanner" class="error" hidden>You are offline. Feed updates may be delayed.</div>
     <!-- TOPPPP BAR -->
     <header class="topbar">
         <div class="topbar-left">
@@ -60,29 +64,39 @@
             </div>
 
             <nav class="panel nav">
-                <a class="nav-item active" href="#">
+                <a class="nav-item active" href="feed.html">
                     <span><i class="uil uil-home"></i></span>Home
                 </a>
 
-                <a class="nav-item" href="#">
+                <a class="nav-item" href="discover.html">
                     <span><i class="uil uil-compass"></i></span>Explore
                 </a>
 
-                <a class="nav-item" href="#">
+                <a class="nav-item" href="zone.html">
                     <i class="uil uil-map-marker"></i>
-                    <span>Campus Map</span>
+                    <span>Zones</span>
                 </a>
 
-                <a class="nav-item" href="dashboard.html">
+                <a class="nav-item" href="analytics.html">
                     <i class="uil uil-smile"></i>
                     <span>Mood Dashboard</span>
                 </a>
-                <a class="nav-item" href="#">
+                <a class="nav-item" href="messages.html">
+                    <i class="uil uil-envelope"></i>
+                    <span>Messages</span>
+                    <span class="inline-badge" data-message-badge hidden>0</span>
+                </a>
+                <a class="nav-item" href="notifications.html">
+                    <i class="uil uil-bell"></i>
+                    <span>Notifications</span>
+                    <span class="inline-badge" data-notification-badge hidden>0</span>
+                </a>
+                <button class="nav-item" type="button" data-theme-toggle aria-label="Toggle theme">
                     <i class="uil uil-palette"></i>
                     <span>Theme</span>
-                </a>
+                </button>
 
-                <a class="nav-item" href="#">
+                <a class="nav-item" href="settings.html">
                     <i class="uil uil-setting"></i>
                     <span>Settings</span>
                 </a>
@@ -125,6 +139,7 @@
             <section class="feed" id="feed">
                 <!-- posts injected by JS-->
             </section>
+            <div class="state" id="feedSentinel" style="display:none;"></div>
 
             <!-- LOADING / EMPTY -->
             <div class="state" id="stateBox">Loading feed…</div>

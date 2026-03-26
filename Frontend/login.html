@@ -1,30 +1,33 @@
 <!doctype html>
 <html lang="en">
- <!-- gotta change it lang="fr" -->
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>PULSE — Login</title>
+  <link rel="stylesheet" href="css/variables.css" />
+  <link rel="stylesheet" href="css/base.css" />
+  <link rel="stylesheet" href="css/components.css" />
   <link rel="stylesheet" href="css/login.css" />
 </head>
 
 <body>
   <main class="page">
     <section class="card">
+      <button type="button" class="lang-toggle" data-lang-toggle>FR</button>
       <div class="brand">
         <div>
-          <h1>PULSE</h1> <!-- gotta change it to PULSE T^T-->
-          <p>Sign in to continue to your campus wellness feed</p>
+          <h1 data-i18n="app.brand">PULSE</h1>
+          <p data-i18n="auth.login.subtitle">Sign in to continue to your campus wellness feed</p>
         </div>
       </div>
 
       <form class="form" id="loginForm">
         <p id="error" class="error" style="display:none;"></p>
         <p id="msg" class="msg" style="display:none;"></p>
-        <label class="label" for="email">Email</label>
+        <label class="label" for="email" data-i18n="auth.login.email">Email</label>
         <input class="input" id="email" type="email" placeholder="name@ulaval.ca" required>
 
-        <label class="label" for="password">Password</label>
+        <label class="label" for="password" data-i18n="auth.login.password">Password</label>
         <div class="password-wrapper">
           <input
             class="input"
@@ -41,17 +44,17 @@
         <div class="row">
           <label class="check">
             <input id="rememberMe" type="checkbox">
-            <span>Remember me</span>
+            <span data-i18n="auth.login.remember">Remember me</span>
           </label>
 
-          <a class="link" href="#">Forgot password?</a> <!-- gotta change it to href="forgot-password.html...." -->
+          <a class="link" href="forgot-password.html" data-i18n="auth.login.forgot">Forgot password?</a>
         </div>
 
-        <button class="btn" type="submit">Login</button>
+        <button class="btn" type="submit" data-i18n="auth.login.submit">Login</button>
 
         <p class="bottom">
-          No account?
-          <a class="link" href="register.html">Create one</a>
+          <span data-i18n="auth.login.no_account">No account?</span>
+          <a class="link" href="register.html" data-i18n="auth.login.create">Create one</a>
         
         </p>
       </form>

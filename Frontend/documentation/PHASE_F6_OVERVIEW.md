@@ -2,12 +2,14 @@
 
 **Pulse Frontend — Vanilla JS · Université Laval**
 
-**Status:** 🔵 Planning  
+**Status:** ✅ Implemented in code
 **Priority:** High — The features that make Pulse feel like a real product  
 **Estimated Time:** 5–7 days  
 **Depends on:** All previous frontend phases complete
 
 > **Design principle for Phase F6:** This phase is the difference between a working prototype and a product people want to use. Skeletons, empty states, error boundaries, dark mode, and accessibility are not optional extras — they are the product.
+
+> **Implementation note:** Search, discovery, mention autocomplete, theme persistence, offline banners, skeletons, and an accessibility audit document are all present in the codebase. The biggest gap versus the original concept is that the live nav dropdown on feed/profile remains people-focused rather than a fully unified search dropdown, and bilingual coverage is still incomplete in some UI copy.
 
 ---
 
@@ -29,24 +31,34 @@
 
 | Component | Priority | Status | Est. Days |
 |-----------|----------|--------|-----------|
-| Global search bar + results | Must Have | 🔵 Not started | 1.5 |
-| @mention autocomplete | Must Have | 🔵 Not started | 0.5 |
-| Discovery feed page | Must Have | 🔵 Not started | 1 |
-| Loading skeletons (all pages) | Must Have | 🔵 Not started | 0.5 |
-| Bilingual empty states (all pages) | Must Have | 🔵 Not started | 0.5 |
-| Dark mode toggle | Should Have | 🔵 Not started | 0.5 |
-| Trending zones widget | Should Have | 🔵 Not started | 0.5 |
-| Error boundaries + offline state | Should Have | 🔵 Not started | 0.5 |
-| Accessibility audit (WCAG 2.1 AA) | Should Have | 🔵 Not started | 1 |
+| Global search bar + results | Must Have | ✅ Implemented, with a simplified nav dropdown | 1.5 |
+| @mention autocomplete | Must Have | ✅ Implemented in composer and comments | 0.5 |
+| Discovery feed page | Must Have | ✅ Implemented | 1 |
+| Loading skeletons (all pages) | Must Have | ✅ Implemented across the main feed/list surfaces | 0.5 |
+| Bilingual empty states (all pages) | Must Have | ~ Implemented across key pages, but not literally every string/view | 0.5 |
+| Dark mode toggle | Should Have | ✅ Implemented with persistence and `auto` mode | 0.5 |
+| Trending zones widget | Should Have | ✅ Implemented | 0.5 |
+| Error boundaries + offline state | Should Have | ~ Offline banners and visible error states exist; formal JS error boundaries are limited in vanilla pages | 0.5 |
+| Accessibility audit (WCAG 2.1 AA) | Should Have | ✅ Documented audit created | 1 |
 
-**Overall Phase F6 Progress:** 🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥 0%
+**Overall Phase F6 Progress:** 🟩🟩🟩🟩🟩🟩🟩🟩🟩⬜ ~95%
+
+## 🧩 SHIPPED IMPLEMENTATION
+
+| Area | Shipped code |
+|------|--------------|
+| Search page | `search.html`, `js/search.js` |
+| Discovery page | `discover.html`, `js/discover.js` |
+| Theme/offline shell | `js/theme.js`, shared offline banners across authenticated pages |
+| Accessibility note | `Frontend/documentation/ACCESSIBILITY_AUDIT.md` |
+| Notable deviation | Shared nav live search is still people-focused rather than a full unified dropdown, and bilingual polish is still incomplete |
 
 ---
 
 ## 📋 COMPONENT 1: Global Search
 
 **File:** `js/search.js`, integrated in nav bar  
-**Route:** `#search?q=<query>&type=<all|posts|users|zones>`
+**Route:** `search.html?q=<query>&type=<all|posts|users|zones>`
 
 ### Search Bar in Nav
 
@@ -395,20 +407,20 @@ Checklist to complete before Phase F6 is marked done:
 
 **Phase F6 Complete When:**
 
-- [ ] Search bar in nav works — live dropdown appears after 2 chars (debounced 300ms)
-- [ ] Full search results page with type tabs (Tout / Publications / Personnes / Zones)
-- [ ] Anonymous post results never reveal author
-- [ ] @mention autocomplete fires in composer and comment inputs after typing `@`
-- [ ] Discovery feed loads from `/api/posts/discover` with zone + sentiment filters
-- [ ] Trending zones widget shows top 3–5 zones
-- [ ] Dark mode toggle persists — respects system preference on first visit
-- [ ] Every feed/list shows skeleton on load (no blank screens)
-- [ ] Every empty state has bilingual message and icon/illustration
-- [ ] Offline banner appears when network lost; hides when restored
-- [ ] Network errors show toast (never silent failure)
-- [ ] Lighthouse accessibility score ≥ 90
-- [ ] All interactive elements keyboard-navigable
-- [ ] All icon buttons have `aria-label`
+- [~] Search in shared nav works, but the dropdown is still people-focused rather than fully unified
+- [x] Full search results page with type tabs exists
+- [x] Anonymous post results do not reveal author identity on the search page
+- [x] `@mention` autocomplete fires in composer and comment inputs
+- [x] Discovery feed loads from `/api/posts/discover` with sentiment filtering
+- [x] Trending zones widget shows the top zones
+- [x] Dark mode toggle persists and supports system-aware `auto`
+- [x] Main feeds/lists now show skeletons on load
+- [~] Key empty states include bilingual copy and illustration/emoji treatment, but coverage is not universal
+- [x] Offline banners appear and hide on connectivity changes across the primary authenticated pages
+- [~] Network errors are surfaced in many places, but not every failure path is toast-driven
+- [~] An accessibility audit document exists, but Lighthouse/WCAG thresholds were not verified here as automated guarantees
+- [~] Keyboard accessibility improved, but not every originally envisioned interaction pattern was audited in-browser
+- [x] Updated shell icon buttons include `aria-label` where required
 
 ---
 
@@ -430,7 +442,7 @@ When Phase F6 is done, the Pulse frontend is feature-complete against all 74+ ba
 
 ---
 
-**Last Updated:** 2026-03-16  
-**Status:** 🔵 Planning  
+**Last Updated:** 2026-03-26
+**Status:** ✅ Implemented in code
 **Blockers:** All previous frontend phases (F1–F5) must be complete  
 **Depends on:** Backend Phase 6 (search, discovery, trending) ✅ Complete

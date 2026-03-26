@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PULSE — Messages</title>
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/feed.css">
+  <link rel="stylesheet" href="css/messages.css">
+</head>
+<body>
+  <div id="offlineBanner" class="error" hidden>You are offline. Messages cannot refresh live.</div>
+  <header class="topbar">
+    <div class="topbar-left"><div class="brand">PULSE</div></div>
+    <div class="topbar-center">
+      <div class="search small">
+        <i class="uil uil-user-plus"></i>
+        <input id="newConversationUsername" type="search" placeholder="Start a conversation with @username" />
+      </div>
+    </div>
+    <div class="topbar-right">
+      <button class="iconbtn" data-theme-toggle aria-label="Toggle theme">☀️</button>
+      <a class="btn btn-ghost" href="feed.html">Feed</a>
+    </div>
+  </header>
+  <div class="app">
+    <main class="main">
+      <div class="messages-layout">
+        <section class="panel messages-panel">
+          <div class="panel-title"><span>Conversations</span><span id="messageBadge" class="inline-badge">0</span></div>
+          <div id="conversationList" class="conversation-list"></div>
+        </section>
+
+        <section class="panel messages-panel">
+          <div class="panel-title"><span id="threadTitle">Select a conversation</span></div>
+          <div id="threadState" class="state">Choose a conversation to load messages.</div>
+          <div id="messageThread" class="message-thread"></div>
+          <form id="messageComposer" class="thread-compose" hidden>
+            <textarea id="messageInput" class="thread-input" placeholder="Write a message..." required></textarea>
+            <div style="display:flex;justify-content:flex-end;">
+              <button class="btn btn-accent" type="submit">Send</button>
+            </div>
+          </form>
+        </section>
+      </div>
+    </main>
+  </div>
+  <script type="module" src="js/messages.js"></script>
+</body>
+</html>
