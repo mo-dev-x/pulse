@@ -1,4 +1,5 @@
 import { apiFetch, requireAuth, logout, getAssetUrl } from "./auth.js";
+import { getPostAvatarUrl, getProfileHref, getUserAvatarUrl } from "./avatar.js";
 import { initLanguageControls } from "./i18n.js";
 import { initOfflineBanner, initThemeToggle, initUnreadBadges } from "./theme.js";
 
@@ -350,9 +351,7 @@ async function openPeopleModal(type) {
 
 function renderPeopleList(people, type) {
   els.peopleList.innerHTML = people.map((person) => {
-    const avatarUrl = person.profile_picture
-      ? getAssetUrl(person.profile_picture)
-      : `https://i.pravatar.cc/80?u=${encodeURIComponent(person.username)}`;
+    const avatarUrl = getUserAvatarUrl(person, getAssetUrl);
 
     return `
       <div class="person-row">
@@ -422,9 +421,7 @@ function openEditModal() {
   }
 
   if (els.editAvatarPreview) {
-    const avatarUrl = currentUser?.profile_picture
-      ? getAssetUrl(currentUser.profile_picture)
-      : `https://i.pravatar.cc/120?u=${encodeURIComponent(currentUser?.username || "user")}`;
+    const avatarUrl = getUserAvatarUrl(currentUser, getAssetUrl);
     els.editAvatarPreview.src = avatarUrl;
   }
 
@@ -443,9 +440,7 @@ function closeEditModal() {
   if (els.editProfileForm) els.editProfileForm.reset();
 
   if (els.editAvatarPreview) {
-    const avatarUrl = currentUser?.profile_picture
-      ? getAssetUrl(currentUser.profile_picture)
-      : `https://i.pravatar.cc/120?u=${encodeURIComponent(currentUser?.username || "user")}`;
+    const avatarUrl = getUserAvatarUrl(currentUser, getAssetUrl);
     els.editAvatarPreview.src = avatarUrl;
   }
 }
@@ -549,9 +544,7 @@ function renderCurrentUserChrome() {
   const displayName = currentUser?.display_name || currentUser?.username || "Pulse User";
   const username = currentUser?.username || "user";
 
-  const avatarUrl = currentUser?.profile_picture
-    ? getAssetUrl(currentUser.profile_picture)
-    : `https://i.pravatar.cc/120?u=${encodeURIComponent(username)}`;
+  const avatarUrl = getUserAvatarUrl(currentUser, getAssetUrl);
 
   if (els.topbarAvatar) els.topbarAvatar.src = avatarUrl;
   if (els.sidebarAvatar) els.sidebarAvatar.src = avatarUrl;
@@ -569,9 +562,7 @@ function renderViewedProfile() {
   const joined = formatJoined(profileUser?.created_at);
   const email = profileUser?.email || null;
 
-  const avatarUrl = profileUser?.profile_picture
-    ? getAssetUrl(profileUser.profile_picture)
-    : `https://i.pravatar.cc/180?u=${encodeURIComponent(username)}`;
+  const avatarUrl = getUserAvatarUrl(profileUser, getAssetUrl);
 
   if (els.profileAvatar) els.profileAvatar.src = avatarUrl;
   if (els.profileDisplayName) els.profileDisplayName.textContent = displayName;
@@ -768,13 +759,7 @@ function normalizePost(p) {
     ? "@anonymous"
     : (author.username ? `@${author.username}` : "@user");
 
-  const avatarSeed = isAnonymous
-    ? `anon-${p.id}`
-    : (author.username || author.display_name || p.id);
-
-  const avatarUrl = !isAnonymous && author.profile_picture
-    ? getAssetUrl(author.profile_picture)
-    : `https://i.pravatar.cc/80?u=${encodeURIComponent(avatarSeed)}`;
+  const avatarUrl = getPostAvatarUrl(author, isAnonymous, getAssetUrl);
 
   return {
     id: p.id,
@@ -783,6 +768,7 @@ function normalizePost(p) {
     authorName,
     handle,
     avatarUrl,
+    profileHref: !isAnonymous && author.username ? getProfileHref(author.username) : "",
     zoneId: zone?.id || null,
     zoneName: zone?.name || "Campus",
     timeRaw: p.created_at || "",
@@ -807,14 +793,29 @@ function normalizePost(p) {
     card.innerHTML = `
     <div class="post-head">
       <div class="post-user">
-        <img class="avatar" src="${escapeAttr(post.avatarUrl)}" alt="User" />
-        <div class="post-meta">
-          <div class="u">
-            ${escapeHtml(post.authorName)}
-            <span class="badge ${badge.cls}">${badge.label}</span>
+        ${post.profileHref ? `
+          <a class="post-user-link" href="${escapeAttr(post.profileHref)}" aria-label="View ${escapeAttr(post.authorName)}'s profile">
+            <img class="avatar" src="${escapeAttr(post.avatarUrl)}" alt="${escapeAttr(post.authorName)}" />
+            <div class="post-meta">
+              <div class="u">
+                ${escapeHtml(post.authorName)}
+                <span class="badge ${badge.cls}">${badge.label}</span>
+              </div>
+              <div class="m">${escapeHtml(post.handle)}</div>
+            </div>
+          </a>
+        ` : `
+          <img class="avatar" src="${escapeAttr(post.avatarUrl)}" alt="User" />
+          <div class="post-meta">
+            <div class="u">
+              ${escapeHtml(post.authorName)}
+              <span class="badge ${badge.cls}">${badge.label}</span>
+            </div>
+            <div class="m">${escapeHtml(post.handle)}</div>
           </div>
+        `}
+        <div class="post-meta post-meta-secondary">
           <div class="m">
-            ${escapeHtml(post.handle)} •
             <button class="zone-pill" data-zone-name="${escapeAttr(post.zoneName)}">${escapeHtml(post.zoneName)}</button> •
             ${escapeHtml(post.timeLabel)}
           </div>
@@ -1036,9 +1037,7 @@ function renderSearchResults(users) {
 
   resultsEl.style.display = "block";
   resultsEl.innerHTML = filteredUsers.map((user) => {
-    const avatarUrl = user.profile_picture
-      ? getAssetUrl(user.profile_picture)
-      : `https://i.pravatar.cc/80?u=${encodeURIComponent(user.username)}`;
+    const avatarUrl = getUserAvatarUrl(user, getAssetUrl);
 
     return `
       <div class="search-result-item">

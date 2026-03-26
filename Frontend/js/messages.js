@@ -1,4 +1,5 @@
 import { apiFetch, getAssetUrl, requireAuth } from "./auth.js";
+import { getUserAvatarUrl } from "./avatar.js";
 import { initLanguageControls } from "./i18n.js";
 import { initThemeToggle, initOfflineBanner } from "./theme.js";
 
@@ -82,9 +83,7 @@ async function loadThread(conversationId) {
 }
 
 function renderConversation(conversation, active) {
-  const avatar = conversation.other_user?.profile_picture
-    ? getAssetUrl(conversation.other_user.profile_picture)
-    : `https://i.pravatar.cc/80?u=${encodeURIComponent(conversation.other_user?.username || conversation.id)}`;
+  const avatar = getUserAvatarUrl(conversation.other_user, getAssetUrl);
 
   return `
     <button class="conversation-row ${active ? "active" : ""}" data-conversation-id="${conversation.id}" type="button">

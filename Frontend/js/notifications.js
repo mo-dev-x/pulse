@@ -1,4 +1,5 @@
 import { apiFetch, getAssetUrl, requireAuth } from "./auth.js";
+import { getUserAvatarUrl } from "./avatar.js";
 import { initLanguageControls } from "./i18n.js";
 import { initThemeToggle, initOfflineBanner } from "./theme.js";
 
@@ -52,9 +53,7 @@ async function loadNotifications() {
 }
 
 function renderNotification(notification) {
-  const avatar = notification.actor?.profile_picture
-    ? getAssetUrl(notification.actor.profile_picture)
-    : `https://i.pravatar.cc/80?u=${encodeURIComponent(notification.actor?.username || notification.id)}`;
+  const avatar = getUserAvatarUrl(notification.actor, getAssetUrl);
 
   return `
     <article class="notification-item ${notification.is_read ? "" : "unread"}">

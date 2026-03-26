@@ -5,6 +5,7 @@ import {
   requireAuth,
   saveCurrentUser,
 } from "./auth.js";
+import { getDefaultAvatarUrl, getPostAvatarUrl, getProfileHref, getUserAvatarUrl } from "./avatar.js";
 import { initLanguageControls } from "./i18n.js";
 import { initMentionAutocomplete } from "./search.js";
 import { initOfflineBanner, initThemeToggle, initUnreadBadges } from "./theme.js";
@@ -87,9 +88,7 @@ async function loadBookmarks() {
 function renderCurrentUser(user) {
   const displayName = user?.display_name || user?.username || "Pulse User";
   const username = user?.username || "user";
-  const avatarUrl = user?.profile_picture
-    ? getAssetUrl(user.profile_picture)
-    : `https://i.pravatar.cc/100?u=${encodeURIComponent(username)}`;
+  const avatarUrl = getUserAvatarUrl(user, getAssetUrl);
 
   const nameEl = document.getElementById("meName");
   const handleEl = document.getElementById("meHandle");
@@ -295,12 +294,7 @@ function normalizePost(post) {
   const isAnonymous = Boolean(post.is_anonymous);
   const author = post.author || {};
   const zone = post.zone || null;
-  const avatarSeed = isAnonymous
-    ? `anon-${post.id}`
-    : (author.username || author.display_name || post.id);
-  const avatarUrl = !isAnonymous && author.profile_picture
-    ? getAssetUrl(author.profile_picture)
-    : `https://i.pravatar.cc/80?u=${encodeURIComponent(avatarSeed)}`;
+  const avatarUrl = getPostAvatarUrl(author, isAnonymous, getAssetUrl);
 
   return {
     id: post.id,
@@ -311,6 +305,7 @@ function normalizePost(post) {
       : (author.display_name || author.username || "User"),
     handle: isAnonymous ? "@anonymous" : `@${author.username || "user"}`,
     avatarUrl,
+    profileHref: !isAnonymous && author.username ? getProfileHref(author.username) : "",
     mine: isAnonymous ? Boolean(author.is_you) : Boolean(currentUser && author.id === currentUser.id),
     zoneId: zone?.id || null,
     zoneName: zone?.name || "Campus",
@@ -343,15 +338,29 @@ function renderPostCard(post) {
   card.innerHTML = `
     <div class="post-head">
       <div class="post-user">
-        <img class="avatar" src="${escapeAttr(post.avatarUrl)}" alt="User" />
-        <div class="post-meta">
-          <div class="u">
-            ${escapeHtml(post.authorName)}
-            <span class="badge ${badge.cls}">${badge.label}</span>
+        ${post.profileHref ? `
+          <a class="post-user-link" href="${escapeAttr(post.profileHref)}" aria-label="View ${escapeAttr(post.authorName)}'s profile">
+            <img class="avatar" src="${escapeAttr(post.avatarUrl)}" alt="${escapeAttr(post.authorName)}" />
+            <div class="post-meta">
+              <div class="u">
+                ${escapeHtml(post.authorName)}
+                <span class="badge ${badge.cls}">${badge.label}</span>
+              </div>
+              <div class="m">${escapeHtml(post.handle)}</div>
+            </div>
+          </a>
+        ` : `
+          <img class="avatar" src="${escapeAttr(post.avatarUrl)}" alt="User" />
+          <div class="post-meta">
+            <div class="u">
+              ${escapeHtml(post.authorName)}
+              <span class="badge ${badge.cls}">${badge.label}</span>
+            </div>
+            <div class="m">${escapeHtml(post.handle)}</div>
           </div>
+        `}
+        <div class="post-meta post-meta-secondary">
           <div class="m">
-            ${escapeHtml(post.handle)}
-            <span class="dot-sep">•</span>
             <button class="zone-pill" data-zone-id="${post.zoneId || ""}" ${post.zoneId ? "" : "disabled"}>
               ${escapeHtml(post.zoneName)}
             </button>
@@ -942,9 +951,7 @@ function renderSearchResults(users) {
 
   resultsEl.style.display = "block";
   resultsEl.innerHTML = filtered.map((user) => {
-    const avatarUrl = user.profile_picture
-      ? getAssetUrl(user.profile_picture)
-      : `https://i.pravatar.cc/80?u=${encodeURIComponent(user.username)}`;
+    const avatarUrl = getUserAvatarUrl(user, getAssetUrl);
 
     return `
       <div class="search-result-item">
@@ -1007,7 +1014,7 @@ function renderMessages() {
 
   msgList.innerHTML = items.map((item) => `
     <div class="msg">
-      <img class="avatar" src="https://i.pravatar.cc/80?img=${item.img}" alt="${escapeAttr(item.name)}" />
+      <img class="avatar" src="${escapeAttr(getDefaultAvatarUrl())}" alt="${escapeAttr(item.name)}" />
       <div>
         <div class="t">${escapeHtml(item.name)}</div>
         <div class="s">${escapeHtml(item.snippet)}</div>

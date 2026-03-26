@@ -1,4 +1,5 @@
 import { apiFetch, requireAuth } from "./auth.js";
+import { getProfileHref } from "./avatar.js";
 import { initLanguageControls } from "./i18n.js";
 import { initThemeToggle, initOfflineBanner } from "./theme.js";
 
@@ -39,7 +40,9 @@ async function loadDiscover() {
       <div class="post-head">
         <div class="post-user">
           <div class="post-meta">
-            <div class="u">${escapeHtml(post.author?.display_name || post.author?.username || "Pulse User")}</div>
+            <div class="u">${post.is_anonymous || !post.author?.username
+              ? escapeHtml(post.author?.pseudonym || "Anonymous")
+              : `<a class="post-user-link-text" href="${escapeAttr(getProfileHref(post.author.username))}">${escapeHtml(post.author?.display_name || post.author?.username || "Pulse User")}</a>`}</div>
             <div class="m">${escapeHtml(post.zone?.name || "Campus")} • ${escapeHtml(post.sentiment || "neutral")}</div>
           </div>
         </div>
@@ -70,6 +73,10 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function escapeAttr(value) {
+  return escapeHtml(value);
 }
 
 function renderSkeletonCards(count) {

@@ -1,4 +1,5 @@
 import { apiFetch, getAssetUrl, requireAuth } from "./auth.js";
+import { getUserAvatarUrl } from "./avatar.js";
 import { initLanguageControls } from "./i18n.js";
 import { initThemeToggle, initOfflineBanner } from "./theme.js";
 
@@ -180,7 +181,7 @@ function renderSearchGroups(results, type) {
         ${users.length ? users.map((user) => `
           <a class="search-result-item search-result-link" href="profile.html?u=${encodeURIComponent(user.username)}">
             <div class="search-result-left">
-              <img class="avatar" src="${escapeAttr(user.profile_picture ? getAssetUrl(user.profile_picture) : `https://i.pravatar.cc/80?u=${encodeURIComponent(user.username)}`)}" alt="User" />
+              <img class="avatar" src="${escapeAttr(getUserAvatarUrl(user, getAssetUrl))}" alt="User" />
               <div>
                 <div class="search-result-name">${escapeHtml(user.display_name || user.username)}</div>
                 <div class="search-result-handle">@${escapeHtml(user.username)}</div>

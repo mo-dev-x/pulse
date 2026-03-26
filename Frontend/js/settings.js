@@ -1,4 +1,5 @@
 import { apiFetch, getAssetUrl, requireAuth, saveCurrentUser } from "./auth.js";
+import { getUserAvatarUrl } from "./avatar.js";
 import { initLanguageControls, setLang } from "./i18n.js";
 import { applyTheme, initThemeToggle, initOfflineBanner, initUnreadBadges, refreshUnreadBadges } from "./theme.js";
 
@@ -41,9 +42,7 @@ async function loadSettings() {
   document.getElementById("pushNotifications").checked = Boolean(currentUser.push_notifications);
   const avatarPreview = document.getElementById("settingsAvatarPreview");
   if (avatarPreview) {
-    avatarPreview.src = currentUser.profile_picture
-      ? getAssetUrl(currentUser.profile_picture)
-      : `https://i.pravatar.cc/100?u=${encodeURIComponent(currentUser.username || "user")}`;
+    avatarPreview.src = getUserAvatarUrl(currentUser, getAssetUrl);
   }
 
   await Promise.all([loadSessions(), refreshTwoFactorState()]);

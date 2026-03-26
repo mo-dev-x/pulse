@@ -1,4 +1,5 @@
 import { apiFetch, getAssetUrl, requireAuth } from "./auth.js";
+import { getPostAvatarUrl, getProfileHref, getUserAvatarUrl } from "./avatar.js";
 import { initLanguageControls } from "./i18n.js";
 import { initOfflineBanner, initThemeToggle, initUnreadBadges } from "./theme.js";
 
@@ -26,9 +27,7 @@ async function loadCurrentUser() {
   try {
     const data = await apiFetch("/api/auth/me", { method: "GET" });
     const user = data.user;
-    const avatarUrl = user?.profile_picture
-      ? getAssetUrl(user.profile_picture)
-      : `https://i.pravatar.cc/100?u=${encodeURIComponent(user?.username || "user")}`;
+    const avatarUrl = getUserAvatarUrl(user, getAssetUrl);
 
     document.getElementById("zoneSidebarAvatar").src = avatarUrl;
     document.getElementById("zoneSidebarName").textContent = user?.display_name || user?.username || "Pulse User";
@@ -120,21 +119,29 @@ async function loadZoneFeed(zoneId) {
 function renderPostCard(post) {
   const author = post.author || {};
   const isAnonymous = Boolean(post.is_anonymous);
-  const avatarSeed = isAnonymous
-    ? `anon-${post.id}`
-    : (author.username || author.display_name || post.id);
-  const avatarUrl = !isAnonymous && author.profile_picture
-    ? getAssetUrl(author.profile_picture)
-    : `https://i.pravatar.cc/80?u=${encodeURIComponent(avatarSeed)}`;
+  const avatarUrl = getPostAvatarUrl(author, isAnonymous, getAssetUrl);
 
   return `
     <article class="panel post">
       <div class="post-head">
         <div class="post-user">
-          <img class="avatar" src="${escapeAttr(avatarUrl)}" alt="User" />
-          <div class="post-meta">
-            <div class="u">${escapeHtml(isAnonymous ? (author.pseudonym || "Anonymous") : (author.display_name || author.username || "User"))}</div>
-            <div class="m">@${escapeHtml(isAnonymous ? "anonymous" : (author.username || "user"))} • ${escapeHtml(formatRelativeTime(post.created_at))}</div>
+          ${!isAnonymous && author.username ? `
+            <a class="post-user-link" href="${escapeAttr(getProfileHref(author.username))}" aria-label="View ${escapeAttr(author.display_name || author.username || "User")}'s profile">
+              <img class="avatar" src="${escapeAttr(avatarUrl)}" alt="${escapeAttr(author.display_name || author.username || "User")}" />
+              <div class="post-meta">
+                <div class="u">${escapeHtml(author.display_name || author.username || "User")}</div>
+                <div class="m">@${escapeHtml(author.username || "user")}</div>
+              </div>
+            </a>
+          ` : `
+            <img class="avatar" src="${escapeAttr(avatarUrl)}" alt="User" />
+            <div class="post-meta">
+              <div class="u">${escapeHtml(author.pseudonym || "Anonymous")}</div>
+              <div class="m">@anonymous</div>
+            </div>
+          `}
+          <div class="post-meta post-meta-secondary">
+            <div class="m">${escapeHtml(formatRelativeTime(post.created_at))}</div>
           </div>
         </div>
       </div>

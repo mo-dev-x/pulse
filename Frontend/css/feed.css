@@ -211,6 +211,16 @@ body::before{
   margin: 0 auto;
 }
 
+.app-shell-main > .main,
+.app-shell-main-right > .main{
+  grid-column: 2;
+  min-width: 0;
+}
+
+.app-shell-main-right > .right{
+  grid-column: 3;
+}
+
 /* Glass panel used everywhere */
 .panel{
   position: relative; /* needed for some overlays (Campus Pulse uses ::before) */
@@ -425,10 +435,31 @@ body::before{
   display:flex;
   align-items:center;
   gap: 10px;
+  min-width: 0;
+}
+
+.post-user-link{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.post-user-link:hover .u,
+.post-user-link-text:hover{
+  text-decoration: underline;
+}
+
+.post-user-link-text{
+  color: inherit;
+  text-decoration: none;
 }
 
 .post-meta .u{ font-weight: 900; }
 .post-meta .m{ font-size: 12px; color: var(--muted); margin-top: 2px; }
+.post-meta-secondary{ margin-left: auto; text-align: right; }
 .dot-sep{ opacity: 0.6; margin: 0 4px; }
 
 .badge{
@@ -852,6 +883,11 @@ body::before{
 @media (max-width: 820px){
   .app{ grid-template-columns: 1fr; }
   .sidebar{ display:none; }
+  .app-shell-main > .main,
+  .app-shell-main-right > .main,
+  .app-shell-main-right > .right{
+    grid-column: auto;
+  }
   .topbar{ grid-template-columns: 1fr; }
   .topbar-left, .topbar-right{ display:none; }
   .topbar-center{ justify-content: stretch; }
