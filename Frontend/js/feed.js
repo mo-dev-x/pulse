@@ -152,6 +152,7 @@ function setupModal() {
   form.addEventListener("submit", onCreatePostSubmit);
 
   function openModal() {
+    clearCreateImagePreview();
     modal.classList.add("open");
     modal.setAttribute("aria-hidden", "false");
     document.getElementById("postText")?.focus();
@@ -202,7 +203,10 @@ function clearCreateImagePreview() {
 
   if (input) input.value = "";
   if (preview) preview.removeAttribute("src");
-  if (previewWrap) previewWrap.hidden = true;
+  if (previewWrap) {
+    previewWrap.hidden = true;
+    previewWrap.setAttribute("hidden", "");
+  }
 }
 
 function setupZonePicker() {

@@ -73,14 +73,25 @@ class Config:
         'http://localhost:5000',
         'https://pulse-seven-blond.vercel.app',
     ]
+    _default_cors_origin_patterns = [
+        r'https://.*\.vercel\.app',
+    ]
     _configured_cors_origins = [
         origin.strip()
         for origin in os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
         if origin.strip()
     ]
+    _configured_cors_origin_patterns = [
+        origin.strip()
+        for origin in os.getenv('CORS_ALLOWED_ORIGIN_PATTERNS', '').split(',')
+        if origin.strip()
+    ]
     if FRONTEND_URL:
         _configured_cors_origins.append(FRONTEND_URL)
     CORS_ALLOWED_ORIGINS = list(dict.fromkeys(_default_cors_origins + _configured_cors_origins))
+    CORS_ALLOWED_ORIGIN_PATTERNS = list(
+        dict.fromkeys(_default_cors_origin_patterns + _configured_cors_origin_patterns)
+    )
 
     # SMTP configuration
     SMTP_HOST = os.getenv('SMTP_HOST')

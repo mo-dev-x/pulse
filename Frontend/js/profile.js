@@ -76,7 +76,7 @@ const els = {
   editAvatarFile: document.getElementById("editAvatarFile"),
   editHeaderFile: document.getElementById("editHeaderFile"),
   editAvatarPreview: document.getElementById("editAvatarPreview"),
-  bannerPreviewCard: document.getElementById("bannerPreviewCard"),
+  bannerPreviewCard: document.getElementById("headerPreviewCard"),
   editHeaderPreview: document.getElementById("editHeaderPreview"),
   editHeaderFocusX: document.getElementById("editHeaderFocusX"),
   editHeaderFocusY: document.getElementById("editHeaderFocusY"),
@@ -491,7 +491,10 @@ function onEditHeaderPreview() {
   }
 
   pendingHeaderObjectUrl = URL.createObjectURL(file);
-  setHidden(els.bannerPreviewCard, false);
+  if (els.bannerPreviewCard) {
+    els.bannerPreviewCard.hidden = false;
+    els.bannerPreviewCard.classList.remove("hidden");
+  }
   els.editHeaderPreview.style.backgroundImage = `
     linear-gradient(rgba(10,10,20,0.22), rgba(10,10,20,0.4)),
     url("${pendingHeaderObjectUrl}")
@@ -530,7 +533,11 @@ function resetHeaderPreview() {
   if (els.editHeaderFocusY) els.editHeaderFocusY.value = String(focus.y);
 
   const headerImage = currentUser?.header_image ? getAssetUrl(currentUser.header_image) : "";
-  setHidden(els.bannerPreviewCard, !headerImage && !pendingHeaderObjectUrl);
+  if (els.bannerPreviewCard) {
+    const shouldHide = !headerImage && !pendingHeaderObjectUrl;
+    els.bannerPreviewCard.hidden = shouldHide;
+    els.bannerPreviewCard.classList.toggle("hidden", shouldHide);
+  }
   els.editHeaderPreview.style.backgroundImage = headerImage
     ? `linear-gradient(rgba(10,10,20,0.22), rgba(10,10,20,0.4)), url("${headerImage}")`
     : "";

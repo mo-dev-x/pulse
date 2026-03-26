@@ -468,6 +468,10 @@
   background: rgba(255,255,255,0.04);
 }
 
+.banner-preview-card[hidden]{
+  display: none !important;
+}
+
 .banner-preview-head{
   display: flex;
   justify-content: space-between;
