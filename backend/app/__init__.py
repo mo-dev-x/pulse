@@ -7,6 +7,7 @@ blueprints, and error handlers.
 
 from datetime import datetime, timezone
 import os
+import re
 from flask import Flask, app, jsonify, request, send_from_directory
 from flask_caching import Cache
 from flask_sqlalchemy import SQLAlchemy
@@ -104,6 +105,62 @@ def create_app(config_name='development'):
         max_age=86400,
     )
     limiter.init_app(app)
+
+    allowed_exact_origins = app.config.get('CORS_ALLOWED_ORIGINS', [])
+    allowed_origin_patterns = [
+        re.compile(pattern)
+        for pattern in app.config.get('CORS_ALLOWED_ORIGIN_PATTERNS', [])
+    ]
+
+    def _cors_origin_for_request():
+        origin = request.headers.get('Origin')
+        if not origin:
+            return None
+        if origin in allowed_exact_origins:
+            return origin
+        for pattern in allowed_origin_patterns:
+            if pattern.fullmatch(origin):
+                return origin
+        return None
+
+    @app.before_request
+    def handle_cors_preflight():
+        if request.method != 'OPTIONS':
+            return None
+        if not (request.path.startswith('/api/') or request.path.startswith('/uploads/')):
+            return None
+
+        origin = _cors_origin_for_request()
+        if not origin:
+            return None
+
+        response = app.make_default_options_response()
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept-Language'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, PATCH, DELETE, OPTIONS'
+        response.headers['Access-Control-Expose-Headers'] = 'Authorization'
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        response.headers['Access-Control-Max-Age'] = '86400'
+        response.headers.add('Vary', 'Origin')
+        return response
+
+    @app.after_request
+    def add_cors_headers(response):
+        if not (request.path.startswith('/api/') or request.path.startswith('/uploads/')):
+            return response
+
+        origin = _cors_origin_for_request()
+        if not origin:
+            return response
+
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept-Language'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, PATCH, DELETE, OPTIONS'
+        response.headers['Access-Control-Expose-Headers'] = 'Authorization'
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+        response.headers['Access-Control-Max-Age'] = '86400'
+        response.headers.add('Vary', 'Origin')
+        return response
 
     # AUTO CREATE DATABASE TABLES ON START (Railway)
     if config_name == "production":
