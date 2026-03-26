@@ -74,7 +74,9 @@ class Config:
         'https://pulse-seven-blond.vercel.app',
     ]
     _default_cors_origin_patterns = [
-        r'https://.*\.vercel\.app',
+        r'https://.*',
+        r'http://localhost(?::\d+)?',
+        r'http://127\.0\.0\.1(?::\d+)?',
     ]
     _configured_cors_origins = [
         origin.strip()
