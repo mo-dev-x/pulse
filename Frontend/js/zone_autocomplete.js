@@ -55,10 +55,7 @@ function initZoneAutocomplete(inputId, resultsId, onSelect) {
 }
 
 async function searchZones(query) {
-  const baseUrl =
-  window.PULSE_API_BASE ||
-  (localStorage.getItem("useRemoteApi") === "true"
-    ? "https://pulse-backend.up.railway.app": "http://127.0.0.1:5000");
+  const baseUrl = window.PULSE_API_BASE || "https://pulse-backend.up.railway.app";
   
   try {
     const response = await fetch(`${baseUrl}/api/zones/search?q=${encodeURIComponent(query)}`);

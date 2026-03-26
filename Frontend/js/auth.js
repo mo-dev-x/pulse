@@ -1,7 +1,26 @@
+function isLocalHostname(hostname) {
+  return hostname === "127.0.0.1"
+    || hostname === "localhost"
+    || hostname === "";
+}
+
 function getApiBaseUrl() {
-  return localStorage.getItem("useRemoteApi") === "true"
-    ? "https://pulse-backend.up.railway.app"
-    : "http://127.0.0.1:5000";
+  const remoteApi = "https://pulse-backend.up.railway.app";
+  const localApi = "http://127.0.0.1:5000";
+
+  if (typeof window !== "undefined") {
+    const hostname = window.location.hostname;
+    const protocol = window.location.protocol;
+    const explicitRemote = localStorage.getItem("useRemoteApi") === "true";
+    const explicitLocal = localStorage.getItem("useRemoteApi") === "false";
+    const hostedFrontend = !isLocalHostname(hostname) || protocol === "https:";
+
+    if (explicitRemote) return remoteApi;
+    if (explicitLocal && isLocalHostname(hostname)) return localApi;
+    if (hostedFrontend) return remoteApi;
+  }
+
+  return localApi;
 }
 
 export const API = getApiBaseUrl();
