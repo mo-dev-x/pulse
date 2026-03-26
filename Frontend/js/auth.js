@@ -160,11 +160,22 @@ export async function apiFetch(path, options = {}) {
     headers["Content-Type"] = "application/json";
   }
 
-  const res = await fetch(url, {
-    method: options.method || "GET",
-    body: options.body,
-    headers,
-  });
+  let res;
+  try {
+    res = await fetch(url, {
+      method: options.method || "GET",
+      body: options.body,
+      headers,
+    });
+  } catch (error) {
+    const isNetworkLike = error instanceof TypeError || /fetch/i.test(String(error?.message || ""));
+    if (isNetworkLike) {
+      throw new Error(
+        "Unable to reach the API. Check that the backend is running and that its CORS settings allow this frontend origin."
+      );
+    }
+    throw error;
+  }
 
   const contentType = res.headers.get("content-type") || "";
   const payload = await parseResponsePayload(res, contentType);
