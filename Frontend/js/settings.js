@@ -34,6 +34,8 @@ async function loadSettings() {
 
   document.getElementById("settingsDisplayName").value = currentUser.display_name || "";
   document.getElementById("settingsBio").value = currentUser.bio || "";
+  document.getElementById("settingsLocation").value = currentUser.location || "";
+  document.getElementById("settingsWebsite").value = currentUser.website || "";
   document.getElementById("settingsVisibility").value = currentUser.profile_visibility || "public";
   document.getElementById("settingsShowEmail").checked = Boolean(currentUser.show_email);
   document.getElementById("settingsLanguage").value = currentUser.preferred_language || "en";
@@ -68,6 +70,8 @@ function wireForms() {
       body: JSON.stringify({
         display_name: document.getElementById("settingsDisplayName").value.trim(),
         bio: document.getElementById("settingsBio").value.trim(),
+        location: document.getElementById("settingsLocation").value.trim(),
+        website: document.getElementById("settingsWebsite").value.trim(),
       }),
     });
 
@@ -205,25 +209,92 @@ async function loadSessions() {
     return;
   }
 
-  root.innerHTML = sessions.map((session) => `
-    <article class="notification-item">
-      <div></div>
-      <div>
-        <div class="notification-title">${escapeHtml(session.device_type || "device")}</div>
-        <div class="notification-message">${escapeHtml(session.user_agent || "Unknown device")}</div>
-        <div class="notification-meta">${escapeHtml(session.ip_address || "Unknown IP")} • ${escapeHtml(session.created_at || "")}</div>
-      </div>
-      <div class="notification-actions">
-        <button class="iconbtn" data-revoke-session="${session.id}" title="Revoke session">✕</button>
-      </div>
-    </article>
-  `).join("");
+  root.className = "session-list";
+  root.innerHTML = sessions.map((session, index) => {
+    const summary = describeSession(session);
+    return `
+      <article class="session-card">
+        <div class="session-icon" aria-hidden="true">${summary.icon}</div>
+        <div>
+          <div class="session-title-row">
+            <div class="session-title">${escapeHtml(summary.title)}</div>
+            ${index === 0 ? '<span class="inline-badge">Current</span>' : ""}
+          </div>
+          <div class="session-subtitle">${escapeHtml(summary.subtitle)}</div>
+          <div class="session-meta">
+            <span class="session-pill">${escapeHtml(summary.deviceType)}</span>
+            <span class="session-pill">${escapeHtml(summary.ip)}</span>
+            <span class="session-pill">Started ${escapeHtml(summary.created)}</span>
+            <span class="session-pill">Seen ${escapeHtml(summary.lastSeen)}</span>
+          </div>
+        </div>
+        <div class="notification-actions">
+          <button class="iconbtn" data-revoke-session="${session.id}" title="Revoke session">✕</button>
+        </div>
+      </article>
+    `;
+  }).join("");
 
   root.querySelectorAll("[data-revoke-session]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       await apiFetch(`/api/auth/sessions/${btn.dataset.revokeSession}`, { method: "DELETE" });
       await loadSessions();
     });
+  });
+}
+
+function describeSession(session) {
+  const ua = String(session.user_agent || "");
+  const ip = session.ip_address || "Unknown IP";
+  const deviceType = String(session.device_type || "unknown");
+  const isMobile = /iphone|android|mobile|ipad/i.test(ua) || deviceType === "mobile";
+  const isMac = /mac os|macintosh/i.test(ua);
+  const isWindows = /windows/i.test(ua);
+  const isLinux = /linux/i.test(ua) && !/android/i.test(ua);
+  const isChrome = /chrome|crios/i.test(ua) && !/edg/i.test(ua);
+  const isSafari = /safari/i.test(ua) && !/chrome|crios|android/i.test(ua);
+  const isFirefox = /firefox/i.test(ua);
+  const isEdge = /edg/i.test(ua);
+
+  const os = isMobile
+    ? (/iphone|ipad/i.test(ua) ? "iPhone / iPad" : "Android")
+    : isMac
+      ? "macOS"
+      : isWindows
+        ? "Windows"
+        : isLinux
+          ? "Linux"
+          : "Unknown OS";
+
+  const browser = isEdge
+    ? "Edge"
+    : isChrome
+      ? "Chrome"
+      : isSafari
+        ? "Safari"
+        : isFirefox
+          ? "Firefox"
+          : "Browser";
+
+  return {
+    icon: isMobile ? "📱" : isMac ? "💻" : isWindows ? "🖥️" : isLinux ? "🧩" : "🌐",
+    title: `${os} ${browser}`.trim(),
+    subtitle: ua || "Unknown device",
+    deviceType: deviceType.charAt(0).toUpperCase() + deviceType.slice(1),
+    ip,
+    created: formatSessionTime(session.created_at),
+    lastSeen: formatSessionTime(session.last_activity),
+  };
+}
+
+function formatSessionTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "recently";
+  return date.toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
   });
 }
 

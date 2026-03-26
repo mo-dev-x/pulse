@@ -310,6 +310,7 @@
 
 .mini-value{
   font-weight: 800;
+  word-break: break-word;
 }
 
 .quick-actions{
@@ -440,6 +441,66 @@
 .profile-cover.has-image{
   background-size: cover !important;
   background-position: center !important;
+}
+
+.profile-edit-modal{
+  backdrop-filter: blur(16px);
+}
+
+.profile-edit-modal .modal-card{
+  background: linear-gradient(180deg, rgba(12,16,28,0.98), rgba(15,18,34,0.96));
+  border-color: rgba(255,255,255,0.12);
+  box-shadow: 0 32px 80px rgba(0,0,0,0.55);
+}
+
+.banner-preview-card{
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.04);
+}
+
+.banner-preview-head{
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.banner-preview-note{
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.banner-preview-stage{
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(0,0,0,0.22);
+}
+
+.banner-preview-image{
+  height: 180px;
+  background:
+    linear-gradient(rgba(10,10,20,0.22), rgba(10,10,20,0.4)),
+    radial-gradient(circle at 15% 25%, rgba(255, 77, 125, 0.20), transparent 35%),
+    radial-gradient(circle at 75% 30%, rgba(124, 58, 237, 0.30), transparent 45%),
+    radial-gradient(circle at 60% 80%, rgba(59, 130, 246, 0.14), transparent 40%),
+    linear-gradient(135deg, rgba(35,26,65,0.95), rgba(22,18,40,0.95));
+  background-size: cover;
+  background-position: 50% 50%;
+}
+
+.banner-position-grid{
+  display: grid;
+  gap: 8px;
+}
+
+.banner-position-field{
+  margin: 0;
 }
 
 .quick-actions .btn{

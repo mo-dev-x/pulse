@@ -71,9 +71,14 @@ const els = {
   editProfileForm: document.getElementById("editProfileForm"),
   editDisplayName: document.getElementById("editDisplayName"),
   editBio: document.getElementById("editBio"),
+  editLocation: document.getElementById("editLocation"),
+  editWebsite: document.getElementById("editWebsite"),
   editAvatarFile: document.getElementById("editAvatarFile"),
   editHeaderFile: document.getElementById("editHeaderFile"),
   editAvatarPreview: document.getElementById("editAvatarPreview"),
+  editHeaderPreview: document.getElementById("editHeaderPreview"),
+  editHeaderFocusX: document.getElementById("editHeaderFocusX"),
+  editHeaderFocusY: document.getElementById("editHeaderFocusY"),
   editProfileError: document.getElementById("editProfileError"),
   btnCloseEditModal: document.getElementById("btnCloseEditModal"),
   btnCancelEdit: document.getElementById("btnCancelEdit"),
@@ -87,6 +92,7 @@ let anonymousPosts = [];
 let visiblePosts = [];
 let viewingOwnProfile = true;
 let currentPinnedPostId = null;
+let pendingHeaderObjectUrl = null;
 
 document.addEventListener("DOMContentLoaded", async () => {
   requireAuth();
@@ -253,6 +259,9 @@ function setupActions() {
   els.btnEditSide?.addEventListener("click", openEditModal);
 
   els.editAvatarFile?.addEventListener("change", onEditAvatarPreview);
+  els.editHeaderFile?.addEventListener("change", onEditHeaderPreview);
+  els.editHeaderFocusX?.addEventListener("input", syncHeaderPreviewPosition);
+  els.editHeaderFocusY?.addEventListener("input", syncHeaderPreviewPosition);
 }
 
 function setupModals() {
@@ -420,10 +429,20 @@ function openEditModal() {
     els.editBio.value = currentUser?.bio || "";
   }
 
+  if (els.editLocation) {
+    els.editLocation.value = currentUser?.location || "";
+  }
+
+  if (els.editWebsite) {
+    els.editWebsite.value = currentUser?.website || "";
+  }
+
   if (els.editAvatarPreview) {
     const avatarUrl = getUserAvatarUrl(currentUser, getAssetUrl);
     els.editAvatarPreview.src = avatarUrl;
   }
+
+  resetHeaderPreview();
 
   hideEditProfileError();
   els.editProfileModal.classList.add("open");
@@ -443,6 +462,13 @@ function closeEditModal() {
     const avatarUrl = getUserAvatarUrl(currentUser, getAssetUrl);
     els.editAvatarPreview.src = avatarUrl;
   }
+
+  if (pendingHeaderObjectUrl) {
+    URL.revokeObjectURL(pendingHeaderObjectUrl);
+    pendingHeaderObjectUrl = null;
+  }
+
+  resetHeaderPreview();
 }
 
 function onEditAvatarPreview() {
@@ -453,6 +479,67 @@ function onEditAvatarPreview() {
   els.editAvatarPreview.src = objectUrl;
 }
 
+function onEditHeaderPreview() {
+  const file = els.editHeaderFile?.files?.[0];
+  if (!file || !els.editHeaderPreview) return;
+
+  if (pendingHeaderObjectUrl) {
+    URL.revokeObjectURL(pendingHeaderObjectUrl);
+  }
+
+  pendingHeaderObjectUrl = URL.createObjectURL(file);
+  els.editHeaderPreview.style.backgroundImage = `
+    linear-gradient(rgba(10,10,20,0.22), rgba(10,10,20,0.4)),
+    url("${pendingHeaderObjectUrl}")
+  `;
+  syncHeaderPreviewPosition();
+}
+
+function getHeaderFocusKey(username) {
+  return `pulse_header_focus_${username || "me"}`;
+}
+
+function getSavedHeaderFocus(username) {
+  try {
+    const raw = localStorage.getItem(getHeaderFocusKey(username));
+    if (!raw) return { x: 50, y: 50 };
+    const parsed = JSON.parse(raw);
+    return {
+      x: Number.isFinite(parsed?.x) ? parsed.x : 50,
+      y: Number.isFinite(parsed?.y) ? parsed.y : 50,
+    };
+  } catch {
+    return { x: 50, y: 50 };
+  }
+}
+
+function saveHeaderFocus(username, x, y) {
+  localStorage.setItem(getHeaderFocusKey(username), JSON.stringify({ x, y }));
+}
+
+function resetHeaderPreview() {
+  if (!els.editHeaderPreview) return;
+
+  const username = currentUser?.username || "me";
+  const focus = getSavedHeaderFocus(username);
+  if (els.editHeaderFocusX) els.editHeaderFocusX.value = String(focus.x);
+  if (els.editHeaderFocusY) els.editHeaderFocusY.value = String(focus.y);
+
+  const headerImage = currentUser?.header_image ? getAssetUrl(currentUser.header_image) : "";
+  els.editHeaderPreview.style.backgroundImage = headerImage
+    ? `linear-gradient(rgba(10,10,20,0.22), rgba(10,10,20,0.4)), url("${headerImage}")`
+    : "";
+  syncHeaderPreviewPosition();
+}
+
+function syncHeaderPreviewPosition() {
+  const x = Number(els.editHeaderFocusX?.value || 50);
+  const y = Number(els.editHeaderFocusY?.value || 50);
+  if (els.editHeaderPreview) {
+    els.editHeaderPreview.style.backgroundPosition = `${x}% ${y}%`;
+  }
+}
+
 async function onEditProfileSubmit(e) {
   e.preventDefault();
 
@@ -460,6 +547,8 @@ async function onEditProfileSubmit(e) {
 
   const name = (els.editDisplayName?.value || "").trim();
   const bio = (els.editBio?.value || "").trim();
+  const location = (els.editLocation?.value || "").trim();
+  const website = (els.editWebsite?.value || "").trim();
   const avatarFile = els.editAvatarFile?.files?.[0] || null;
   const headerFile = els.editHeaderFile?.files?.[0] || null;
   const submitBtn = els.editProfileForm?.querySelector('button[type="submit"]');
@@ -476,6 +565,16 @@ async function onEditProfileSubmit(e) {
 
   if (bio.length > 500) {
     showEditProfileError("Bio must be 500 characters or less.");
+    return;
+  }
+
+  if (location.length > 100) {
+    showEditProfileError("Location must be 100 characters or less.");
+    return;
+  }
+
+  if (website.length > 255) {
+    showEditProfileError("Website must be 255 characters or less.");
     return;
   }
 
@@ -512,8 +611,16 @@ async function onEditProfileSubmit(e) {
       body: JSON.stringify({
         display_name: name,
         bio,
+        location,
+        website,
       }),
     });
+
+    saveHeaderFocus(
+      currentUser?.username,
+      Number(els.editHeaderFocusX?.value || 50),
+      Number(els.editHeaderFocusY?.value || 50),
+    );
 
     showToast("Profile updated", "success");
     closeEditModal();
@@ -570,7 +677,8 @@ function renderViewedProfile() {
   if (els.profileBio) els.profileBio.textContent = bio;
 
   if (els.profileCover) {
-    const headerImage = viewingOwnProfile ? currentUser?.header_image : null;
+    const headerImage = viewingOwnProfile ? currentUser?.header_image : profileUser?.header_image;
+    const focus = getSavedHeaderFocus(profileUser?.username);
 
     if (headerImage) {
       els.profileCover.classList.add("has-image");
@@ -578,9 +686,11 @@ function renderViewedProfile() {
         linear-gradient(rgba(10,10,20,0.28), rgba(10,10,20,0.38)),
         url("${getAssetUrl(headerImage)}")
       `;
+      els.profileCover.style.backgroundPosition = `${focus.x}% ${focus.y}%`;
     } else {
       els.profileCover.classList.remove("has-image");
       els.profileCover.style.backgroundImage = "";
+      els.profileCover.style.backgroundPosition = "";
     }
   }
 
@@ -774,6 +884,8 @@ function normalizePost(p) {
     timeRaw: p.created_at || "",
     timeLabel: formatRelativeTime(p.created_at),
     sentiment: p.sentiment || "neutral",
+    emotionLabel: p.emotion_label || "",
+    emotionDisplay: p.emotion_display || "",
     imagePath: firstImage?.file_path || "",
     reactions: {
       love: p.reactions?.["❤️"] ?? 0,
@@ -786,7 +898,7 @@ function normalizePost(p) {
     const card = document.createElement("article");
     card.className = "panel post";
 
-    const badge = sentimentBadge(post.sentiment);
+    const badge = sentimentBadge(post.sentiment, post.emotionDisplay, post.emotionLabel);
     const canPin = viewingOwnProfile && !post.isAnonymous;
     const isPinned = canPin && currentPinnedPostId === post.id;
 
@@ -895,11 +1007,12 @@ async function onPinToggle(post) {
   }
 }
 
-  function sentimentBadge(sentiment) {
-    const s = String(sentiment || "neutral").toLowerCase();
-    if (s.includes("pos")) return { cls: "green", label: "🟢 Positive" };
-    if (s.includes("neg")) return { cls: "red", label: "🔴 Negative" };
-    return { cls: "yellow", label: "🟡 Neutral" };
+  function sentimentBadge(sentiment, emotionDisplay = "", emotionLabel = "") {
+    const raw = String(emotionDisplay || emotionLabel || sentiment || "neutral").trim();
+    const value = raw.toLowerCase();
+    if (/(joy|love|excited|hope|positive|calm|grateful|happy)/i.test(value)) return { cls: "green", label: `🟢 ${raw}` };
+    if (/(anger|sad|fear|stress|anx|negative|frustr|overwhelm|disgust)/i.test(value)) return { cls: "red", label: `🔴 ${raw}` };
+    return { cls: "yellow", label: `🟡 ${raw}` };
   }
 
 function humanizeVisibility(value) {

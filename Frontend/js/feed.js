@@ -312,6 +312,8 @@ function normalizePost(post) {
     timeRaw: post.created_at || "",
     timeLabel: formatRelativeTime(post.created_at),
     sentiment: post.sentiment || "neutral",
+    emotionLabel: post.emotion_label || "",
+    emotionDisplay: post.emotion_display || "",
     imagePath: firstImage?.file_path || "",
     videoPath: firstVideo?.file_path || "",
     reactionCounts: { ...(post.reactions || {}) },
@@ -321,18 +323,19 @@ function normalizePost(post) {
   };
 }
 
-function sentimentBadge(sentiment) {
-  const value = String(sentiment || "neutral").toLowerCase();
-  if (value.includes("pos")) return { cls: "green", label: "🟢 Positive" };
-  if (value.includes("neg")) return { cls: "red", label: "🔴 Negative" };
-  return { cls: "yellow", label: "🟡 Neutral" };
+function sentimentBadge(sentiment, emotionDisplay = "", emotionLabel = "") {
+  const raw = String(emotionDisplay || emotionLabel || sentiment || "neutral").trim();
+  const value = raw.toLowerCase();
+  if (/(joy|love|excited|hope|positive|calm|grateful|happy)/i.test(value)) return { cls: "green", label: `🟢 ${raw}` };
+  if (/(anger|sad|fear|stress|anx|negative|frustr|overwhelm|disgust)/i.test(value)) return { cls: "red", label: `🔴 ${raw}` };
+  return { cls: "yellow", label: `🟡 ${raw}` };
 }
 
 function renderPostCard(post) {
   const card = document.createElement("article");
   card.className = "panel post";
   card.dataset.id = post.id;
-  const badge = sentimentBadge(post.sentiment);
+  const badge = sentimentBadge(post.sentiment, post.emotionDisplay, post.emotionLabel);
   const commentOpen = expandedComments.has(post.id);
 
   card.innerHTML = `

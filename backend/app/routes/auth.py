@@ -460,7 +460,7 @@ def get_current_user():
 @jwt_required()
 def update_profile():
     """
-    Update user profile (display_name, bio, profile_picture)
+    Update user profile (display_name, bio, profile_picture, website, location)
     
     Request Body (all fields optional):
         {
@@ -502,7 +502,26 @@ def update_profile():
                     'error': get_localized_message(request, 'validation_error'),
                     'message': get_localized_message(request, 'bio_too_long')
                 }), 400
-        
+
+        if 'location' in data:
+            location = (data['location'] or '').strip()
+            if len(location) <= 100:
+                user.location = location or None
+            else:
+                return jsonify({
+                    'error': get_localized_message(request, 'validation_error'),
+                    'message': 'Location must be 100 characters or less'
+                }), 400
+
+        if 'website' in data:
+            website = (data['website'] or '').strip()
+            if len(website) > 255:
+                return jsonify({
+                    'error': get_localized_message(request, 'validation_error'),
+                    'message': 'Website must be 255 characters or less'
+                }), 400
+            user.website = website or None
+
         if 'profile_picture' in data:
             # In production, validate this is a safe URL or uploaded file
             user.profile_picture = data['profile_picture']
