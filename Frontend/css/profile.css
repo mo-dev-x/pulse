@@ -445,9 +445,15 @@
 
 .profile-edit-modal{
   backdrop-filter: blur(16px);
+  align-items: flex-start;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-top: 32px;
+  padding-bottom: 32px;
 }
 
 .profile-edit-modal .modal-card{
+  margin: auto;
   background: linear-gradient(180deg, rgba(12,16,28,0.98), rgba(15,18,34,0.96));
   border-color: rgba(255,255,255,0.12);
   box-shadow: 0 32px 80px rgba(0,0,0,0.55);

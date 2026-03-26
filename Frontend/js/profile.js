@@ -76,6 +76,7 @@ const els = {
   editAvatarFile: document.getElementById("editAvatarFile"),
   editHeaderFile: document.getElementById("editHeaderFile"),
   editAvatarPreview: document.getElementById("editAvatarPreview"),
+  bannerPreviewCard: document.getElementById("bannerPreviewCard"),
   editHeaderPreview: document.getElementById("editHeaderPreview"),
   editHeaderFocusX: document.getElementById("editHeaderFocusX"),
   editHeaderFocusY: document.getElementById("editHeaderFocusY"),
@@ -445,6 +446,7 @@ function openEditModal() {
   resetHeaderPreview();
 
   hideEditProfileError();
+  document.body.style.overflow = "hidden";
   els.editProfileModal.classList.add("open");
   els.editProfileModal.setAttribute("aria-hidden", "false");
 }
@@ -454,6 +456,7 @@ function closeEditModal() {
 
   els.editProfileModal.classList.remove("open");
   els.editProfileModal.setAttribute("aria-hidden", "true");
+  document.body.style.overflow = "";
   hideEditProfileError();
 
   if (els.editProfileForm) els.editProfileForm.reset();
@@ -488,6 +491,7 @@ function onEditHeaderPreview() {
   }
 
   pendingHeaderObjectUrl = URL.createObjectURL(file);
+  setHidden(els.bannerPreviewCard, false);
   els.editHeaderPreview.style.backgroundImage = `
     linear-gradient(rgba(10,10,20,0.22), rgba(10,10,20,0.4)),
     url("${pendingHeaderObjectUrl}")
@@ -526,6 +530,7 @@ function resetHeaderPreview() {
   if (els.editHeaderFocusY) els.editHeaderFocusY.value = String(focus.y);
 
   const headerImage = currentUser?.header_image ? getAssetUrl(currentUser.header_image) : "";
+  setHidden(els.bannerPreviewCard, !headerImage && !pendingHeaderObjectUrl);
   els.editHeaderPreview.style.backgroundImage = headerImage
     ? `linear-gradient(rgba(10,10,20,0.22), rgba(10,10,20,0.4)), url("${headerImage}")`
     : "";

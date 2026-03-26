@@ -776,11 +776,14 @@ body::before{
 .modal-card{
   width: min(680px, 96vw);
   max-width: 100%;
+  max-height: min(88vh, 920px);
   border-radius: 18px;
   background: var(--panel2);
   border: 1px solid rgba(255,255,255,0.12);
   box-shadow: 0 30px 80px rgba(0,0,0,0.55);
-  overflow: visible;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .modal-head{
@@ -797,6 +800,8 @@ body::before{
   display:flex;
   flex-direction: column;
   gap: 10px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .label{ font-size: 13px; color: rgba(255,255,255,0.82); }
