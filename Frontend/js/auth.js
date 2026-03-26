@@ -51,7 +51,9 @@ export function getAssetUrl(path, fallback = "") {
   if (!path) return fallback;
   if (/^https?:\/\//i.test(path)) return path;
 
-  const clean = String(path).replace(/^\/+/, "");
+  const normalized = String(path).replace(/\\/g, "/");
+  const uploadsIndex = normalized.lastIndexOf("/uploads/");
+  const clean = (uploadsIndex >= 0 ? normalized.slice(uploadsIndex + 1) : normalized).replace(/^\/+/, "");
   if (!clean) return fallback;
 
   if (clean.startsWith("uploads/")) {

@@ -250,7 +250,7 @@ class FrenchTwitterNLPService:
             'fear': ('stressed', 'stress', 'anxious', 'anxiety', 'panic', 'panicked', 'worried', 'nervous', 'scared', 'afraid', 'terrified', 'fear'),
             'anger': ('angry', 'mad', 'furious', 'rage', 'frustrated', 'annoyed', 'irritated'),
             'disgust': ('overwhelmed', 'burned out', 'burnt out', 'disgusted', 'gross', 'drained', 'exhausted'),
-            'sadness': ('sad', 'down', 'depressed', 'hopeless', 'lonely', 'crying', 'miserable'),
+            'sadness': ('sad', 'down', 'depressed', 'hopeless', 'lonely', 'crying', 'miserable', 'heartbroken', 'broken heart', 'broke my heart', 'breaks my heart', 'hurt so much', 'hurts so much', 'grief', 'grieving'),
             'surprise': ('surprised', 'shocked', 'unexpected', 'unbelievable', 'wow'),
             'joy': ('happy', 'love', 'loving', 'amazing', 'great', 'awesome', 'excited', 'glad', 'relieved', 'proud'),
         }

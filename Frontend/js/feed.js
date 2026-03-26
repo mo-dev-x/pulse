@@ -36,6 +36,7 @@ let isFeedLoading = false;
 let zoneAutocomplete = null;
 let feedObserver = null;
 let bookmarkedPostIds = new Set();
+let pendingCreateImagePreviewUrl = null;
 const expandedComments = new Set();
 const commentsCache = new Map();
 
@@ -143,6 +144,8 @@ function setupModal() {
 
   btnClose?.addEventListener("click", closeModal);
   btnCancel?.addEventListener("click", closeModal);
+  document.getElementById("imageFile")?.addEventListener("change", onCreateImageSelected);
+  document.getElementById("clearImagePreview")?.addEventListener("click", clearCreateImagePreview);
   modal.addEventListener("click", (event) => {
     if (event.target === modal) closeModal();
   });
@@ -162,8 +165,44 @@ function setupModal() {
     zoneAutocomplete?.clearSelection();
     const hiddenZoneId = document.getElementById("zoneId");
     if (hiddenZoneId) hiddenZoneId.value = "";
+    clearCreateImagePreview();
     updateCharCount();
   }
+}
+
+function onCreateImageSelected(event) {
+  const file = event.target?.files?.[0];
+  const previewWrap = document.getElementById("imagePreviewWrap");
+  const preview = document.getElementById("imagePreview");
+  if (!previewWrap || !preview) return;
+
+  if (!file) {
+    clearCreateImagePreview();
+    return;
+  }
+
+  if (pendingCreateImagePreviewUrl) {
+    URL.revokeObjectURL(pendingCreateImagePreviewUrl);
+  }
+
+  pendingCreateImagePreviewUrl = URL.createObjectURL(file);
+  preview.src = pendingCreateImagePreviewUrl;
+  previewWrap.hidden = false;
+}
+
+function clearCreateImagePreview() {
+  const input = document.getElementById("imageFile");
+  const previewWrap = document.getElementById("imagePreviewWrap");
+  const preview = document.getElementById("imagePreview");
+
+  if (pendingCreateImagePreviewUrl) {
+    URL.revokeObjectURL(pendingCreateImagePreviewUrl);
+    pendingCreateImagePreviewUrl = null;
+  }
+
+  if (input) input.value = "";
+  if (preview) preview.removeAttribute("src");
+  if (previewWrap) previewWrap.hidden = true;
 }
 
 function setupZonePicker() {

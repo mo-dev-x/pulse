@@ -53,6 +53,12 @@ class FrenchTwitterNLPServiceTests(unittest.TestCase):
         self.assertEqual(neutral['emotion_label'], 'neutral')
         self.assertEqual(neutral['emotion_display'], 'Neutral')
 
+    def test_heartbreak_phrase_maps_to_sadness_not_joy(self):
+        result = self.service.analyze_english("It broke my heart when everything fell apart.")
+
+        self.assertEqual(result['emotion_label'], 'sadness')
+        self.assertEqual(result['label'], 'negative')
+
 
 if __name__ == '__main__':
     unittest.main()
