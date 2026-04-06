@@ -1,7 +1,7 @@
 """Email service for verification and password reset flows."""
 
 import secrets
-import smtplib
+import requests
 from datetime import datetime, timedelta, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -13,29 +13,30 @@ from app.services.job_queue_service import enqueue_task
 
 
 def _send_html_email(recipient, subject, html_body):
-    """Send an HTML email using configured SMTP credentials."""
-    smtp_host = current_app.config.get('SMTP_HOST')
-    smtp_port = current_app.config.get('SMTP_PORT')
-    smtp_user = current_app.config.get('SMTP_USER')
-    smtp_password = current_app.config.get('SMTP_PASSWORD')
-    smtp_from = current_app.config.get('SMTP_FROM')
+    api_key = current_app.config.get("RESEND_API_KEY")
 
-    if not smtp_host or not smtp_port or not smtp_from:
-        return False, 'SMTP is not configured'
-
-    msg = MIMEMultipart('alternative')
-    msg['Subject'] = subject
-    msg['From'] = smtp_from
-    msg['To'] = recipient
-    msg.attach(MIMEText(html_body, 'html'))
+    if not api_key:
+        return False, "Resend API key not configured"
 
     try:
-        with smtplib.SMTP(smtp_host, smtp_port, timeout=10) as server:
-            if current_app.config.get('SMTP_USE_TLS', True):
-                server.starttls()
-            if smtp_user and smtp_password:
-                server.login(smtp_user, smtp_password)
-            server.send_message(msg)
+        response = requests.post(
+            "https://api.resend.com/emails",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "from": "onboarding@resend.dev",
+                "to": [recipient],
+                "subject": subject,
+                "html": html_body,
+            },
+            timeout=10,
+        )
+
+        if response.status_code >= 400:
+            return False, response.text
+
     except Exception as exc:
         return False, str(exc)
 
