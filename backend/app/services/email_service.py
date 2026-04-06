@@ -69,7 +69,7 @@ def create_password_reset_token(user):
 
 
 def _build_verification_email(user, token):
-    frontend_url = current_app.config.get('FRONTEND_URL', 'http://localhost:3000')
+    frontend_url = current_app.config.get('FRONTEND_URL', 'http://localhost:3000').rstrip('/')
     verify_link = f'{frontend_url}/verify-email?token={token}'
     greeting_name = user.display_name or user.username or 'there'
     lang = _resolve_user_language(user)
@@ -107,7 +107,7 @@ def _build_verification_email(user, token):
 
 
 def _build_password_reset_email(user, token):
-    frontend_url = current_app.config.get('FRONTEND_URL', 'http://localhost:3000')
+    frontend_url = current_app.config.get('FRONTEND_URL', 'http://localhost:3000').rstrip('/')
     reset_link = f'{frontend_url}/reset-password?token={token}'
     lang = _resolve_user_language(user)
 
