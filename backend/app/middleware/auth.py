@@ -32,7 +32,8 @@ def require_verification(func):
         if not user.is_verified:
             return jsonify({
                 'error': get_localized_message(request, 'validation_error'),
-                'message': get_localized_message(request, 'verification_required')
+                'message': get_localized_message(request, 'verification_required'),
+                'needs_verification': True
             }), 403
 
         return func(*args, **kwargs)

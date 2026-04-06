@@ -6,7 +6,7 @@ import {
   saveCurrentUser,
 } from "./auth.js";
 import { getDefaultAvatarUrl, getPostAvatarUrl, getProfileHref, getUserAvatarUrl } from "./avatar.js";
-import { initLanguageControls } from "./i18n.js";
+import { initLanguageControls, t } from "./i18n.js";
 import { initMentionAutocomplete } from "./search.js";
 import { initOfflineBanner, initThemeToggle, initUnreadBadges } from "./theme.js";
 
@@ -48,6 +48,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   initUnreadBadges();
   setupUserMenu();
   setupModal();
+  setupCreateResendLink();
   setupCharCounter();
   setupZonePicker();
   setupFeedModeSwitch();
@@ -828,6 +829,33 @@ async function onDeletePost(postId) {
   }
 }
 
+function setupCreateResendLink() {
+  const link = document.getElementById("create-resend-link");
+  if (!link) return;
+
+  link.textContent = t("auth.login.resend_verification");
+  link.addEventListener("click", async (event) => {
+    event.preventDefault();
+    const email = currentUser?.email;
+    if (!email) return;
+
+    link.textContent = t("common.loading");
+    try {
+      await apiFetch("/api/auth/resend-verification", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+        skipAuthRedirect: true,
+      });
+      showToast(t("auth.login.resend_success"), "success");
+      document.getElementById("create-resend-verification").style.display = "none";
+    } catch {
+      showCreateError(t("auth.login.resend_error"));
+    } finally {
+      link.textContent = t("auth.login.resend_verification");
+    }
+  });
+}
+
 async function onCreatePostSubmit(event) {
   event.preventDefault();
   hideCreateError();
@@ -871,7 +899,8 @@ async function onCreatePostSubmit(event) {
 
     await resetAndLoadCurrentFeed();
   } catch (error) {
-    showCreateError(error.message || "Create post failed");
+    const needsVerification = error.payload?.needs_verification === true;
+    showCreateError(error.message || "Create post failed", needsVerification);
   } finally {
     if (submitBtn) {
       submitBtn.disabled = false;
@@ -906,11 +935,13 @@ function hideState() {
   box.style.display = "none";
 }
 
-function showCreateError(message) {
+function showCreateError(message, showResend = false) {
   const el = document.getElementById("createError");
   if (!el) return;
   el.textContent = message;
   el.style.display = "block";
+  const resendEl = document.getElementById("create-resend-verification");
+  if (resendEl) resendEl.style.display = showResend ? "block" : "none";
 }
 
 function hideCreateError() {
@@ -918,6 +949,8 @@ function hideCreateError() {
   if (!el) return;
   el.textContent = "";
   el.style.display = "none";
+  const resendEl = document.getElementById("create-resend-verification");
+  if (resendEl) resendEl.style.display = "none";
 }
 
 function showToast(message, type = "info") {
