@@ -4,13 +4,19 @@ Posts Routes
 Handles post creation, retrieval, feed generation, and management.
 
 Endpoints:
-- POST   /api/posts                — Create new post (public or anonymous)
-- GET    /api/posts/feed           — Feed (public posts from followed users)
-- GET    /api/posts/me             — Current user's public posts
-- GET    /api/posts/me/anonymous   — Current user's anonymous posts (private)
-- GET    /api/posts/@{username}    — User's public posts
-- GET    /api/posts/zone/{zone_id} — All posts in a zone
-- DELETE /api/posts/{post_id}      — Delete own post
+- POST   /api/posts                       — Create new post (public or anonymous)
+- GET    /api/posts/feed                  — Home feed (posts from followed users)
+- GET    /api/posts/discover              — Discover feed (public posts from all users)
+- GET    /api/posts/trending              — Trending posts
+- GET    /api/posts/me                    — Current user's public posts
+- GET    /api/posts/me/anonymous          — Current user's anonymous posts (private)
+- GET    /api/posts/@<username>           — A specific user's public posts
+- GET    /api/posts/zone/<zone_id>        — All posts in a campus zone
+- DELETE /api/posts/<post_id>             — Delete own post
+- POST   /api/posts/<post_id>/bookmark    — Bookmark a post
+- DELETE /api/posts/<post_id>/bookmark    — Remove bookmark
+- PATCH  /api/posts/<post_id>/pin         — Pin a post to own profile
+- DELETE /api/posts/pin                   — Unpin the currently pinned post
 """
 
 import os
@@ -22,12 +28,12 @@ from werkzeug.utils import secure_filename
 
 from app import cache, db, limiter, rate_limit_key_user, rate_limit_value
 from app.middleware import require_verification
-from app.models import Post, CampusZone, User
+from app.models import Post, CampusZone, User, Comment
 from app.models.follower import Follower
 from app.models.media import Media
 from app.models.reaction import Reaction
 from app.models.bookmark import Bookmark
-from app.services import analyze_sentiment, delete_document, upsert_documents
+from app.services import delete_document, upsert_documents
 from app.services.job_queue_service import enqueue_task
 from app.services.notification_service import create_mention_notifications
 from app.utils.i18n import get_localized_message
@@ -44,19 +50,66 @@ TRENDING_WINDOWS = {
 
 
 def _enrich_post_dict(post_dict, post, current_user_id):
-    """Add reaction counts and media to a serialized post dict"""
-    # Add reaction counts
+    """Add reaction counts and media to a serialized post dict (single-post path)."""
     post_dict['reactions'] = Reaction.get_counts(post.id)
     post_dict['my_reaction'] = Reaction.get_user_reaction(current_user_id, post.id)
     post_dict['reaction_count'] = Reaction.get_total_count(post.id)
-
-    # Add media
-    if post.media:
-        post_dict['media'] = [m.to_dict() for m in post.media]
-    else:
-        post_dict['media'] = []
-
+    post_dict['media'] = [m.to_dict() for m in post.media] if post.media else []
     return post_dict
+
+
+def _bulk_enrich_posts(posts, current_user_id):
+    """
+    Enrich a list of posts with reaction/comment/media data using bulk queries.
+
+    Replaces per-post calls to _enrich_post_dict: instead of 4 queries per post
+    this runs 4 queries total regardless of how many posts are in the list.
+    """
+    if not posts:
+        return []
+
+    post_ids = [p.id for p in posts]
+
+    # One query for all reaction counts across all posts
+    reaction_rows = db.session.query(
+        Reaction.post_id,
+        Reaction.emoji,
+        db.func.count('*').label('cnt')
+    ).filter(Reaction.post_id.in_(post_ids)).group_by(
+        Reaction.post_id, Reaction.emoji
+    ).all()
+
+    reaction_counts = {}  # {post_id: {emoji: count}}
+    total_reactions = {}  # {post_id: int}
+    for row in reaction_rows:
+        reaction_counts.setdefault(row.post_id, {})[row.emoji] = row.cnt
+        total_reactions[row.post_id] = total_reactions.get(row.post_id, 0) + row.cnt
+
+    # One query for the current user's reactions across all posts
+    user_reaction_rows = Reaction.query.filter(
+        Reaction.post_id.in_(post_ids),
+        Reaction.user_id == current_user_id
+    ).all()
+    user_reactions = {r.post_id: r.emoji for r in user_reaction_rows}
+
+    # One query for comment counts across all posts
+    comment_rows = db.session.query(
+        Comment.post_id,
+        db.func.count('*').label('cnt')
+    ).filter(Comment.post_id.in_(post_ids)).group_by(Comment.post_id).all()
+    comment_counts = {row.post_id: row.cnt for row in comment_rows}
+
+    result = []
+    for post in posts:
+        post_dict = post.to_dict(current_user_id=current_user_id)
+        post_dict['reactions'] = reaction_counts.get(post.id, {})
+        post_dict['my_reaction'] = user_reactions.get(post.id)
+        post_dict['reaction_count'] = total_reactions.get(post.id, 0)
+        post_dict['comment_count'] = comment_counts.get(post.id, 0)
+        post_dict['media'] = [m.to_dict() for m in post.media] if post.media else []
+        result.append(post_dict)
+
+    return result
 
 
 def _allowed_file(filename):
@@ -82,14 +135,6 @@ def _public_posts_query():
     )
 
 
-def _post_engagement_metrics(post, now=None):
-    now = now or datetime.now(timezone.utc).replace(tzinfo=None)
-    reaction_count = Reaction.get_total_count(post.id)
-    comment_count = post.comments.count()
-    hours_since = max((now - post.created_at).total_seconds() / 3600, 1 / 60)
-    score = reaction_count * 2 + comment_count + (10 / hours_since)
-    return reaction_count, comment_count, round(score, 4)
-
 
 def _sentiment_bucket(avg_score):
     if avg_score is None:
@@ -102,15 +147,15 @@ def _sentiment_bucket(avg_score):
 
 
 def _serialize_ranked_posts(posts, current_user_id):
-    ranked = []
+    enriched = _bulk_enrich_posts(posts, current_user_id)
     now = datetime.now(timezone.utc).replace(tzinfo=None)
-    for post in posts:
-        post_dict = post.to_dict(current_user_id=current_user_id)
-        post_dict = _enrich_post_dict(post_dict, post, current_user_id)
-        reaction_count, comment_count, score = _post_engagement_metrics(post, now=now)
-        post_dict['reaction_count'] = reaction_count
-        post_dict['comment_count'] = comment_count
-        post_dict['engagement_score'] = score
+    ranked = []
+    for post_dict, post in zip(enriched, posts):
+        reaction_count = post_dict.get('reaction_count', 0)
+        comment_count = post_dict.get('comment_count', 0)
+        hours_since = max((now - post.created_at).total_seconds() / 3600, 1 / 60)
+        score = reaction_count * 2 + comment_count + (10 / hours_since)
+        post_dict['engagement_score'] = round(score, 4)
         ranked.append((score, post.created_at, post_dict))
 
     ranked.sort(key=lambda item: (item[0], item[1]), reverse=True)
@@ -244,20 +289,12 @@ def create_post():
             }), 404
 
     try:
-        # Analyze sentiment (bilingual: FR + EN)
-        sentiment_result = analyze_sentiment(content)
-
-        # Create post
+        # Create post — sentiment fields are populated asynchronously after commit
         new_post = Post(
             content=content,
             user_id=user_id,
             zone_id=zone_id,
             is_anonymous=is_anonymous,
-            sentiment_score=sentiment_result['score'],
-            sentiment_label=sentiment_result['label'],
-            emotion_label=sentiment_result.get('emotion_label'),
-            emotion_display=sentiment_result.get('emotion_display'),
-            detected_language=sentiment_result['language']
         )
 
         db.session.add(new_post)
@@ -304,6 +341,11 @@ def create_post():
             'app.tasks.aggregation_tasks.refresh_post_aggregates',
             new_post.id,
             queue_name='analytics',
+        )
+        enqueue_task(
+            'app.tasks.nlp_tasks.analyze_post_sentiment',
+            new_post.id,
+            queue_name='default',
         )
         try:
             upsert_documents('posts', [_post_search_document(new_post)])
@@ -414,12 +456,7 @@ def get_feed():
     ).order_by(Post.created_at.desc())
 
     paginated = feed_query.paginate(page=page, per_page=per_page, error_out=False)
-
-    posts = []
-    for post in paginated.items:
-        post_dict = post.to_dict(current_user_id=current_user_id)
-        post_dict = _enrich_post_dict(post_dict, post, current_user_id)
-        posts.append(post_dict)
+    posts = _bulk_enrich_posts(paginated.items, current_user_id)
 
     return jsonify({
         'posts': posts,
@@ -512,12 +549,7 @@ def get_my_posts():
     ).order_by(Post.created_at.desc())
 
     paginated = query.paginate(page=page, per_page=per_page, error_out=False)
-
-    posts = []
-    for post in paginated.items:
-        post_dict = post.to_dict(current_user_id=current_user_id)
-        post_dict = _enrich_post_dict(post_dict, post, current_user_id)
-        posts.append(post_dict)
+    posts = _bulk_enrich_posts(paginated.items, current_user_id)
 
     return jsonify({
         'posts': posts,
@@ -549,12 +581,7 @@ def get_my_anonymous_posts():
     ).order_by(Post.created_at.desc())
 
     paginated = query.paginate(page=page, per_page=per_page, error_out=False)
-
-    posts = []
-    for post in paginated.items:
-        post_dict = post.to_dict(current_user_id=current_user_id)
-        post_dict = _enrich_post_dict(post_dict, post, current_user_id)
-        posts.append(post_dict)
+    posts = _bulk_enrich_posts(paginated.items, current_user_id)
 
     return jsonify({
         'posts': posts,
@@ -597,11 +624,7 @@ def get_user_posts(username):
 
     paginated = query.paginate(page=page, per_page=per_page, error_out=False)
 
-    posts = []
-    for post in paginated.items:
-        post_dict = post.to_dict(current_user_id=current_user_id)
-        post_dict = _enrich_post_dict(post_dict, post, current_user_id)
-        posts.append(post_dict)
+    posts = _bulk_enrich_posts(paginated.items, current_user_id)
 
     return jsonify({
         'user': username,
@@ -646,11 +669,7 @@ def get_zone_posts(zone_id):
 
     paginated = query.paginate(page=page, per_page=per_page, error_out=False)
 
-    posts = []
-    for post in paginated.items:
-        post_dict = post.to_dict(current_user_id=current_user_id)
-        post_dict = _enrich_post_dict(post_dict, post, current_user_id)
-        posts.append(post_dict)
+    posts = _bulk_enrich_posts(paginated.items, current_user_id)
 
     return jsonify({
         'zone': zone.to_dict(),

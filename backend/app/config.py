@@ -39,6 +39,10 @@ class Config:
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO = False  # Set to True to see SQL queries in console
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_pre_ping': True,   # drop and replace stale connections silently
+        'pool_recycle': 280,     # recycle before MySQL's 300 s wait_timeout
+    }
     
     # File Upload Configuration
     MAX_CONTENT_LENGTH = int(os.getenv('MAX_CONTENT_LENGTH', 5242880))  # 5MB default

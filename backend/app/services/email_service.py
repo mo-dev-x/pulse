@@ -51,10 +51,17 @@ def _resolve_user_language(user):
 
 
 def create_verification_token(user):
-    """Create and persist a one-time verification token valid for 24 hours."""
+    """Return existing valid token or create a new one valid for 24 hours.
+
+    Reusing the same token while it's still valid prevents previous email
+    links from being invalidated when the user requests a resend.
+    """
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    if user.verification_token and user.verification_expires and user.verification_expires > now:
+        return user.verification_token
     token = secrets.token_urlsafe(32)
     user.verification_token = token
-    user.verification_expires = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=24)
+    user.verification_expires = now + timedelta(hours=24)
     db.session.commit()
     return token
 

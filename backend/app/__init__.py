@@ -68,7 +68,6 @@ def create_app(config_name='development'):
     # Load configuration
     app.config.from_object(config[config_name])
 
-    #faten did this
     base_dir = os.path.abspath(os.path.join(app.root_path, '..'))
     upload_root = os.path.join(base_dir, 'uploads')
 
@@ -185,7 +184,6 @@ def create_app(config_name='development'):
     # Register blueprints
     register_blueprints(app)
 
-    #Faten did this - serve uploaded files (profile pics, post media, etc.)
     @app.route('/uploads/<path:filename>')
     def serve_uploaded_file(filename):
         return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
@@ -193,15 +191,11 @@ def create_app(config_name='development'):
     # Register error handlers
     register_error_handlers(app)
     
-    # Create database tables (in development only)
+    # Eagerly import the user model in development so SQLAlchemy is aware of it
+    # without relying solely on blueprint imports. Schema is managed via SQL scripts.
     if config_name == 'development':
         with app.app_context():
-            # Import models here to avoid circular imports
-            # NOTE: Only import models that exist!
-            from app.models import user
-            # We'll uncomment these as we create them:
-            # from app.models import post, campus_zone, media, reaction, aggregate
-            # db.create_all()  # Commented out - we'll use SQL script instead
+            from app.models import user  # noqa: F401
     
     return app
 

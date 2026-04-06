@@ -27,6 +27,24 @@ async function verifyEmailToken() {
     if (data.user) saveCurrentUser(data.user);
     showStatus(data.message || t("common.success"));
   } catch (error) {
+    // If the token is invalid/expired but the user is already verified (e.g. they
+    // clicked an old link after already verifying), show a success message instead.
+    const cached = getCurrentUser();
+    if (cached?.is_verified) {
+      showStatus(t("common.success"));
+      return;
+    }
+    // Try a fresh profile fetch to catch cases where localStorage is stale.
+    if (isLoggedIn()) {
+      try {
+        const profile = await apiFetch("/api/auth/me", { skipAuthRedirect: true });
+        if (profile?.user?.is_verified || profile?.is_verified) {
+          if (profile.user) saveCurrentUser(profile.user);
+          showStatus(t("common.success"));
+          return;
+        }
+      } catch (_) { /* ignore */ }
+    }
     showStatus(error.message || t("error.network"), true);
   }
 }

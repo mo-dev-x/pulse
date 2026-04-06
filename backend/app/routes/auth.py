@@ -1,12 +1,40 @@
 """
 Authentication Routes
 
-Handles user registration, login, and logout.
+Handles user registration, login, session management, profile updates,
+email verification, password management, 2FA, and account lifecycle.
 
 Endpoints:
-- POST /api/auth/register - Create new user account
-- POST /api/auth/login - Authenticate and get JWT token
-- POST /api/auth/logout - Invalidate token (client-side only for now)
+- POST   /api/auth/register                  — Create new user account
+- POST   /api/auth/login                     — Authenticate and get JWT token
+- POST   /api/auth/logout                    — Revoke session and invalidate token
+- GET    /api/auth/me                        — Get current user profile
+- PATCH  /api/auth/update-profile            — Update display name, username, language
+- PATCH  /api/auth/update-bio                — Update bio
+- PATCH  /api/auth/update-pseudonym          — Update anonymous pseudonym
+- POST   /api/auth/upload-profile-pic        — Upload profile picture
+- POST   /api/auth/upload-header             — Upload profile header image
+- POST   /api/auth/send-verification         — Send verification email (JWT required)
+- POST   /api/auth/resend-verification       — Resend verification email (no auth required)
+- GET    /api/auth/verify-email/<token>      — Verify email with token
+- POST   /api/auth/forgot-password           — Request password reset link
+- POST   /api/auth/reset-password            — Reset password with token
+- POST   /api/auth/change-password           — Change password (JWT required)
+- GET    /api/auth/sessions                  — List active sessions
+- DELETE /api/auth/sessions/<session_id>     — Revoke a specific session
+- DELETE /api/auth/sessions/all              — Revoke all other sessions
+- PATCH  /api/auth/privacy-settings          — Update privacy settings
+- PATCH  /api/auth/preferences               — Update notification/display preferences
+- POST   /api/auth/2fa/enable                — Initiate 2FA setup (returns TOTP secret)
+- POST   /api/auth/2fa/verify                — Confirm 2FA setup with TOTP code
+- POST   /api/auth/2fa/disable               — Disable 2FA
+- GET    /api/auth/2fa/backup-codes          — View 2FA backup codes
+- POST   /api/auth/deactivate                — Deactivate account
+- POST   /api/auth/reactivate                — Reactivate account
+- GET    /api/auth/oidc/login                — Initiate OIDC login (feature-flagged)
+- GET    /api/auth/oidc/callback             — OIDC callback (feature-flagged)
+- GET    /api/auth/cas/login                 — Legacy CAS redirect (compatibility)
+- GET    /api/auth/cas/callback              — Legacy CAS redirect (compatibility)
 """
 
 import os
@@ -14,7 +42,7 @@ import re
 import secrets
 import base64
 import io
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
 
 import jwt as pyjwt
@@ -48,8 +76,8 @@ bp = Blueprint('auth', __name__)
 
 
 def _should_log_email_warning(error_message):
-    """Keep expected SMTP-disabled test runs quiet while logging real delivery issues."""
-    if current_app.testing and error_message == 'SMTP is not configured':
+    """Keep expected Brevo-unconfigured test runs quiet while logging real delivery issues."""
+    if current_app.testing and error_message == 'Brevo API key not configured':
         return False
     return True
 
@@ -389,21 +417,15 @@ def login():
 @jwt_required()
 def logout():
     """
-    Logout user (client-side token invalidation)
-    
-    Note:
-    - JWTs are stateless, so we can't truly invalidate them server-side
-    - Client should delete the token from storage
-    - Future enhancement: Add token blacklist for immediate invalidation
-    
+    Logout user — revokes the current session server-side.
+
+    The session's JTI is marked inactive in the database; the token
+    blocklist loader in create_app() rejects any further requests
+    that carry this JTI. Clients should also discard the token locally.
+
     Returns:
-        200: Logout acknowledged
+        200: Session revoked
     """
-    # In a more advanced implementation, we would:
-    # 1. Add token to blacklist in Redis/database
-    # 2. Check blacklist on every @jwt_required() request
-    # For now, client handles token deletion
-    
     claims = get_jwt()
     revoke_session(claims.get('jti'))
     log_security_event(
@@ -668,6 +690,15 @@ def resend_verification():
 
     if not user or user.is_verified:
         return jsonify(generic), 200
+
+    # Per-email cooldown: if a valid token was issued within the last 5 minutes,
+    # skip sending to prevent spam. The token is valid for 24 h so sent_at ≈ expires - 24 h.
+    _COOLDOWN_MINUTES = 5
+    if user.verification_expires:
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        sent_at_approx = user.verification_expires - timedelta(hours=24)
+        if sent_at_approx + timedelta(minutes=_COOLDOWN_MINUTES) > now:
+            return jsonify(generic), 200
 
     sent, error = False, None
     try:
