@@ -308,7 +308,8 @@ def login():
     if not user.is_verified:
         return jsonify({
             'error': get_localized_message(request, 'validation_error'),
-            'message': get_localized_message(request, 'verification_required_login')
+            'message': get_localized_message(request, 'verification_required_login'),
+            'needs_verification': True
         }), 403
 
     if user.totp_enabled:
@@ -648,6 +649,39 @@ def send_verification():
             response['verification_email_error'] = error or 'email delivery failed'
 
     return jsonify(response), 200
+
+
+@bp.route('/resend-verification', methods=['POST'])
+@limiter.limit(rate_limit_value('SEND_VERIFICATION_RATE_LIMIT', '5 per hour'))
+def resend_verification():
+    """Resend a verification email given an email address (no auth required)."""
+    data = request.get_json(silent=True) or {}
+    email = (data.get('email') or '').strip().lower()
+
+    if not email:
+        return jsonify({'error': get_localized_message(request, 'validation_error')}), 400
+
+    user = User.query.filter_by(email=email).first()
+
+    # Always return the same generic response to avoid user enumeration.
+    generic = {'message': get_localized_message(request, 'verification_sent_generic')}
+
+    if not user or user.is_verified:
+        return jsonify(generic), 200
+
+    sent, error = False, None
+    try:
+        sent, error = send_verification_email(user)
+    except Exception as exc:
+        error = str(exc)
+
+    if not sent and _should_log_email_warning(error):
+        current_app.logger.warning(
+            "Resend verification failed for user_id=%s email=%s reason=%s",
+            user.id, user.email, error or "unknown error",
+        )
+
+    return jsonify(generic), 200
 
 
 @bp.route('/verify-email/<token>', methods=['GET'])

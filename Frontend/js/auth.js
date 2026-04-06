@@ -209,7 +209,9 @@ export async function apiFetch(path, options = {}) {
   }
 
   if (!res.ok) {
-    throw new Error(resolveErrorMessage(payload));
+    const err = new Error(resolveErrorMessage(payload));
+    err.payload = payload;
+    throw err;
   }
 
   return payload;

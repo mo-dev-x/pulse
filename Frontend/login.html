@@ -23,39 +23,62 @@
 
       <form class="form" id="loginForm">
         <p id="error" class="error" style="display:none;"></p>
+        <p id="resend-verification" style="display:none;">
+          <a id="resend-link" class="link" href="#" data-i18n="auth.login.resend_verification">Resend verification email</a>
+        </p>
         <p id="msg" class="msg" style="display:none;"></p>
-        <label class="label" for="email" data-i18n="auth.login.email">Email</label>
-        <input class="input" id="email" type="email" placeholder="name@ulaval.ca" required>
 
-        <label class="label" for="password" data-i18n="auth.login.password">Password</label>
-        <div class="password-wrapper">
-          <input
-            class="input"
-            id="password"
-            type="password"
-            placeholder="••••••••"
-            required
-          >
-          <button type="button" id="togglePassword" class="toggle-password">
-            👁
-          </button>
+        <div id="credentials-step">
+          <label class="label" for="email" data-i18n="auth.login.email">Email</label>
+          <input class="input" id="email" type="email" placeholder="name@ulaval.ca" required>
+
+          <label class="label" for="password" data-i18n="auth.login.password">Password</label>
+          <div class="password-wrapper">
+            <input
+              class="input"
+              id="password"
+              type="password"
+              placeholder="••••••••"
+              required
+            >
+            <button type="button" id="togglePassword" class="toggle-password">
+              👁
+            </button>
+          </div>
+
+          <div class="row">
+            <label class="check">
+              <input id="rememberMe" type="checkbox">
+              <span data-i18n="auth.login.remember">Remember me</span>
+            </label>
+            <a class="link" href="forgot-password.html" data-i18n="auth.login.forgot">Forgot password?</a>
+          </div>
         </div>
-        
-        <div class="row">
-          <label class="check">
-            <input id="rememberMe" type="checkbox">
-            <span data-i18n="auth.login.remember">Remember me</span>
-          </label>
 
-          <a class="link" href="forgot-password.html" data-i18n="auth.login.forgot">Forgot password?</a>
+        <div id="2fa-step" style="display:none;">
+          <p class="label" data-i18n="auth.login.2fa_subtitle">Enter the code from your authenticator app.</p>
+
+          <div id="totp-section">
+            <label class="label" for="totp-code" data-i18n="auth.login.2fa_code">Authentication code</label>
+            <input class="input" id="totp-code" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" placeholder="000000">
+          </div>
+
+          <div id="backup-section" style="display:none;">
+            <label class="label" for="backup-code" data-i18n="auth.login.2fa_backup_label">Backup code</label>
+            <input class="input" id="backup-code" type="text" placeholder="xxxxxxxx">
+          </div>
+
+          <div class="row">
+            <a id="toggle-backup" class="link" href="#" data-i18n="auth.login.2fa_use_backup">Use a backup code instead</a>
+            <a id="back-to-login" class="link" href="#" data-i18n="auth.login.2fa_back">Back</a>
+          </div>
         </div>
 
         <button class="btn" type="submit" data-i18n="auth.login.submit">Login</button>
 
-        <p class="bottom">
+        <p class="bottom" id="register-link-row">
           <span data-i18n="auth.login.no_account">No account?</span>
           <a class="link" href="register.html" data-i18n="auth.login.create">Create one</a>
-        
         </p>
       </form>
     </section>
