@@ -13,23 +13,24 @@ from app.services.job_queue_service import enqueue_task
 
 
 def _send_html_email(recipient, subject, html_body):
-    api_key = current_app.config.get("RESEND_API_KEY")
+    api_key = current_app.config.get("BREVO_API_KEY")
+    sender_email = current_app.config.get("BREVO_SENDER_EMAIL")
 
     if not api_key:
-        return False, "Resend API key not configured"
+        return False, "Brevo API key not configured"
 
     try:
         response = requests.post(
-            "https://api.resend.com/emails",
+            "https://api.brevo.com/v3/smtp/email",
             headers={
-                "Authorization": f"Bearer {api_key}",
+                "api-key": api_key,
                 "Content-Type": "application/json",
             },
             json={
-                "from": "onboarding@resend.dev",
-                "to": [recipient],
+                "sender": {"email": sender_email},
+                "to": [{"email": recipient}],
                 "subject": subject,
-                "html": html_body,
+                "htmlContent": html_body,
             },
             timeout=10,
         )

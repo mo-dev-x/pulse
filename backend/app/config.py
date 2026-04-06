@@ -95,8 +95,9 @@ class Config:
         dict.fromkeys(_default_cors_origin_patterns + _configured_cors_origin_patterns)
     )
 
-    # Resend email configuration
-    RESEND_API_KEY = os.getenv('RESEND_API_KEY')
+    # Brevo email configuration
+    BREVO_API_KEY = os.getenv('BREVO_API_KEY')
+    BREVO_SENDER_EMAIL = os.getenv('BREVO_SENDER_EMAIL')
 
     # OIDC / Azure Entra configuration
     ENABLE_OIDC_AUTH = os.getenv('ENABLE_OIDC_AUTH', 'false').lower() == 'true'
