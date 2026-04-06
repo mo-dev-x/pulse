@@ -76,14 +76,13 @@ def create_app(config_name='development'):
     app.config['PROFILE_UPLOAD_FOLDER'] = os.path.join(upload_root, 'profiles')
     app.config['HEADER_UPLOAD_FOLDER'] = os.path.join(upload_root, 'headers')
 
-    # Development visibility: make missing SMTP obvious early.
+    # Development visibility: make missing email config obvious early.
     if config_name != 'testing':
-        smtp_host = app.config.get('SMTP_HOST')
-        smtp_from = app.config.get('SMTP_FROM')
-        if not smtp_host or not smtp_from:
+        brevo_key = app.config.get('BREVO_API_KEY')
+        if not brevo_key:
             app.logger.warning(
-                "SMTP not fully configured. Verification/reset emails will not be delivered. "
-                "Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM in backend/.env."
+                "Brevo API key not configured. Verification/reset emails will not be delivered. "
+                "Set BREVO_API_KEY and BREVO_SENDER_EMAIL in Railway environment variables."
             )
     
     # Initialize extensions with app

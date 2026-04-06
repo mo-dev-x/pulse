@@ -4,6 +4,7 @@
     { "src": "/", "dest": "/login.html" },
     { "src": "/feed", "dest": "/feed.html" },
     { "src": "/register", "dest": "/register.html" },
+    { "src": "/verify-email", "dest": "/verify-email.html" },
     { "src": "/(.*)", "dest": "/$1" }
   ]
 }
