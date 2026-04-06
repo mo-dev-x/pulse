@@ -172,6 +172,12 @@ def create_app(config_name='development'):
         jti = jwt_payload.get('jti')
         if not jti:
             return False
+        # Cache valid JTIs for 30 s to avoid a DB round-trip on every request.
+        # Revoked sessions stay effective within 30 s of logout (acceptable).
+        cache_key = f'jti_valid:{jti}'
+        cached = cache.get(cache_key)
+        if cached is True:
+            return False  # known-valid, skip DB
         session = Session.query.filter_by(token_jti=jti).first()
         if not session:
             return False
@@ -179,6 +185,7 @@ def create_app(config_name='development'):
             return True
         if session.expires_at and session.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
             return True
+        cache.set(cache_key, True, timeout=30)
         return False
     
     # Register blueprints

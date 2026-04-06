@@ -103,6 +103,9 @@ class Config:
     BREVO_API_KEY = os.getenv('BREVO_API_KEY')
     BREVO_SENDER_EMAIL = os.getenv('BREVO_SENDER_EMAIL')
 
+    # Hugging Face Inference API (sentiment analysis)
+    HUGGINGFACE_API_KEY = os.getenv('HUGGINGFACE_API_KEY')
+
     # OIDC / Azure Entra configuration
     ENABLE_OIDC_AUTH = os.getenv('ENABLE_OIDC_AUTH', 'false').lower() == 'true'
     OIDC_AUTHORIZE_URL = os.getenv('OIDC_AUTHORIZE_URL')

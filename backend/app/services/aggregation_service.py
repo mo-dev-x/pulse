@@ -38,11 +38,13 @@ def compute_daily_aggregate(target_date, zone_id=None):
         query = query.filter(Post.zone_id == zone_id)
 
     # Count by sentiment label
+    # Posts with NULL sentiment_label are pending async analysis; treat as neutral
+    # so the DB check constraint total_posts = positive+neutral+negative is satisfied.
     posts = query.all()
     total = len(posts)
     positive = sum(1 for p in posts if p.sentiment_label == 'positive')
-    neutral = sum(1 for p in posts if p.sentiment_label == 'neutral')
     negative = sum(1 for p in posts if p.sentiment_label == 'negative')
+    neutral = total - positive - negative
     emotion_distribution = _emotion_distribution(posts)
 
     # Compute average sentiment score
@@ -103,11 +105,13 @@ def compute_weekly_aggregate(week_start_date, zone_id=None):
         query = query.filter(Post.zone_id == zone_id)
 
     # Count by sentiment label
+    # Posts with NULL sentiment_label are pending async analysis; treat as neutral
+    # so the DB check constraint total_posts = positive+neutral+negative is satisfied.
     posts = query.all()
     total = len(posts)
     positive = sum(1 for p in posts if p.sentiment_label == 'positive')
-    neutral = sum(1 for p in posts if p.sentiment_label == 'neutral')
     negative = sum(1 for p in posts if p.sentiment_label == 'negative')
+    neutral = total - positive - negative
     emotion_distribution = _emotion_distribution(posts)
 
     # Compute average sentiment score

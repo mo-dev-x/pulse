@@ -202,6 +202,16 @@ def _filtered_public_posts(zone_id=None, sentiment=None, window=None):
     return query.order_by(Post.created_at.desc()).all()
 
 
+def _filtered_public_posts_page(zone_id=None, sentiment=None, page=1, per_page=20):
+    """Paginate public posts at the DB level (avoids loading all posts into memory)."""
+    query = _public_posts_query()
+    if zone_id:
+        query = query.filter(Post.zone_id == zone_id)
+    if sentiment:
+        query = query.filter(Post.sentiment_label == sentiment)
+    return query.order_by(Post.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
+
+
 def _trending_cache_key():
     """Cache trending responses per user because payload includes my_reaction."""
     current_user_id = get_jwt_identity() or 'anonymous'
@@ -483,15 +493,14 @@ def discover_posts():
     if sentiment and sentiment not in {'positive', 'negative', 'neutral'}:
         return jsonify({'error': 'Invalid sentiment filter', 'message': 'sentiment must be positive, negative, or neutral'}), 400
 
-    posts = _filtered_public_posts(zone_id=zone_id, sentiment=sentiment)
-    ranked_posts = _serialize_ranked_posts(posts, current_user_id=current_user_id)
-    paginated_posts, has_next = _paginate_list(ranked_posts, page, per_page)
+    paginated = _filtered_public_posts_page(zone_id=zone_id, sentiment=sentiment, page=page, per_page=per_page)
+    ranked_posts = _serialize_ranked_posts(paginated.items, current_user_id=current_user_id)
 
     return jsonify({
-        'posts': paginated_posts,
-        'total': len(ranked_posts),
+        'posts': ranked_posts,
+        'total': paginated.total,
         'page': page,
-        'has_next': has_next,
+        'has_next': paginated.has_next,
         'filters': {
             'zone_id': zone_id,
             'sentiment': sentiment,

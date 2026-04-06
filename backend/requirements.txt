@@ -21,10 +21,8 @@ bcrypt==4.1.2
 # NLP - Production Bilingual Support (French/English)
 vaderSentiment==3.3.2       # English sentiment (social media optimized)
 langdetect==1.0.9            # Language detection
-
-# Optional ML dependencies for French transformer sentiment live in
-# requirements-ml.txt so lightweight platforms like Railway can deploy
-# without downloading PyTorch/model tooling.
+# French sentiment uses the Hugging Face Inference API (no local model weights).
+# requests (below) is the only additional dependency needed.
 
 # Utilities
 python-dotenv==1.0.0

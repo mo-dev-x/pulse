@@ -212,9 +212,11 @@ def get_followers(username):
 
     paginated = followers_query.paginate(page=page, per_page=per_page, error_out=False)
 
+    follower_ids = [f.follower_id for f in paginated.items]
+    users_map = {u.id: u for u in User.query.filter(User.id.in_(follower_ids)).all()} if follower_ids else {}
     followers_list = []
     for follow in paginated.items:
-        user = db.session.get(User, follow.follower_id)
+        user = users_map.get(follow.follower_id)
         if user:
             followers_list.append({
                 'id': user.id,
@@ -260,9 +262,11 @@ def get_following(username):
 
     paginated = following_query.paginate(page=page, per_page=per_page, error_out=False)
 
+    following_ids = [f.following_id for f in paginated.items]
+    users_map = {u.id: u for u in User.query.filter(User.id.in_(following_ids)).all()} if following_ids else {}
     following_list = []
     for follow in paginated.items:
-        user = db.session.get(User, follow.following_id)
+        user = users_map.get(follow.following_id)
         if user:
             following_list.append({
                 'id': user.id,
