@@ -95,13 +95,8 @@ class Config:
         dict.fromkeys(_default_cors_origin_patterns + _configured_cors_origin_patterns)
     )
 
-    # SMTP configuration
-    SMTP_HOST = os.getenv('SMTP_HOST')
-    SMTP_PORT = int(os.getenv('SMTP_PORT', 587))
-    SMTP_USER = os.getenv('SMTP_USER')
-    SMTP_PASSWORD = os.getenv('SMTP_PASSWORD')
-    SMTP_FROM = os.getenv('SMTP_FROM', 'pulse.ulaval@gmail.com')
-    SMTP_USE_TLS = os.getenv('SMTP_USE_TLS', 'true').lower() == 'true'
+    # Resend email configuration
+    RESEND_API_KEY = os.getenv('RESEND_API_KEY')
 
     # OIDC / Azure Entra configuration
     ENABLE_OIDC_AUTH = os.getenv('ENABLE_OIDC_AUTH', 'false').lower() == 'true'
