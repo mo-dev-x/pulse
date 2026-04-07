@@ -225,7 +225,7 @@ async function loadZoneActivity(zoneId) {
       </div>
       ${recentPosts.map((entry) => `
         <article class="activity-post">
-          <div><strong>${escapeHtml(entry.author?.display_name || entry.author?.username || "Pulse User")}</strong></div>
+          <div><strong>${escapeHtml(entry.author?.display_name || entry.author?.username || "Pulse User")}${entry.author?.is_admin ? '<span class="admin-star" title="Admin">⭐</span>' : ''}</strong></div>
           <div style="margin-top:6px;">${escapeHtml(entry.content || "")}</div>
           <div class="activity-post-meta">${escapeHtml(formatRelativeTime(entry.created_at || latestAnalyticsDate))}</div>
         </article>

@@ -129,7 +129,7 @@ function renderPostCard(post) {
             <a class="post-user-link" href="${escapeAttr(getProfileHref(author.username))}" aria-label="View ${escapeAttr(author.display_name || author.username || "User")}'s profile">
               <img class="avatar" src="${escapeAttr(avatarUrl)}" alt="${escapeAttr(author.display_name || author.username || "User")}" />
               <div class="post-meta">
-                <div class="u">${escapeHtml(author.display_name || author.username || "User")}</div>
+                <div class="u">${escapeHtml(author.display_name || author.username || "User")}${author.is_admin ? '<span class="admin-star" title="Admin">⭐</span>' : ''}</div>
                 <div class="m">@${escapeHtml(author.username || "user")}</div>
               </div>
             </a>

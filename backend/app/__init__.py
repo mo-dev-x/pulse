@@ -75,13 +75,19 @@ def create_app(config_name='development'):
     app.config['PROFILE_UPLOAD_FOLDER'] = os.path.join(upload_root, 'profiles')
     app.config['HEADER_UPLOAD_FOLDER'] = os.path.join(upload_root, 'headers')
 
-    # Development visibility: make missing email config obvious early.
+    # Development visibility: make missing API keys obvious early.
     if config_name != 'testing':
         brevo_key = app.config.get('BREVO_API_KEY')
         if not brevo_key:
             app.logger.warning(
                 "Brevo API key not configured. Verification/reset emails will not be delivered. "
                 "Set BREVO_API_KEY and BREVO_SENDER_EMAIL in Railway environment variables."
+            )
+        hf_key = app.config.get('HUGGINGFACE_API_KEY')
+        if not hf_key:
+            app.logger.warning(
+                "HUGGINGFACE_API_KEY not configured. French sentiment analysis will fall back to VADER. "
+                "Set HUGGINGFACE_API_KEY in Railway environment variables."
             )
     
     # Initialize extensions with app
@@ -203,6 +209,13 @@ def create_app(config_name='development'):
     if config_name == 'development':
         with app.app_context():
             from app.models import user  # noqa: F401
+            from app.models import mood_checkin  # noqa: F401
+            db.create_all()
+
+    if config_name == 'production':
+        with app.app_context():
+            from app.models import mood_checkin  # noqa: F401
+            db.create_all()
     
     return app
 
@@ -211,7 +224,7 @@ def register_blueprints(app):
     """
     Register all Flask blueprints
     """
-    from app.routes import auth, posts, social, reactions, analytics, comments, notifications, bookmarks, zones, search, reports, messages, push
+    from app.routes import auth, posts, social, reactions, analytics, comments, notifications, bookmarks, zones, search, reports, messages, push, mood
     
     app.register_blueprint(auth.bp, url_prefix='/api/auth')
     app.register_blueprint(posts.bp, url_prefix='/api/posts')
@@ -226,6 +239,7 @@ def register_blueprints(app):
     app.register_blueprint(reports.bp, url_prefix='/api')
     app.register_blueprint(messages.bp, url_prefix='/api')
     app.register_blueprint(push.bp, url_prefix='/api')
+    app.register_blueprint(mood.bp, url_prefix='/api')
 
 
 def register_error_handlers(app):

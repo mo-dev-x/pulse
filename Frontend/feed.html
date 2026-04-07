@@ -17,7 +17,7 @@
     <!-- TOPPPP BAR -->
     <header class="topbar">
         <div class="topbar-left">
-            <div class="brand">PULSE</div>
+            <a class="brand" href="feed.html">PULSE</a>
         </div>
 
         <div class="topbar-center">
@@ -143,58 +143,12 @@
 
         <!-- RIGHT PANELLLLLLLL -->
         <aside class="right">
-            <section class="panel messages">
+            <section class="panel" id="campusMoodSidebar">
                 <div class="panel-title">
-                    <span>Messages</span>
-                    <button class="iconbtn" title="New message"><i class="uil uil-pen"></i></button>
+                    <span>Campus today</span>
                 </div>
-
-                <div class="search small">
-                    <i class="uil uil-search"></i>
-                    <input id="msgSearch" type="search" placeholder="Search messages" />
-                </div>
-
-                <div class="tabs">
-                    <button class="tab active" data-tab="primary">Primary</button>
-                    <button class="tab" data-tab="general">General</button>
-                    <button class="tab" data-tab="requests">Requests(7)</button>
-                </div>
-
-                <div class="msg-list" id="msgList">
-                    <!-- injected by JS-->
-                </div>
-            </section>
-
-            <section class="panel requests">
-                <div class="panel-title">
-                    <span>Requests</span>
-                </div>
-
-                <div class="request-card">
-                    <div class="req-left">
-                        <img class="avatar" src="assets/default-avatar.svg" alt="Requester" />
-                        <div>
-                            <div class="req-name">Emma Bois</div>
-                            <div class="req-sub">8 mutual friends</div>
-                        </div>
-                    </div>
-                    <div class="req-actions">
-                        <button class="btn btn-ghost btn-sm">Decline</button>
-                        <button class="btn btn-accent btn-sm">Accept</button>
-                    </div>
-                </div>
-                <div class="request-card">
-                    <div class="req-left">
-                        <img class="avatar" src="assets/default-avatar.svg" alt="Requester" />
-                        <div>
-                            <div class="req-name">Laurence parent</div>
-                            <div class="req-sub">2 mutual friends</div>
-                        </div>
-                    </div>
-                    <div class="req-actions">
-                        <button class="btn btn-ghost btn-sm">Decline</button>
-                        <button class="btn btn-accent btn-sm">Accept</button>
-                    </div>
+                <div id="campusMoodList">
+                    <!-- injected by JS -->
                 </div>
             </section>
         </aside>

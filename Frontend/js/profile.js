@@ -73,6 +73,7 @@ const els = {
   editBio: document.getElementById("editBio"),
   editLocation: document.getElementById("editLocation"),
   editWebsite: document.getElementById("editWebsite"),
+  editPrivateAccount: document.getElementById("editPrivateAccount"),
   editAvatarFile: document.getElementById("editAvatarFile"),
   editHeaderFile: document.getElementById("editHeaderFile"),
   editAvatarPreview: document.getElementById("editAvatarPreview"),
@@ -368,7 +369,7 @@ function renderPeopleList(people, type) {
         <a class="person-left" href="profile.html?u=${encodeURIComponent(person.username)}">
           <img class="avatar" src="${escapeAttr(avatarUrl)}" alt="User" />
           <div class="person-meta">
-            <div class="person-name">${escapeHtml(person.display_name || person.username)}</div>
+            <div class="person-name">${escapeHtml(person.display_name || person.username)}${person.is_admin ? '<span class="admin-star" title="Admin">⭐</span>' : ''}</div>
             <div class="person-handle">@${escapeHtml(person.username)}</div>
           </div>
         </a>
@@ -436,6 +437,10 @@ function openEditModal() {
 
   if (els.editWebsite) {
     els.editWebsite.value = currentUser?.website || "";
+  }
+
+  if (els.editPrivateAccount) {
+    els.editPrivateAccount.checked = currentUser?.profile_visibility === "private";
   }
 
   if (els.editAvatarPreview) {
@@ -628,6 +633,14 @@ async function onEditProfileSubmit(e) {
       }),
     });
 
+    const isPrivate = els.editPrivateAccount?.checked ?? false;
+    await apiFetch("/api/auth/privacy-settings", {
+      method: "PATCH",
+      body: JSON.stringify({
+        profile_visibility: isPrivate ? "private" : "public",
+      }),
+    });
+
     saveHeaderFocus(
       currentUser?.username,
       Number(els.editHeaderFocusX?.value || 50),
@@ -684,7 +697,7 @@ function renderViewedProfile() {
   const avatarUrl = getUserAvatarUrl(profileUser, getAssetUrl);
 
   if (els.profileAvatar) els.profileAvatar.src = avatarUrl;
-  if (els.profileDisplayName) els.profileDisplayName.textContent = displayName;
+  if (els.profileDisplayName) els.profileDisplayName.innerHTML = escapeHtml(displayName) + (profileUser?.is_admin ? '<span class="admin-star" title="Admin">⭐</span>' : '');
   if (els.profileHandle) els.profileHandle.textContent = `@${username}`;
   if (els.profileBio) els.profileBio.textContent = bio;
 
@@ -890,6 +903,7 @@ function normalizePost(p) {
     authorName,
     handle,
     avatarUrl,
+    isAdmin: !isAnonymous && Boolean(author.is_admin),
     profileHref: !isAnonymous && author.username ? getProfileHref(author.username) : "",
     zoneId: zone?.id || null,
     zoneName: zone?.name || "Campus",
@@ -922,7 +936,7 @@ function normalizePost(p) {
             <img class="avatar" src="${escapeAttr(post.avatarUrl)}" alt="${escapeAttr(post.authorName)}" />
             <div class="post-meta">
               <div class="u">
-                ${escapeHtml(post.authorName)}
+                ${escapeHtml(post.authorName)}${post.isAdmin ? '<span class="admin-star" title="Admin">⭐</span>' : ''}
                 <span class="badge ${badge.cls}">${badge.label}</span>
               </div>
               <div class="m">${escapeHtml(post.handle)}</div>
@@ -1169,7 +1183,7 @@ function renderSearchResults(users) {
         <a class="search-result-left search-result-link" href="profile.html?u=${encodeURIComponent(user.username)}">
           <img class="avatar" src="${escapeAttr(avatarUrl)}" alt="User" />
           <div>
-            <div class="search-result-name">${escapeHtml(user.display_name || user.username)}</div>
+            <div class="search-result-name">${escapeHtml(user.display_name || user.username)}${user.is_admin ? '<span class="admin-star" title="Admin">⭐</span>' : ''}</div>
             <div class="search-result-handle">@${escapeHtml(user.username)}</div>
           </div>
         </a>

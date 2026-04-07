@@ -55,7 +55,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupGlobalUserSearch();
   setupFeedObserver();
   renderStories();
-  renderMessages();
 
   try {
     renderFeedSkeletons();
@@ -350,6 +349,7 @@ function normalizePost(post) {
     handle: isAnonymous ? "@anonymous" : `@${author.username || "user"}`,
     avatarUrl,
     profileHref: !isAnonymous && author.username ? getProfileHref(author.username) : "",
+    isAdmin: !isAnonymous && Boolean(author.is_admin),
     mine: isAnonymous ? Boolean(author.is_you) : Boolean(currentUser && author.id === currentUser.id),
     zoneId: zone?.id || null,
     zoneName: zone?.name || "Campus",
@@ -390,7 +390,7 @@ function renderPostCard(post) {
             <img class="avatar" src="${escapeAttr(post.avatarUrl)}" alt="${escapeAttr(post.authorName)}" />
             <div class="post-meta">
               <div class="u">
-                ${escapeHtml(post.authorName)}
+                ${escapeHtml(post.authorName)}${post.isAdmin ? '<span class="admin-star" title="Admin">⭐</span>' : ''}
                 <span class="badge ${badge.cls}">${badge.label}</span>
               </div>
               <div class="m">${escapeHtml(post.handle)}</div>
@@ -677,7 +677,7 @@ function renderCommentItem(postId, comment) {
     <div class="comment-item">
       <div class="comment-row">
         <div>
-          <div class="comment-author">${escapeHtml(authorName)}</div>
+          <div class="comment-author">${escapeHtml(authorName)}${!comment.is_anonymous && comment.author?.is_admin ? '<span class="admin-star" title="Admin">⭐</span>' : ''}</div>
           <div class="comment-meta">${escapeHtml(formatRelativeTime(comment.created_at))}</div>
         </div>
         <div class="comment-actions-inline">
@@ -706,7 +706,7 @@ function renderReplyItem(reply) {
 
   return `
     <div class="comment-reply">
-      <div class="comment-author">${escapeHtml(authorName)}</div>
+      <div class="comment-author">${escapeHtml(authorName)}${!reply.is_anonymous && reply.author?.is_admin ? '<span class="admin-star" title="Admin">⭐</span>' : ''}</div>
       <div class="comment-meta">${escapeHtml(formatRelativeTime(reply.created_at))}</div>
       <div class="comment-content">${escapeHtml(reply.content || "")}</div>
     </div>
@@ -1037,7 +1037,7 @@ function renderSearchResults(users) {
         <a class="search-result-left search-result-link" href="profile.html?u=${encodeURIComponent(user.username)}">
           <img class="avatar" src="${escapeAttr(avatarUrl)}" alt="User" />
           <div>
-            <div class="search-result-name">${escapeHtml(user.display_name || user.username)}</div>
+            <div class="search-result-name">${escapeHtml(user.display_name || user.username)}${user.is_admin ? '<span class="admin-star" title="Admin">⭐</span>' : ''}</div>
             <div class="search-result-handle">@${escapeHtml(user.username)}</div>
           </div>
         </a>
@@ -1081,27 +1081,6 @@ async function followUser(username, btn) {
   }
 }
 
-function renderMessages() {
-  const msgList = document.getElementById("msgList");
-  if (!msgList) return;
-
-  const items = [
-    { name: "Daniella Jackson", snippet: "2 new messages", img: 16 },
-    { name: "Marc Tremblay", snippet: "Let’s study tonight", img: 33 },
-    { name: "Sarah Lavoie", snippet: "Thanks for the follow!", img: 24 },
-  ];
-
-  msgList.innerHTML = items.map((item) => `
-    <div class="msg">
-      <img class="avatar" src="${escapeAttr(getDefaultAvatarUrl())}" alt="${escapeAttr(item.name)}" />
-      <div>
-        <div class="t">${escapeHtml(item.name)}</div>
-        <div class="s">${escapeHtml(item.snippet)}</div>
-      </div>
-    </div>
-  `).join("");
-}
-
 function renderStories() {
   const row = document.getElementById("storiesRow");
   if (!row) return;
@@ -1112,22 +1091,138 @@ function renderStories() {
         <div class="pulse-ring">
           <div class="pulse-ring-inner">
             <p class="pulse-kicker">Campus pulse</p>
-            <div class="pulse-mood">Balanced</div>
-            <div class="pulse-meta">Community mood snapshot</div>
+            <div class="pulse-mood" id="pulseMood">—</div>
+            <div class="pulse-meta" id="pulseMeta">Share how you feel</div>
             <div class="pulse-dots"><span></span><span></span><span></span><span></span><span></span><span></span></div>
           </div>
         </div>
       </div>
       <div class="pulse-right">
-        <div class="emotile joy"><div class="emoji">😊</div><div class="label">Joy</div></div>
-        <div class="emotile stress"><div class="emoji">😵</div><div class="label">Stress</div></div>
-        <div class="emotile calm"><div class="emoji">🫶</div><div class="label">Calm</div></div>
-        <div class="emotile connected"><div class="emoji">🤝</div><div class="label">Connected</div></div>
-        <div class="emotile tired"><div class="emoji">😴</div><div class="label">Tired</div></div>
-        <div class="emotile frustrated"><div class="emoji">😤</div><div class="label">Frustrated</div></div>
+        <button class="emotile joy"        data-emotion="joy"        type="button"><div class="emoji">😊</div><div class="label">Joy</div></button>
+        <button class="emotile stress"     data-emotion="stress"     type="button"><div class="emoji">😵</div><div class="label">Stress</div></button>
+        <button class="emotile calm"       data-emotion="calm"       type="button"><div class="emoji">🫶</div><div class="label">Calm</div></button>
+        <button class="emotile connected"  data-emotion="connected"  type="button"><div class="emoji">🤝</div><div class="label">Connected</div></button>
+        <button class="emotile tired"      data-emotion="tired"      type="button"><div class="emoji">😴</div><div class="label">Tired</div></button>
+        <button class="emotile frustrated" data-emotion="frustrated" type="button"><div class="emoji">😤</div><div class="label">Frustrated</div></button>
+        <div class="emotile-cooldown" id="emotileCooldown" hidden></div>
       </div>
     </div>
   `;
+
+  row.querySelectorAll(".emotile[data-emotion]").forEach((btn) => {
+    btn.addEventListener("click", () => checkInMood(btn.dataset.emotion));
+  });
+
+  loadCampusPulse();
+}
+
+const EMOTION_LABELS = {
+  joy: "Joy 😊", stress: "Stress 😵", calm: "Calm 🫶",
+  connected: "Connected 🤝", tired: "Tired 😴", frustrated: "Frustrated 😤",
+};
+const EMOTION_EMOJI = {
+  joy: "😊", stress: "😵", calm: "🫶", connected: "🤝", tired: "😴", frustrated: "😤",
+};
+
+async function loadCampusPulse() {
+  try {
+    const data = await apiFetch("/api/mood/pulse", { method: "GET" });
+    const moodEl = document.getElementById("pulseMood");
+    const metaEl = document.getElementById("pulseMeta");
+
+    if (moodEl) {
+      moodEl.textContent = data.dominant ? (EMOTION_LABELS[data.dominant] || data.dominant) : "Be first!";
+    }
+    if (metaEl) {
+      metaEl.textContent = data.total > 0
+        ? `${data.total} check-in${data.total !== 1 ? "s" : ""} today`
+        : "Share how you feel";
+    }
+
+    const allEmotiles = document.querySelectorAll(".emotile[data-emotion]");
+    const inCooldown = data.cooldown_seconds > 0;
+    const cooldownEl = document.getElementById("emotileCooldown");
+
+    allEmotiles.forEach((b) => {
+      b.classList.remove("emotile--active");
+      b.disabled = inCooldown;
+    });
+
+    if (data.user_emotion) {
+      const activeBtn = document.querySelector(`.emotile[data-emotion="${data.user_emotion}"]`);
+      if (activeBtn) activeBtn.classList.add("emotile--active");
+    }
+
+    if (cooldownEl) {
+      if (inCooldown) {
+        cooldownEl.textContent = `Next check-in in ${formatCooldown(data.cooldown_seconds)}`;
+        cooldownEl.hidden = false;
+      } else {
+        cooldownEl.hidden = true;
+      }
+    }
+
+    renderCampusMoodSidebar(data);
+  } catch {
+    // Campus pulse is non-critical — fail silently.
+  }
+}
+
+function formatCooldown(seconds) {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
+async function checkInMood(emotion) {
+  try {
+    document.querySelectorAll(".emotile[data-emotion]").forEach((b) => b.classList.remove("emotile--active"));
+    const btn = document.querySelector(`.emotile[data-emotion="${emotion}"]`);
+    if (btn) btn.classList.add("emotile--active");
+
+    await apiFetch("/api/mood/checkin", {
+      method: "POST",
+      body: JSON.stringify({ emotion }),
+    });
+
+    await loadCampusPulse();
+    showToast("Feeling logged!", "success");
+  } catch (err) {
+    const payload = err?.payload;
+    if (payload?.retry_after != null) {
+      showToast(`Already checked in. Next check-in in ${formatCooldown(payload.retry_after)}.`, "info");
+      await loadCampusPulse();
+    } else {
+      showToast("Could not log feeling", "error");
+    }
+  }
+}
+
+function renderCampusMoodSidebar(data) {
+  const el = document.getElementById("campusMoodList");
+  if (!el) return;
+
+  const total = data.total || 0;
+  if (!total) {
+    el.innerHTML = `<div class="mood-sidebar-empty">No check-ins yet today.<br><span>Be the first to share!</span></div>`;
+    return;
+  }
+
+  const sorted = Object.entries(data.distribution || {}).sort((a, b) => b[1] - a[1]);
+  el.innerHTML = sorted.map(([emotion, count]) => {
+    const pct = Math.round(count / total * 100);
+    const emoji = EMOTION_EMOJI[emotion] || "";
+    return `
+      <div class="mood-bar-row">
+        <span class="mood-bar-label">${escapeHtml(emoji)} ${escapeHtml(emotion)}</span>
+        <div class="mood-bar-track">
+          <div class="mood-bar-fill" style="width:${pct}%"></div>
+        </div>
+        <span class="mood-bar-pct">${pct}%</span>
+      </div>
+    `;
+  }).join("");
 }
 
 function formatRelativeTime(dateLike) {

@@ -59,6 +59,9 @@ body::before{
   font-weight: 950;
   letter-spacing: 0.2px;
   font-size: 22px;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
 }
 
 .topbar-left{ display:flex; align-items:center; min-width: 0; }
@@ -1173,6 +1176,78 @@ body::before{
 .story.pulse-card .emotile.connected{ background: linear-gradient(180deg, rgba(120, 255, 200, 0.35), rgba(35, 85, 65, 0.28)); }
 .story.pulse-card .emotile.frustrated{ background: linear-gradient(180deg, rgba(255, 120, 200, 0.35), rgba(85, 35, 65, 0.28)); }
 .story.pulse-card .emotile:hover{ transform: translateY(-2px); }
+/* Reset button defaults for emotile */
+.story.pulse-card button.emotile {
+  font-family: inherit;
+  padding: 0;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.story.pulse-card .emotile--active {
+  box-shadow: 0 0 0 2px var(--accent), 0 8px 20px rgba(0,0,0,0.35);
+  transform: translateY(-2px) scale(1.04);
+}
+.story.pulse-card .emotile:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+  pointer-events: none;
+}
+.story.pulse-card .emotile--active:disabled {
+  opacity: 0.75;
+  box-shadow: 0 0 0 2px var(--accent), 0 4px 12px rgba(0,0,0,0.25);
+}
+.emotile-cooldown {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-size: 10px;
+  color: rgba(255,255,255,0.55);
+  padding-top: 2px;
+  letter-spacing: 0.02em;
+}
+
+/* Campus mood sidebar bars */
+.mood-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+}
+.mood-bar-label {
+  width: 90px;
+  flex-shrink: 0;
+  font-size: 12px;
+  text-transform: capitalize;
+  color: var(--text);
+}
+.mood-bar-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.08);
+  overflow: hidden;
+}
+.mood-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  transition: width 0.4s ease;
+}
+.mood-bar-pct {
+  width: 30px;
+  text-align: right;
+  font-size: 11px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.mood-sidebar-empty {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+  padding: 20px 8px;
+  line-height: 1.6;
+}
 
 /* Mention dropdown */
 .mention-dropdown {

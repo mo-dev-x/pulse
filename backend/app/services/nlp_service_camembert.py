@@ -161,9 +161,10 @@ class FrenchTwitterNLPService:
                 return emotion, round(max(base_confidence, 0.6), 2)
 
         if score > 0.2:
-            return 'joy', round(abs(score), 2)
+            # Ensure confidence clears LOW_CONFIDENCE_THRESHOLD (VADER compound != softmax prob)
+            return 'joy', max(round(abs(score), 2), 0.5)
         if score < -0.2:
-            return 'sadness', round(abs(score), 2)
+            return 'sadness', max(round(abs(score), 2), 0.5)
         return 'neutral', round(abs(score), 2)
 
     def _classify_score(self, score, language, confidence=None, emotion_label=None):

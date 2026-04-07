@@ -42,7 +42,7 @@ async function loadDiscover() {
           <div class="post-meta">
             <div class="u">${post.is_anonymous || !post.author?.username
               ? escapeHtml(post.author?.pseudonym || "Anonymous")
-              : `<a class="post-user-link-text" href="${escapeAttr(getProfileHref(post.author.username))}">${escapeHtml(post.author?.display_name || post.author?.username || "Pulse User")}</a>`}</div>
+              : `<a class="post-user-link-text" href="${escapeAttr(getProfileHref(post.author.username))}">${escapeHtml(post.author?.display_name || post.author?.username || "Pulse User")}${post.author?.is_admin ? '<span class="admin-star" title="Admin">⭐</span>' : ''}</a>`}</div>
             <div class="m">${escapeHtml(post.zone?.name || "Campus")} • ${escapeHtml(post.emotion_display || post.emotion_label || post.sentiment || "neutral")}</div>
           </div>
         </div>

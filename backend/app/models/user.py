@@ -289,9 +289,10 @@ class User(db.Model):
             'header_image': self.header_image,
             'website': self.website,
             'location': self.location,
-            'created_at': self.created_at.isoformat() if self.created_at else None
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'is_admin': self.is_admin
         }
-        
+
         if include_private:
             data['email'] = self.email
             data['pseudonym'] = self.pseudonym

@@ -50,6 +50,7 @@ class Notification(db.Model):
                 'username': self.actor.username,
                 'display_name': self.actor.display_name,
                 'profile_picture': self.actor.profile_picture,
+                'is_admin': self.actor.is_admin,
             } if self.actor else None,
             'is_read': self.is_read,
             'created_at': self.created_at.isoformat() + 'Z' if self.created_at else None,

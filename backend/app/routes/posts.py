@@ -716,8 +716,8 @@ def delete_post(post_id):
             'message': get_localized_message(request, 'forbidden')
         }), 403
 
-    # Time restriction: within 24 hours
-    if post.created_at:
+    # Time restriction: anonymous posts can only be deleted within 24 hours
+    if post.is_anonymous and post.created_at:
         hours_since = (datetime.now(timezone.utc).replace(tzinfo=None) - post.created_at).total_seconds() / 3600
         if hours_since > 24:
             return jsonify({

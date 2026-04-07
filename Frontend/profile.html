@@ -19,7 +19,7 @@
     <!-- TOP BAR -->
     <header class="topbar">
         <div class="topbar-left">
-            <div class="brand">PULSE</div>
+            <a class="brand" href="feed.html">PULSE</a>
         </div>
 
         <div class="topbar-center">
@@ -406,6 +406,14 @@
                     <img id="editAvatarPreview" class="avatar-preview" src="assets/default-avatar.svg"
                         alt="Avatar preview" />
                 </div>
+
+                <label class="checkbox" style="margin-top:12px;">
+                    <input id="editPrivateAccount" type="checkbox" />
+                    <span>Private account</span>
+                </label>
+                <p class="form-hint" id="editPrivateHint" style="margin:4px 0 0 0;font-size:12px;color:var(--text-muted);">
+                    When private, only your followers can see your posts and profile.
+                </p>
 
                 <div class="error" id="editProfileError" style="display:none;"></div>
 

@@ -29,6 +29,7 @@ def _other_user_payload(conversation, current_user_id):
         'username': other_user.username,
         'display_name': other_user.display_name,
         'profile_picture': other_user.profile_picture,
+        'is_admin': other_user.is_admin,
     } if other_user else None
 
 

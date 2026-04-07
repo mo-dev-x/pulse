@@ -53,7 +53,8 @@ class Comment(db.Model):
                 'id': self.user.id,
                 'username': self.user.username,
                 'display_name': self.user.display_name,
-                'profile_picture': self.user.profile_picture
+                'profile_picture': self.user.profile_picture,
+                'is_admin': self.user.is_admin
             }
 
         return data

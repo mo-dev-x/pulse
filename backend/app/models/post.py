@@ -101,7 +101,8 @@ class Post(db.Model):
                 'id': self.author.id,
                 'username': self.author.username,
                 'display_name': self.author.display_name,
-                'profile_picture': self.author.profile_picture
+                'profile_picture': self.author.profile_picture,
+                'is_admin': self.author.is_admin
             }
         
         return data

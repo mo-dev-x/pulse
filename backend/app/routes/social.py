@@ -58,6 +58,7 @@ def _build_public_profile_base(user, current_user_id):
             'created_at': user.created_at.isoformat() if user.created_at else None,
             'follower_count': Follower.get_follower_count(user.id),
             'following_count': Follower.get_following_count(user.id),
+            'is_admin': user.is_admin,
         },
         'pinned_post': pinned_post,
         'recent_posts': [post.to_dict(current_user_id=current_user_id) for post in recent_posts]

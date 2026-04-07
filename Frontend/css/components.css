@@ -89,3 +89,14 @@
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+
+/* ── Admin star badge ─────────────────────────── */
+.admin-star {
+  display: inline-block;
+  font-size: 13px;
+  vertical-align: middle;
+  margin-left: 3px;
+  line-height: 1;
+  position: relative;
+  top: -1px;
+}
