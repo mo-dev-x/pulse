@@ -1,14 +1,39 @@
-"""Direct messaging routes."""
+"""
+Direct Messaging Routes
 
+Handles private conversations and message delivery between users.
+
+Endpoints:
+- GET    /api/messages/conversations                    — List user's conversations
+- POST   /api/messages/conversations                    — Create or reuse a conversation
+- GET    /api/messages/conversations/<id>               — Fetch messages in a thread
+- POST   /api/messages/conversations/<id>               — Send a text message
+- PATCH  /api/messages/conversations/<id>/read          — Mark conversation as read
+- GET    /api/messages/unread-count                     — Unread conversation count
+- POST   /api/messages/conversations/<id>/audio         — Send a voice/audio message
+- POST   /api/messages/conversations/<id>/media         — Send an image or video
+
+Media content convention:
+  Audio messages are stored as   [audio]/api/uploads/<filename>
+  Image messages are stored as   [image]/api/uploads/<filename>
+  Video messages are stored as   [video]/api/uploads/<filename>
+  Plain text messages are stored verbatim (no prefix).
+"""
+
+import os
+import uuid
 from datetime import datetime, timezone
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from sqlalchemy import func
 
 from app import db, limiter, rate_limit_key_user, rate_limit_value
 from app.models import Conversation, Message, User
 from app.utils.i18n import get_localized_message
+
+_ALLOWED_AUDIO_EXTS = {'webm', 'ogg', 'mp4', 'm4a', 'wav', 'opus'}
+_ALLOWED_MEDIA_EXTS = {'jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'mov', 'webm'}
 
 bp = Blueprint('messages', __name__)
 
@@ -137,6 +162,78 @@ def send_message(conversation_id):
         return jsonify({'error': get_localized_message(request, 'validation_error'), 'message': 'Message must be between 1 and 1000 characters'}), 400
 
     message = Message(
+        conversation_id=conversation.id,
+        sender_id=current_user_id,
+        content=content,
+    )
+    db.session.add(message)
+    conversation.last_message_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    db.session.commit()
+
+    return jsonify({'message': message.to_dict(current_user_id=current_user_id)}), 201
+
+
+@bp.route('/messages/conversations/<int:conversation_id>/audio', methods=['POST'])
+@jwt_required()
+@limiter.limit(rate_limit_value('MESSAGE_SEND_RATE_LIMIT', '60 per hour'), key_func=rate_limit_key_user)
+def send_audio_message(conversation_id):
+    """Upload an audio blob and send it as a voice message."""
+    current_user_id = int(get_jwt_identity())
+    conversation, error_response = _get_conversation_or_403(conversation_id, current_user_id)
+    if error_response:
+        return error_response
+
+    audio_file = request.files.get('audio')
+    if not audio_file or not audio_file.filename:
+        return jsonify({'error': 'No audio file provided'}), 400
+
+    raw_ext = audio_file.filename.rsplit('.', 1)[-1].lower() if '.' in audio_file.filename else 'webm'
+    ext = raw_ext if raw_ext in _ALLOWED_AUDIO_EXTS else 'webm'
+    filename = f"{uuid.uuid4().hex}.{ext}"
+    upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads/')
+    os.makedirs(upload_folder, exist_ok=True)
+    audio_file.save(os.path.join(upload_folder, filename))
+
+    content = f"[audio]/api/uploads/{filename}"
+    message = Message(
+        conversation_id=conversation.id,
+        sender_id=current_user_id,
+        content=content,
+    )
+    db.session.add(message)
+    conversation.last_message_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    db.session.commit()
+
+    return jsonify({'message': message.to_dict(current_user_id=current_user_id)}), 201
+
+
+@bp.route('/messages/conversations/<int:conversation_id>/media', methods=['POST'])
+@jwt_required()
+@limiter.limit(rate_limit_value('MESSAGE_SEND_RATE_LIMIT', '60 per hour'), key_func=rate_limit_key_user)
+def send_media_message(conversation_id):
+    """Upload an image/video and send it as a media message."""
+    current_user_id = int(get_jwt_identity())
+    conversation, error_response = _get_conversation_or_403(conversation_id, current_user_id)
+    if error_response:
+        return error_response
+
+    media_file = request.files.get('media')
+    if not media_file or not media_file.filename:
+        return jsonify({'error': 'No media file provided'}), 400
+
+    raw_ext = media_file.filename.rsplit('.', 1)[-1].lower() if '.' in media_file.filename else ''
+    if raw_ext not in _ALLOWED_MEDIA_EXTS:
+        return jsonify({'error': 'Unsupported file type'}), 400
+
+    filename = f"{uuid.uuid4().hex}.{raw_ext}"
+    upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads/')
+    os.makedirs(upload_folder, exist_ok=True)
+    media_file.save(os.path.join(upload_folder, filename))
+
+    is_video = raw_ext in {'mp4', 'mov', 'webm'}
+    prefix   = '[video]' if is_video else '[image]'
+    content  = f"{prefix}/api/uploads/{filename}"
+    message  = Message(
         conversation_id=conversation.id,
         sender_id=current_user_id,
         content=content,

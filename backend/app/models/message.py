@@ -35,5 +35,9 @@ class Message(db.Model):
     def validate_content(content):
         if content is None:
             return False
-        length = len(content.strip())
+        stripped = content.strip()
+        # Media messages carry a special prefix — bypass length check
+        if stripped.startswith(('[audio]', '[image]', '[video]')):
+            return len(stripped) > 7
+        length = len(stripped)
         return 1 <= length <= 1000

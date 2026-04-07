@@ -6,6 +6,10 @@ import { initThemeToggle, initOfflineBanner } from "./theme.js";
 let currentConversationId = null;
 let currentOtherUser = null;
 let pollTimer = null;
+let lastKnownMessageId = null;   // used by smooth polling
+let mediaRecorder = null;
+let audioChunks   = [];
+let isRecording   = false;
 
 document.addEventListener("DOMContentLoaded", async () => {
   requireAuth();
@@ -13,7 +17,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   initThemeToggle();
   initOfflineBanner();
 
-  // Start new conversation by typing @username and pressing Enter
+  // Start new conversation
   document.getElementById("newConversationUsername")?.addEventListener("keydown", async (e) => {
     if (e.key !== "Enter") return;
     e.preventDefault();
@@ -31,21 +35,32 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  // "New message" buttons open the search field
   const focusSearch = () => document.getElementById("newConversationUsername")?.focus();
   document.getElementById("newMsgBtn")?.addEventListener("click", focusSearch);
   document.getElementById("newMsgBtnEmpty")?.addEventListener("click", focusSearch);
 
-  // Send message on form submit
   document.getElementById("messageComposer")?.addEventListener("submit", async (e) => {
     e.preventDefault();
     await sendMessage();
   });
 
-  // Mobile: back button returns to conversation list
   document.getElementById("backBtn")?.addEventListener("click", () => {
     document.getElementById("dmSidebar").classList.remove("dm-sidebar--hidden");
   });
+
+  // Image attach
+  document.getElementById("imageAttachBtn")?.addEventListener("click", () => {
+    document.getElementById("imageAttachInput")?.click();
+  });
+  document.getElementById("imageAttachInput")?.addEventListener("change", async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    await sendMediaMessage(file);
+  });
+
+  // Audio record
+  document.getElementById("audioRecordBtn")?.addEventListener("click", toggleAudioRecording);
 
   await loadConversations();
   updateUnreadBadge();
@@ -90,9 +105,11 @@ async function loadConversations(selectId = null) {
 
 function renderConversation(conv, active) {
   const avatar = getUserAvatarUrl(conv.other_user, getAssetUrl);
-  const name = conv.other_user?.display_name || "Unknown";
-  const preview = conv.last_message?.content || "No messages yet.";
-  const ts = conv.last_message?.created_at ? formatRelativeTime(conv.last_message.created_at) : "";
+  const name   = conv.other_user?.display_name || "Unknown";
+  const preview = conv.last_message
+    ? (conv.last_message.content?.startsWith("[audio]") ? "🎤 Voice message" : conv.last_message.content)
+    : "No messages yet.";
+  const ts     = conv.last_message?.created_at ? formatRelativeTime(conv.last_message.created_at) : "";
   const unread = Number(conv.unread_count || 0) > 0;
 
   return `
@@ -115,7 +132,6 @@ function renderConversation(conv, active) {
 // ── Thread ─────────────────────────────────────────────────────────────────
 
 async function loadThread(conversationId) {
-  // Reveal thread panels (empty state hides, thread shows)
   document.getElementById("dmEmpty").hidden = true;
   document.getElementById("threadHeader").hidden = false;
   document.getElementById("messagesArea").hidden = false;
@@ -135,25 +151,57 @@ async function loadThread(conversationId) {
   );
 
   currentOtherUser = data.conversation?.other_user || null;
-  const titleEl = document.getElementById("threadTitle");
+  const titleEl   = document.getElementById("threadTitle");
   const titleName = currentOtherUser?.display_name || "Conversation";
   titleEl.innerHTML = escapeHtml(titleName) + (currentOtherUser?.is_admin ? '<span class="admin-star" title="Admin">⭐</span>' : '');
-  document.getElementById("threadAvatar").src = getUserAvatarUrl(
-    currentOtherUser,
-    getAssetUrl
-  );
+  document.getElementById("threadAvatar").src = getUserAvatarUrl(currentOtherUser, getAssetUrl);
 
-  thread.innerHTML = renderMessageGroups(data.messages || []);
+  const messages = data.messages || [];
+  lastKnownMessageId = messages.length ? messages[messages.length - 1].id : null;
 
-  // Scroll to latest message
+  thread.innerHTML = renderMessageGroups(messages);
+
   const area = document.getElementById("messagesArea");
   area.scrollTop = area.scrollHeight;
 
-  await apiFetch(`/api/messages/conversations/${conversationId}/read`, {
-    method: "PATCH",
-  });
+  await apiFetch(`/api/messages/conversations/${conversationId}/read`, { method: "PATCH" });
 
   startPolling(conversationId);
+}
+
+// ── Smooth poll — only updates DOM when new messages arrive ───────────────
+
+async function pollMessages(conversationId) {
+  if (currentConversationId !== conversationId) return;
+
+  try {
+    const data = await apiFetch(
+      `/api/messages/conversations/${conversationId}?per_page=100`,
+      { method: "GET" }
+    );
+    const messages = data.messages || [];
+    if (!messages.length) return;
+
+    const latestId = messages[messages.length - 1].id;
+    if (latestId === lastKnownMessageId) return; // Nothing new
+
+    lastKnownMessageId = latestId;
+
+    const thread = document.getElementById("messageThread");
+    const area   = document.getElementById("messagesArea");
+
+    // Remember if user was near the bottom before update
+    const nearBottom = area.scrollHeight - area.scrollTop - area.clientHeight < 120;
+
+    thread.innerHTML = renderMessageGroups(messages);
+
+    if (nearBottom) area.scrollTop = area.scrollHeight;
+
+    await apiFetch(`/api/messages/conversations/${conversationId}/read`, { method: "PATCH" });
+    await updateUnreadBadge();
+  } catch {
+    // Polling errors are silent
+  }
 }
 
 /** Group consecutive messages from the same sender, then render. */
@@ -162,7 +210,6 @@ function renderMessageGroups(messages) {
     return `<div class="dm-empty-thread">No messages yet. Say hello! 👋</div>`;
   }
 
-  // Build groups of consecutive same-sender messages
   const groups = [];
   for (const msg of messages) {
     const last = groups[groups.length - 1];
@@ -175,18 +222,15 @@ function renderMessageGroups(messages) {
 
   return groups.map(({ is_mine, msgs }) => {
     const side = is_mine ? "mine" : "theirs";
-    const n = msgs.length;
+    const n    = msgs.length;
 
-    const bubbles = msgs
-      .map((m, i) => {
-        const pos = n === 1 ? "solo" : i === 0 ? "first" : i === n - 1 ? "last" : "mid";
-        return `<div class="dm-bubble" data-pos="${pos}">${escapeHtml(m.content || "")}</div>`;
-      })
-      .join("");
+    const bubbles = msgs.map((m, i) => {
+      const pos = n === 1 ? "solo" : i === 0 ? "first" : i === n - 1 ? "last" : "mid";
+      return `<div class="dm-bubble" data-pos="${pos}">${renderBubbleContent(m.content)}</div>`;
+    }).join("");
 
-    const last = msgs[n - 1];
-    const timeMeta =
-      formatRelativeTime(last.created_at) +
+    const last    = msgs[n - 1];
+    const timeMeta = formatRelativeTime(last.created_at) +
       (last.is_mine && last.is_read ? " · Seen" : "");
 
     const avatarHtml = !is_mine
@@ -204,11 +248,29 @@ function renderMessageGroups(messages) {
   }).join("");
 }
 
-// ── Send ───────────────────────────────────────────────────────────────────
+/** Render bubble content — handles audio/image/video messages specially. */
+function renderBubbleContent(content) {
+  if (!content) return "";
+  if (content.startsWith("[audio]")) {
+    const url = escapeAttr(content.slice(7));
+    return `<audio class="dm-audio" controls src="${url}" preload="metadata"></audio>`;
+  }
+  if (content.startsWith("[image]")) {
+    const url = escapeAttr(content.slice(7));
+    return `<img class="dm-media-img" src="${url}" alt="Image" loading="lazy" />`;
+  }
+  if (content.startsWith("[video]")) {
+    const url = escapeAttr(content.slice(7));
+    return `<video class="dm-media-video" controls src="${url}" preload="metadata"></video>`;
+  }
+  return escapeHtml(content);
+}
+
+// ── Send text message ──────────────────────────────────────────────────────
 
 async function sendMessage() {
   if (!currentConversationId) return;
-  const input = document.getElementById("messageInput");
+  const input   = document.getElementById("messageInput");
   const content = input.value.trim();
   if (!content) return;
   input.value = "";
@@ -220,15 +282,100 @@ async function sendMessage() {
   await loadConversations(currentConversationId);
 }
 
+// ── Send image/video message ───────────────────────────────────────────────
+
+async function sendMediaMessage(file) {
+  if (!currentConversationId) return;
+  const form = new FormData();
+  form.append("media", file, file.name);
+  try {
+    await apiFetch(`/api/messages/conversations/${currentConversationId}/media`, {
+      method: "POST",
+      body: form,
+    });
+    await loadThread(currentConversationId);
+    await loadConversations(currentConversationId);
+  } catch {
+    // Silently fail — backend may not support it yet
+  }
+}
+
+// ── Audio recording ────────────────────────────────────────────────────────
+
+async function toggleAudioRecording() {
+  if (isRecording) {
+    stopAudioRecording();
+  } else {
+    await startAudioRecording();
+  }
+}
+
+async function startAudioRecording() {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    alert("Audio recording is not supported in this browser.");
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioChunks  = [];
+    mediaRecorder = new MediaRecorder(stream, { mimeType: getSupportedAudioMime() });
+    mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
+    mediaRecorder.onstop = async () => {
+      stream.getTracks().forEach((t) => t.stop());
+      const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+      await sendAudioMessage(blob);
+    };
+    mediaRecorder.start();
+    isRecording = true;
+    setAudioBtnRecording(true);
+  } catch {
+    alert("Microphone access was denied. Please allow it in your browser settings.");
+  }
+}
+
+function stopAudioRecording() {
+  if (mediaRecorder && isRecording) {
+    mediaRecorder.stop();
+    isRecording = false;
+    setAudioBtnRecording(false);
+  }
+}
+
+function getSupportedAudioMime() {
+  const types = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/ogg", "audio/mp4"];
+  return types.find((t) => MediaRecorder.isTypeSupported?.(t)) || "";
+}
+
+function setAudioBtnRecording(active) {
+  const btn = document.getElementById("audioRecordBtn");
+  if (!btn) return;
+  btn.classList.toggle("dm-audio-btn--recording", active);
+  btn.title = active ? "Stop recording" : "Send audio";
+  btn.querySelector("i").className = active ? "uil uil-stop-circle" : "uil uil-microphone";
+}
+
+async function sendAudioMessage(blob) {
+  if (!currentConversationId) return;
+  const ext  = blob.type.includes("ogg") ? "ogg" : blob.type.includes("mp4") ? "mp4" : "webm";
+  const form = new FormData();
+  form.append("audio", blob, `voice.${ext}`);
+  try {
+    await apiFetch(`/api/messages/conversations/${currentConversationId}/audio`, {
+      method: "POST",
+      body: form,
+    });
+    await loadThread(currentConversationId);
+    await loadConversations(currentConversationId);
+  } catch {
+    alert("Could not send audio message. Please try again.");
+  }
+}
+
 // ── Polling ────────────────────────────────────────────────────────────────
 
 function startPolling(conversationId) {
   clearInterval(pollTimer);
-  pollTimer = setInterval(async () => {
-    if (currentConversationId !== conversationId) return;
-    await loadThread(conversationId);
-    await updateUnreadBadge();
-  }, 5000);
+  pollTimer = setInterval(() => pollMessages(conversationId), 5000);
 }
 
 async function updateUnreadBadge() {
@@ -239,13 +386,12 @@ async function updateUnreadBadge() {
     badge.textContent = String(count);
     badge.hidden = count === 0;
   } catch {
-    // Keep polling resilient.
+    // Keep polling resilient
   }
 }
 
 // ── Mobile helpers ─────────────────────────────────────────────────────────
 
-/** On mobile: hide the sidebar, show the thread. */
 function showThread() {
   document.getElementById("dmSidebar").classList.add("dm-sidebar--hidden");
   document.getElementById("dmEmpty").hidden = true;
@@ -257,14 +403,13 @@ function showThread() {
 // ── Utilities ──────────────────────────────────────────────────────────────
 
 function formatRelativeTime(dateLike) {
-  const date = new Date(dateLike);
-  const diffSec = Math.floor((Date.now() - date.getTime()) / 1000);
+  const diffSec = Math.floor((Date.now() - new Date(dateLike).getTime()) / 1000);
   if (diffSec < 60) return "Just now";
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h`;
-  return `${Math.floor(diffHr / 24)}d`;
+  const m = Math.floor(diffSec / 60);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h`;
+  return `${Math.floor(h / 24)}d`;
 }
 
 function escapeHtml(value) {
@@ -276,7 +421,4 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
-function escapeAttr(value) {
-  return escapeHtml(value);
-}
-
+function escapeAttr(value) { return escapeHtml(value); }

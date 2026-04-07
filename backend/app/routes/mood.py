@@ -17,7 +17,7 @@ from app.models.mood_checkin import MoodCheckin
 
 bp = Blueprint('mood', __name__)
 
-VALID_EMOTIONS = {'joy', 'stress', 'calm', 'connected', 'tired', 'frustrated'}
+VALID_EMOTIONS = {'joy', 'sadness', 'anger', 'fear', 'disgust', 'surprise', 'neutral'}
 COOLDOWN_HOURS = 12
 
 

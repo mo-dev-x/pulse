@@ -54,6 +54,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupFeedModeSwitch();
   setupGlobalUserSearch();
   setupFeedObserver();
+  setupReactionPopupDismiss();
+  setupMobileDrawer();
   renderStories();
 
   try {
@@ -71,6 +73,44 @@ async function loadCurrentUser() {
   currentUser = data.user;
   saveCurrentUser(currentUser);
   renderCurrentUser(currentUser);
+  showVerificationBanner(currentUser);
+}
+
+function showVerificationBanner(user) {
+  if (user?.is_verified) return;
+  const existing = document.getElementById("verifyBanner");
+  if (existing) return;
+
+  const banner = document.createElement("div");
+  banner.id = "verifyBanner";
+  banner.className = "verify-banner";
+  banner.innerHTML = `
+    <span>📧 Please verify your email to post.</span>
+    <a class="verify-banner-link" href="verify-email.html">Verify now →</a>
+    <button class="verify-banner-close" aria-label="Dismiss">✕</button>
+  `;
+  banner.querySelector(".verify-banner-close").addEventListener("click", () => banner.remove());
+
+  // Insert before the composer
+  const composer = document.querySelector(".composer");
+  if (composer) {
+    composer.parentNode.insertBefore(banner, composer);
+  } else {
+    document.querySelector(".main")?.prepend(banner);
+  }
+
+  // Intercept all post-creation buttons for unverified users
+  ["btnOpenCreateTop", "btnOpenCreateLeft", "btnOpenCreateComposer", "btnOpenCreateSmall"].forEach((id) => {
+    const btn = document.getElementById(id);
+    if (btn) {
+      btn.addEventListener("click", (e) => {
+        if (!currentUser?.is_verified) {
+          e.stopImmediatePropagation();
+          window.location.href = "verify-email.html";
+        }
+      }, true); // capture phase so it fires before the modal opener
+    }
+  });
 }
 
 async function loadBookmarks() {
@@ -250,6 +290,35 @@ function updateFeedModeUi() {
   });
 }
 
+function setupReactionPopupDismiss() {
+  document.addEventListener("click", () => {
+    document.querySelectorAll(".reaction-popup.open").forEach((p) => p.classList.remove("open"));
+  });
+}
+
+function setupMobileDrawer() {
+  const trigger  = document.getElementById("mobileMenuTrigger");
+  const drawer   = document.getElementById("mobileDrawer");
+  const overlay  = document.getElementById("mobileDrawerOverlay");
+  const closeBtn = document.getElementById("mobileDrawerClose");
+  if (!drawer || !overlay) return;
+
+  function openDrawer() {
+    drawer.classList.add("open");
+    overlay.classList.add("open");
+    document.body.style.overflow = "hidden";
+  }
+  function closeDrawer() {
+    drawer.classList.remove("open");
+    overlay.classList.remove("open");
+    document.body.style.overflow = "";
+  }
+
+  trigger?.addEventListener("click", openDrawer);
+  closeBtn?.addEventListener("click", closeDrawer);
+  overlay.addEventListener("click", closeDrawer);
+}
+
 function setupFeedObserver() {
   const sentinel = document.getElementById("feedSentinel");
   if (!sentinel) return;
@@ -425,13 +494,19 @@ function renderPostCard(post) {
     ${renderMedia(post)}
 
     <div class="post-actions">
-      <div class="reaction-grid">
-        ${REACTION_EMOJIS.map((emoji) => `
-          <button class="react-btn ${post.myReaction === emoji ? "is-active" : ""}" data-emoji="${emoji}">
-            ${emoji}
-            <span>${post.reactionCounts[emoji] ?? 0}</span>
-          </button>
-        `).join("")}
+      <div class="reactions-wrap">
+        <button class="react-trigger" data-react-trigger aria-label="React to post">
+          ${post.myReaction
+            ? `${post.myReaction} <span class="react-trigger-count">${post.reactionCounts[post.myReaction] ?? 0}</span>`
+            : `<span class="react-trigger-plus">+</span><span class="react-trigger-label">React</span>`}
+        </button>
+        <div class="reaction-popup" data-reaction-popup>
+          ${REACTION_EMOJIS.map((emoji) => `
+            <button class="react-btn ${post.myReaction === emoji ? "is-active" : ""}" data-emoji="${emoji}" title="${emoji}">
+              ${emoji}<span>${post.reactionCounts[emoji] ?? 0}</span>
+            </button>
+          `).join("")}
+        </div>
       </div>
 
       <div class="post-secondary-actions">
@@ -471,8 +546,21 @@ function renderPostCard(post) {
     </section>
   `;
 
+  // Reaction trigger — toggle popup
+  card.querySelector("[data-react-trigger]")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const popup = card.querySelector("[data-reaction-popup]");
+    const isNowOpen = !popup.classList.contains("open");
+    // Close any other open popups first
+    document.querySelectorAll(".reaction-popup.open").forEach((p) => p.classList.remove("open"));
+    popup.classList.toggle("open", isNowOpen);
+  });
+
+  // Emoji buttons inside popup
   card.querySelectorAll("[data-emoji]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
+    btn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      card.querySelector("[data-reaction-popup]")?.classList.remove("open");
       await onReact(post.id, btn.dataset.emoji);
     });
   });
@@ -1087,7 +1175,7 @@ function renderStories() {
 
   row.innerHTML = `
     <div class="story pulse-card">
-      <div class="pulse-left">
+      <div class="pulse-center">
         <div class="pulse-ring">
           <div class="pulse-ring-inner">
             <p class="pulse-kicker">Campus pulse</p>
@@ -1097,13 +1185,14 @@ function renderStories() {
           </div>
         </div>
       </div>
-      <div class="pulse-right">
-        <button class="emotile joy"        data-emotion="joy"        type="button"><div class="emoji">😊</div><div class="label">Joy</div></button>
-        <button class="emotile stress"     data-emotion="stress"     type="button"><div class="emoji">😵</div><div class="label">Stress</div></button>
-        <button class="emotile calm"       data-emotion="calm"       type="button"><div class="emoji">🫶</div><div class="label">Calm</div></button>
-        <button class="emotile connected"  data-emotion="connected"  type="button"><div class="emoji">🤝</div><div class="label">Connected</div></button>
-        <button class="emotile tired"      data-emotion="tired"      type="button"><div class="emoji">😴</div><div class="label">Tired</div></button>
-        <button class="emotile frustrated" data-emotion="frustrated" type="button"><div class="emoji">😤</div><div class="label">Frustrated</div></button>
+      <div class="pulse-emotions">
+        <button class="emotile joy"      data-emotion="joy"      type="button"><div class="emoji">😊</div><div class="label">Joy</div></button>
+        <button class="emotile sadness"  data-emotion="sadness"  type="button"><div class="emoji">😢</div><div class="label">Sad</div></button>
+        <button class="emotile anger"    data-emotion="anger"    type="button"><div class="emoji">😤</div><div class="label">Angry</div></button>
+        <button class="emotile fear"     data-emotion="fear"     type="button"><div class="emoji">😰</div><div class="label">Anxious</div></button>
+        <button class="emotile disgust"  data-emotion="disgust"  type="button"><div class="emoji">🤢</div><div class="label">Overwhelmed</div></button>
+        <button class="emotile surprise" data-emotion="surprise" type="button"><div class="emoji">😲</div><div class="label">Surprised</div></button>
+        <button class="emotile neutral"  data-emotion="neutral"  type="button"><div class="emoji">😐</div><div class="label">Neutral</div></button>
         <div class="emotile-cooldown" id="emotileCooldown" hidden></div>
       </div>
     </div>
@@ -1117,12 +1206,14 @@ function renderStories() {
 }
 
 const EMOTION_LABELS = {
-  joy: "Joy 😊", stress: "Stress 😵", calm: "Calm 🫶",
-  connected: "Connected 🤝", tired: "Tired 😴", frustrated: "Frustrated 😤",
+  joy: "Joy 😊", sadness: "Sad 😢", anger: "Angry 😤",
+  fear: "Anxious 😰", disgust: "Overwhelmed 🤢", surprise: "Surprised 😲", neutral: "Neutral 😐",
 };
 const EMOTION_EMOJI = {
-  joy: "😊", stress: "😵", calm: "🫶", connected: "🤝", tired: "😴", frustrated: "😤",
+  joy: "😊", sadness: "😢", anger: "😤", fear: "😰", disgust: "🤢", surprise: "😲", neutral: "😐",
 };
+
+let _cooldownInterval = null;
 
 async function loadCampusPulse() {
   try {
@@ -1145,12 +1236,16 @@ async function loadCampusPulse() {
 
     allEmotiles.forEach((b) => {
       b.classList.remove("emotile--active");
+      b.removeAttribute("data-timer");
       b.disabled = inCooldown;
     });
 
     if (data.user_emotion) {
       const activeBtn = document.querySelector(`.emotile[data-emotion="${data.user_emotion}"]`);
-      if (activeBtn) activeBtn.classList.add("emotile--active");
+      if (activeBtn) {
+        activeBtn.classList.add("emotile--active");
+        if (inCooldown) activeBtn.dataset.timer = formatCooldown(data.cooldown_seconds);
+      }
     }
 
     if (cooldownEl) {
@@ -1160,6 +1255,26 @@ async function loadCampusPulse() {
       } else {
         cooldownEl.hidden = true;
       }
+    }
+
+    // Live countdown timer
+    if (_cooldownInterval) { clearInterval(_cooldownInterval); _cooldownInterval = null; }
+    if (inCooldown) {
+      const endsAt = Date.now() + data.cooldown_seconds * 1000;
+      _cooldownInterval = setInterval(() => {
+        const remaining = Math.max(0, Math.round((endsAt - Date.now()) / 1000));
+        if (remaining <= 0) {
+          clearInterval(_cooldownInterval);
+          _cooldownInterval = null;
+          loadCampusPulse();
+          return;
+        }
+        const text = formatCooldown(remaining);
+        const el = document.getElementById("emotileCooldown");
+        const active = document.querySelector(".emotile--active");
+        if (el) el.textContent = `Next check-in in ${text}`;
+        if (active) active.dataset.timer = text;
+      }, 30_000);
     }
 
     renderCampusMoodSidebar(data);

@@ -56,19 +56,22 @@ Pulse is a campus wellness platform with three core features:
 
 1. **Social Expression** 
    - Post publicly (linked to your profile) or anonymously (with pseudonym)
+   - Manage your anonymous identity — custom pseudonym, changeable every 90 days, from Settings
    - Follow friends and build connections
-   - React with emojis to posts
+   - React to posts via an emoji picker (tap + to reveal reactions)
    - Comment on posts with threading support
 
 2. **Privacy Protection**
    - Choose public or anonymous per post
-   - Persistent pseudonym (changeable every 90 days)
+   - Persistent pseudonym (changeable every 90 days via Settings)
    - Followers never see your anonymous posts
    - University-verified accounts via email verification (OIDC/Entra ready but currently disabled)
+   - Email notifications for reactions, comments, follows, and mentions (on by default)
 
 3. **Collective Insights**
    - Campus-wide mood trends
    - Zone-based sentiment analysis
+   - Personalised home feed: posts from followed accounts blended with interest-based suggestions from non-followed accounts (ranked by engagement + recency)
    - Discovery and trending feeds
    - Privacy-safe aggregation (≥10 posts required)
    - Daily and weekly analytics
@@ -76,8 +79,10 @@ Pulse is a campus wellness platform with three core features:
 4. **Platform Systems**
    - Unified search across posts, users, and zones
    - Moderation and reporting workflow
-   - Direct messaging between users
+   - Direct messaging: text, images, videos, and voice messages
+   - Instagram-style notification centre with grouping (Today / This week / Earlier)
    - Push-ready notification infrastructure
+   - Mobile-friendly navigation via slide-in drawer (hamburger menu)
    - Caching and optional Redis/RQ background jobs
 
 ### Core Principle
@@ -304,7 +309,7 @@ POST   /api/auth/reset-password        # Reset password
 ### Posts, Discovery & Search
 ```
 POST   /api/posts                      # Create post
-GET    /api/posts/feed                 # Timeline (friends' posts)
+GET    /api/posts/feed                 # Personalised feed (followed + interest-based)
 GET    /api/posts/discover             # Campus-wide discovery feed
 GET    /api/posts/trending             # Trending posts
 GET    /api/posts/@{username}          # User's public posts
@@ -326,7 +331,15 @@ GET    /api/users/me/friends           # Mutual follows
 GET    /api/users/@{username}          # User profile
 GET    /api/messages/conversations     # DM conversations
 POST   /api/messages/conversations     # Create/reuse DM conversation
+GET    /api/messages/conversations/{id}    # Fetch messages in thread
+POST   /api/messages/conversations/{id}    # Send text message
+POST   /api/messages/conversations/{id}/audio  # Send voice message
+POST   /api/messages/conversations/{id}/media  # Send image or video
+PATCH  /api/messages/conversations/{id}/read   # Mark conversation read
+GET    /api/messages/unread-count      # Unread count
 GET    /api/notifications              # List notifications
+PATCH  /api/notifications/{id}         # Mark notification read
+DELETE /api/notifications/{id}         # Delete notification
 ```
 
 ### Reactions, Comments & Moderation
@@ -496,17 +509,20 @@ Currently manual testing via browser:
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| Login Page | ✅ Complete | JWT auth, password toggle working |
-| Register Page | ✅ Complete | Email validation working |
-| Feed Layout | ✅ Complete | Sidebar, navbar, right panel done |
-| Feed Posts | ✅ Complete | Post cards with author, zone, sentiment badge |
-| Post Composer | ✅ Complete | Zone picker, anon toggle, image upload UI |
-| Profile Page | 🟡 Partial | Page exists, full wiring pending |
-| Post Creation | 🟡 In Progress | Modal done, API integration ongoing |
-| Reactions / Comments | 🟠 Next | Backend ready, frontend wiring pending |
-| Analytics Dashboard | 🔵 Planned | Uses existing backend analytics APIs |
+| Auth (login / register / reset) | ✅ Complete | JWT, @ulaval.ca validation, 2FA |
+| Email verification | ✅ Complete | Banner + intercept for unverified users |
+| Feed | ✅ Complete | Interest-based blending, infinite scroll, emoji picker popup, mobile drawer |
+| Post Composer | ✅ Complete | Zone picker, anon toggle, image upload |
+| Reactions | ✅ Complete | `+` trigger → animated emoji popup |
+| Comments | ✅ Complete | Threaded display, @mention autocomplete |
+| Profile Page | ✅ Complete | Public/own view, follow, edit, pinned post |
+| Settings | ✅ Complete | Profile, preferences, pseudonym, security, 2FA |
+| Direct Messages | ✅ Complete | Text, images, videos, voice messages, smooth polling |
+| Notifications | ✅ Complete | Instagram-style, grouped, type icons, mark read |
+| Analytics Dashboard | ✅ Complete | Charts, zone breakdown, privacy threshold |
+| Search / Discovery | ✅ Complete | Unified search, discovery feed, trending zones |
 
-**Overall Progress:** ~60%
+**Overall Progress:** ~100%
 
 ---
 
@@ -618,16 +634,14 @@ JWT_STORAGE_KEY=pulse_token
 - ⏸️ OIDC/Entra remains feature-flagged off until university rollout
 
 ### Frontend
-- ✅ ES modules working via HTTP server
-- ✅ Token storage and retrieval working
-- ⚠️ Logout button not implemented yet (manual removal works)
-- ⚠️ Feed posts not loading yet (API integration pending)
-- ⚠️ Empty states and loading spinners needed
+- ✅ All pages fully implemented and wired to backend
+- ✅ Bilingual (FR/EN) throughout
+- ⏸️ Token refresh not implemented — users re-login after 24 h expiration
 
 ### Integration
 - ✅ CORS working between frontend and backend
 - ✅ JWT authentication working end-to-end
-- ⚠️ Token refresh not implemented (24h expiration)
+- ⏸️ OIDC/Entra feature-flagged off until university rollout
 
 ---
 
@@ -663,21 +677,29 @@ For questions or issues, please contact the development team or open an issue in
 
 ---
 
-**Last Updated:** 2026-03-18  
+**Last Updated:** 2026-04-07  
 **Backend Status:** Phase 6 Complete  
-**Frontend Status:** Phases 1–3 Complete · Phase 4 In Progress (~60%)  
+**Frontend Status:** All phases complete (~100%)  
 **Repository:** [github.com/mo-dev-x/pulse](https://github.com/mo-dev-x/pulse)
 
 ---
 
 ## 🎉 MILESTONE ACHIEVEMENTS
 
+**April 2026:**
+- ✅ Interest-based home feed (followed posts + interest signals from reactions/zones)
+- ✅ Anonymous pseudonym management added to Settings (90-day cooldown, live UI)
+- ✅ Voice messages + image/video messages in DMs
+- ✅ Smooth DM polling (no more flash — DOM updates only on new messages)
+- ✅ Instagram-style notifications (grouped, type icons, mark-read, delete)
+- ✅ Emoji reaction popup (+ trigger → animated picker)
+- ✅ Mobile hamburger drawer for navigation
+- ✅ Email notifications wired end-to-end (Brevo, bilingual, on by default)
+- ✅ Email verification banner + intercept on feed for unverified accounts
+
 **March 2026:**
 - ✅ Backend Phases 1-6 complete
-- ✅ Frontend Auth Integration Complete (login + register working)
+- ✅ Frontend all phases complete (auth, feed, profile, DMs, notifications, settings, analytics, search)
 - ✅ JWT authentication working end-to-end
 - ✅ Search, moderation, messaging, push, caching, and background jobs added
 - ✅ Architecture docs and technical guides updated
-- 🚧 Frontend feed UI in progress
-
-**Next Major Milestone:** Frontend integration catch-up for the completed backend platform 🚀

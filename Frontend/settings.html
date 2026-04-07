@@ -58,6 +58,19 @@
           <label class="checkbox"><input id="settingsShowEmail" type="checkbox" /><span>Show email on public profile</span></label>
           <button class="btn btn-accent" type="submit">Save profile</button>
         </form>
+
+        <form id="pseudonymForm" class="modal-body" style="margin-top:18px;border-top:1px solid var(--border);padding-top:18px;">
+          <div class="panel-title" style="margin-bottom:10px;"><span>Anonymous identity</span></div>
+          <p style="font-size:13px;color:var(--muted);margin:0 0 12px;">
+            When you post anonymously your username is hidden and replaced by your pseudonym.
+            You can change it once every 90 days — it will update on all your past anonymous posts too.
+          </p>
+          <div id="pseudonymMessage" class="msg" hidden></div>
+          <label class="label" for="settingsPseudonym">Your pseudonym</label>
+          <input id="settingsPseudonym" class="select" type="text" minlength="3" maxlength="50" placeholder="e.g. stressed_engineer" />
+          <p id="pseudonymCooldownNote" class="label" style="margin-top:6px;color:var(--muted);font-size:12px;" hidden></p>
+          <button id="savePseudonymBtn" class="btn btn-accent" type="submit" style="margin-top:10px;">Save pseudonym</button>
+        </form>
       </section>
 
       <section id="tab-preferences" class="panel analytics-card settings-panel" hidden>

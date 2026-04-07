@@ -5,7 +5,7 @@ Handles post creation, retrieval, feed generation, and management.
 
 Endpoints:
 - POST   /api/posts                       — Create new post (public or anonymous)
-- GET    /api/posts/feed                  — Home feed (posts from followed users)
+- GET    /api/posts/feed                  — Personalised home feed (followed + interest-based posts)
 - GET    /api/posts/discover              — Discover feed (public posts from all users)
 - GET    /api/posts/trending              — Trending posts
 - GET    /api/posts/me                    — Current user's public posts
@@ -431,49 +431,126 @@ def get_feed():
     """
     Get user's personalized feed.
 
-    Shows ONLY public posts from followed users (never anonymous).
-    Ordered by newest first, paginated.
+    Blends public posts from followed users with interest-based posts from
+    non-followed accounts.  Interest signals are derived from:
+      - Zones the current user has posted in
+      - Zones and emotion labels from posts the user has reacted to recently
+
+    Followed posts receive a score boost so they appear prominently.
+    New users with no activity fall back to recent public posts.
 
     Query Params:
         page (int): Page number (default 1)
         per_page (int): Items per page (default 20, max 50)
     """
     current_user_id = int(get_jwt_identity())
-
     page = request.args.get('page', 1, type=int)
     per_page = min(request.args.get('per_page', 20, type=int), 50)
 
-    # Get IDs of users the current user follows
     following_ids = Follower.get_following_ids(current_user_id)
+    following_set = set(following_ids)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    thirty_days_ago = now - timedelta(days=30)
 
-    if not following_ids:
+    # --- Derive interest signals from the user's own activity ---
+    user_zone_ids = set(
+        row[0] for row in db.session.query(Post.zone_id)
+        .filter(Post.user_id == current_user_id, Post.zone_id.isnot(None))
+        .distinct().all()
+    )
+
+    reacted_post_ids = [
+        row[0] for row in db.session.query(Reaction.post_id)
+        .filter(Reaction.user_id == current_user_id, Reaction.created_at >= thirty_days_ago)
+        .all()
+    ]
+
+    reacted_zone_ids: set = set()
+    reacted_emotions: set = set()
+    if reacted_post_ids:
+        for zone_id, emotion in db.session.query(Post.zone_id, Post.emotion_label).filter(
+            Post.id.in_(reacted_post_ids)
+        ).all():
+            if zone_id:
+                reacted_zone_ids.add(zone_id)
+            if emotion:
+                reacted_emotions.add(emotion)
+
+    interest_zone_ids = user_zone_ids | reacted_zone_ids
+
+    # --- Fetch followed-user posts (up to 3× page size for ranking pool) ---
+    followed_posts = []
+    if following_ids:
+        followed_posts = Post.query.filter(
+            Post.user_id.in_(following_ids),
+            Post.is_anonymous == False,  # noqa: E712
+            Post.hidden_by_mod == False,  # noqa: E712
+        ).join(User, User.id == Post.user_id).filter(
+            User.is_deactivated == False  # noqa: E712
+        ).order_by(Post.created_at.desc()).limit(per_page * 3).all()
+
+    followed_post_ids = {p.id for p in followed_posts}
+
+    # --- Fetch interest-based posts from non-followed accounts ---
+    discovery_posts = []
+    interest_filters = []
+    if interest_zone_ids:
+        interest_filters.append(Post.zone_id.in_(interest_zone_ids))
+    if reacted_emotions:
+        interest_filters.append(Post.emotion_label.in_(reacted_emotions))
+
+    if interest_filters:
+        discovery_q = _public_posts_query().filter(
+            Post.user_id != current_user_id,
+            Post.user_id.notin_(following_ids) if following_ids else db.true(),
+            db.or_(*interest_filters),
+        ).order_by(Post.created_at.desc()).limit(per_page * 2)
+        discovery_posts = discovery_q.all()
+
+    # Fallback for brand-new users with no activity or interest signals
+    if not followed_posts and not discovery_posts:
+        discovery_posts = _public_posts_query().filter(
+            Post.user_id != current_user_id,
+        ).order_by(Post.created_at.desc()).limit(per_page * 2).all()
+
+    all_posts = followed_posts + [p for p in discovery_posts if p.id not in followed_post_ids]
+
+    if not all_posts:
         return jsonify({
             'posts': [],
             'total': 0,
             'page': 1,
             'pages': 0,
             'has_next': False,
-            'message': get_localized_message(request, 'feed_empty')
+            'message': get_localized_message(request, 'feed_empty'),
         }), 200
 
-    # CRITICAL: Only public posts from followed users
-    feed_query = Post.query.filter(
-        Post.user_id.in_(following_ids),
-        Post.is_anonymous == False,  # noqa: E712 — SQLAlchemy requires ==
-        Post.hidden_by_mod == False  # noqa: E712
-    ).join(User, User.id == Post.user_id).filter(
-        User.is_deactivated == False  # noqa: E712
-    ).order_by(Post.created_at.desc())
+    # --- Rank: engagement score + recency decay, followed posts get a boost ---
+    enriched = _bulk_enrich_posts(all_posts, current_user_id)
+    follow_boost = 20.0
+    ranked = []
+    for post_dict, post in zip(enriched, all_posts):
+        reaction_count = post_dict.get('reaction_count', 0)
+        comment_count = post_dict.get('comment_count', 0)
+        hours_since = max((now - post.created_at).total_seconds() / 3600, 1 / 60)
+        score = reaction_count * 2 + comment_count + (10 / hours_since)
+        if post.user_id in following_set:
+            score += follow_boost
+        post_dict['engagement_score'] = round(score, 4)
+        post_dict['is_suggested'] = post.user_id not in following_set
+        ranked.append((score, post.created_at, post_dict))
 
-    paginated = feed_query.paginate(page=page, per_page=per_page, error_out=False)
-    posts = _bulk_enrich_posts(paginated.items, current_user_id)
+    ranked.sort(key=lambda item: (item[0], item[1]), reverse=True)
+    ranked_posts = [item[2] for item in ranked]
+
+    page_posts, has_next = _paginate_list(ranked_posts, page, per_page)
 
     return jsonify({
-        'posts': posts,
-        'total': paginated.total,
-        'page': paginated.page,
-        'pages': paginated.pages,
-        'has_next': paginated.has_next
+        'posts': page_posts,
+        'total': len(ranked_posts),
+        'page': page,
+        'pages': (len(ranked_posts) + per_page - 1) // per_page,
+        'has_next': has_next,
     }), 200
 
 

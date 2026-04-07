@@ -69,8 +69,6 @@
           <span class="dm-thread-name" id="threadTitle">—</span>
         </div>
         <div class="dm-thread-actions">
-          <button class="dm-icon-btn" title="Voice call"><i class="uil uil-phone"></i></button>
-          <button class="dm-icon-btn" title="Video call"><i class="uil uil-video"></i></button>
           <button class="dm-icon-btn" title="Info"><i class="uil uil-info-circle"></i></button>
         </div>
       </div>
@@ -82,7 +80,13 @@
 
       <!-- Compose bar -->
       <form class="dm-compose" id="messageComposer" hidden>
-        <button class="dm-icon-btn" type="button" title="Send image"><i class="uil uil-image"></i></button>
+        <button class="dm-icon-btn" type="button" id="imageAttachBtn" title="Send image">
+          <i class="uil uil-image"></i>
+        </button>
+        <input id="imageAttachInput" type="file" accept="image/*,video/*" hidden />
+        <button class="dm-icon-btn dm-audio-btn" type="button" id="audioRecordBtn" title="Send audio">
+          <i class="uil uil-microphone"></i>
+        </button>
         <div class="dm-compose-field">
           <input
             id="messageInput"
@@ -91,7 +95,6 @@
             placeholder="Message…"
             autocomplete="off"
           />
-          <button class="dm-icon-btn" type="button" title="Emoji"><i class="uil uil-smile"></i></button>
         </div>
         <button class="dm-send-btn" type="submit" title="Send">
           <i class="uil uil-message"></i>

@@ -1,4 +1,4 @@
-"""Email service for verification and password reset flows."""
+"""Email service for verification, password reset, and notification emails."""
 
 import secrets
 import requests

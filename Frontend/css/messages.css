@@ -465,6 +465,38 @@ html, body { height: 100%; overflow: hidden; }
 
 @keyframes shimmer { to { background-position: -200% 0; } }
 
+/* ── Media messages ───────────────────────────────── */
+.dm-media-img,
+.dm-media-video {
+  display: block;
+  max-width: 260px;
+  max-height: 260px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+
+/* ── Audio record button ──────────────────────────── */
+.dm-audio-btn { color: var(--muted); }
+.dm-audio-btn--recording {
+  color: var(--accent) !important;
+  animation: dm-pulse 1.2s ease-in-out infinite;
+}
+@keyframes dm-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
+}
+
+/* ── Audio message bubble ─────────────────────────── */
+.dm-audio {
+  display: block;
+  width: 100%;
+  min-width: 200px;
+  max-width: 280px;
+  border-radius: 12px;
+  height: 40px;
+  accent-color: var(--accent);
+}
+
 /* ── Mobile ───────────────────────────────────────── */
 @media (max-width: 768px) {
   .dm-sidebar {

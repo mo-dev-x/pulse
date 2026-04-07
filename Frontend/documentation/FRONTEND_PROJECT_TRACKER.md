@@ -1,6 +1,6 @@
 # 🫀 PULSE FRONTEND — PROJECT TRACKER
 
-**Last Updated:** 2026-03-26
+**Last Updated:** 2026-04-07
 **University:** Université Laval  
 **Project:** Pulse Frontend (Privacy-First Campus Wellness Platform)  
 **Tech Stack:** Vanilla JavaScript (ES Modules) + HTML5 + CSS3  
@@ -176,11 +176,13 @@ Frontend/
 - [x] Search bar UI (topbar) ✅
 - [x] Loading / empty state (`#stateBox`) ✅
 - [x] Infinite scroll / pagination ✅
-- [x] Reaction picker (10 emojis) — privacy-safe counts ✅
+- [x] Reaction picker — `+` trigger button, animated popup on click, global dismiss ✅
 - [x] Comment thread — nested display, submit ✅
 - [x] Bookmark toggle ✅
 - [x] Delete own post UI wired (`feed.js`) ✅
 - [x] Image upload wired in composer via `FormData` ✅
+- [x] Email verification banner — shown to unverified users; intercepts post/comment buttons ✅
+- [x] Mobile hamburger drawer — slide-in nav, overlay backdrop, links to all pages ✅
 
 ### Phase F3 — Profile, Social & Following
 - [x] Profile page (`profile.html` + `profile.js` + `profile.css`) — structured and data-wired ✅
@@ -202,11 +204,13 @@ Frontend/
 - [x] Zone activity feed via `/api/zones/<id>/activity` ✅
 
 ### Phase F5 — Notifications, DMs & Settings
-- [x] Notification centre — list, mark read, badge count ✅
+- [x] Notification centre — Instagram-style, grouped (Today/This week/Earlier), type icons (reaction/comment/follow/mention), mark read, delete ✅
 - [x] DM conversation list ✅
-- [x] DM thread view — send, receive, read receipts ✅
+- [x] DM thread view — text, images, videos, voice messages, read receipts ✅
+- [x] DM smooth polling — DOM only updates when new messages arrive (no flash) ✅
 - [x] Unread DM badge in nav ✅
 - [x] Settings page — display name, bio, avatar, language preference ✅
+- [x] Settings — anonymous pseudonym management (change with 90-day cooldown, live UI) ✅
 - [x] Security settings — change password, active sessions, revoke sessions ✅
 - [x] 2FA setup — QR code display, TOTP verify, backup codes ✅
 - [x] Push notification permission request (browser) ✅
@@ -250,7 +254,11 @@ All 74+ backend endpoints are live. Key ones for frontend:
 | Analytics campus | GET | `/api/analytics/campus` |
 | Notifications | GET | `/api/notifications` |
 | DM conversations | GET | `/api/messages/conversations` |
-| Send DM | POST | `/api/messages/conversations/<id>` |
+| Send DM (text) | POST | `/api/messages/conversations/<id>` |
+| Send DM (audio) | POST | `/api/messages/conversations/<id>/audio` |
+| Send DM (media) | POST | `/api/messages/conversations/<id>/media` |
+| Mark DM read | PATCH | `/api/messages/conversations/<id>/read` |
+| Update pseudonym | PATCH | `/api/auth/update-pseudonym` |
 | Sessions | GET | `/api/sessions` |
 | 2FA setup | POST | `/api/auth/2fa/setup` |
 | Push subscribe | POST | `/api/push/subscribe` |
@@ -279,15 +287,15 @@ All 74+ backend endpoints are live. Key ones for frontend:
 | `verify-email.html` / `verify_email.js` | ✅ Working | Verification wait screen + resend flow |
 | `forgot-password.html` / `forgot_password.js` | ✅ Working | Password reset request flow |
 | `reset-password.html` / `reset_password.js` | ✅ Working | Password reset confirm flow |
-| `feed.html` | ✅ Working | Full layout: topbar, sidebar, composer, feed, right panel, create modal |
-| `feed.css` | ✅ Working | Full glassmorphism dark theme, responsive breakpoints |
-| `feed.js` | ✅ Working | Feed loading, pagination, comments, bookmarks, 10-emoji reactions, create post, image upload, delete, user search |
+| `feed.html` | ✅ Working | Full layout: topbar (with mobile hamburger), sidebar, composer, feed, right panel, create modal, mobile slide-in drawer |
+| `feed.css` | ✅ Working | Full glassmorphism dark theme, responsive breakpoints, reaction popup, verification banner, mobile drawer |
+| `feed.js` | ✅ Working | Interest-based feed, pagination, comments, bookmarks, emoji reaction popup, create post, image upload, delete, verification banner intercept, mobile drawer |
 | `profile.html` / `profile.js` / `profile.css` | ✅ Working | Public/own profile views, edit profile modal, follow/unfollow, followers/following/friends modals |
 | `zone.html` / `zone.js` | ✅ Working | Zone feed page + zone lookup |
 | `analytics.html` / `analytics.css` / `analytics.js` | ✅ Working | Campus mood hero, charts, zone breakdown, privacy notice, zone activity details |
-| `notifications.html` / `notifications.css` / `notifications.js` | ✅ Working | List, unread summary, mark read, mark all read, delete |
-| `messages.html` / `messages.css` / `messages.js` | ✅ Working | Conversation list, thread view, send flow, read state, polling |
-| `settings.html` / `settings.js` | ✅ Working | Profile/preferences/security tabs, avatar upload, change password, sessions, 2FA, push permission |
+| `notifications.html` / `notifications.css` / `notifications.js` | ✅ Working | Instagram-style: grouped by time, type icons, mark read, mark all read, delete |
+| `messages.html` / `messages.css` / `messages.js` | ✅ Working | Conversation list, thread view, text/image/video/voice messages, smooth polling |
+| `settings.html` / `settings.js` | ✅ Working | Profile/preferences/security tabs, avatar upload, pseudonym management, change password, sessions, 2FA, push permission |
 | `search.html` / `search.js` | ✅ Working | Unified search page with tabs, paging, search skeletons, mention autocomplete helper used by composer/comments |
 | `discover.html` / `discover.js` | ✅ Working | Discovery feed with sentiment filter + trending zones sidebar |
 | `auth.js` | ✅ Working | Token helpers, 401 auth cleanup, language-aware API requests |
@@ -313,8 +321,8 @@ All 74+ backend endpoints are live. Key ones for frontend:
 **📌 Remember:** Update this tracker after every completed phase!
 
 **Backend Status:** ✅ All 6 phases complete — 74+ endpoints available  
-**Frontend Status:** ✅ Phase F1 ~95% · ✅ Phase F2 ~95% · ✅ Phase F3 ~95% · ✅ Phase F4 ~95% · ✅ Phase F5 ~95% · ✅ Phase F6 ~95%
-**Last Updated:** 2026-03-26
+**Frontend Status:** ✅ All phases complete (~100%) — all pages fully wired
+**Last Updated:** 2026-04-07
 **Next Milestone:** Translation coverage expansion, in-browser accessibility verification, and regression testing
 
 **📝 Note:** All frontend architecture decisions will be documented in `FRONTEND_ARCHITECTURE_DECISIONS.md` as they are made.

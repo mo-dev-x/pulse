@@ -38,6 +38,18 @@ def create_notification(user_id, notification_type, title, message, related_type
         },
         queue_name='push',
     )
+
+    # Send email notification if the user has it enabled
+    user = db.session.get(User, user_id)
+    if user and user.email_notifications:
+        enqueue_task(
+            'app.tasks.email_tasks.deliver_notification_email',
+            user_id,
+            title,
+            message,
+            queue_name='email',
+        )
+
     return notification
 
 

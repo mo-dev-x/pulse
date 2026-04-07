@@ -4,34 +4,70 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>PULSE — Notifications</title>
+  <link rel="stylesheet" href="https://unicons.iconscout.com/release/v4.0.8/css/line.css" />
   <link rel="stylesheet" href="css/variables.css">
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/components.css">
-  <link rel="stylesheet" href="css/feed.css">
   <link rel="stylesheet" href="css/notifications.css">
 </head>
 <body>
-  <div id="offlineBanner" class="error" hidden>You are offline. Notifications may be stale.</div>
-  <header class="topbar">
-    <div class="topbar-left"><a class="brand" href="feed.html">PULSE</a></div>
-    <div class="topbar-center"></div>
-    <div class="topbar-right">
-      <button class="iconbtn" data-theme-toggle aria-label="Toggle theme">☀️</button>
-      <a class="btn btn-ghost" href="feed.html">Feed</a>
-    </div>
-  </header>
-  <div class="app app-shell-main">
-    <main class="main">
-      <section class="panel analytics-card">
-        <div class="panel-title">
-          <span>Notifications</span>
-          <button id="markAllRead" class="btn btn-ghost btn-sm">Mark all read</button>
+  <div id="offlineBanner" class="notif-offline" hidden>You are offline. Notifications may be stale.</div>
+
+  <div class="notif-app">
+
+    <!-- Header -->
+    <header class="notif-header">
+      <a class="notif-back" href="feed.html" title="Back to feed">
+        <i class="uil uil-arrow-left"></i>
+      </a>
+      <h1 class="notif-title">Notifications</h1>
+      <div class="notif-header-actions">
+        <button class="notif-header-btn" id="markAllRead" title="Mark all as read">
+          <i class="uil uil-check"></i>
+        </button>
+        <button class="notif-header-btn" data-theme-toggle title="Toggle theme">
+          <i class="uil uil-sun"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <main class="notif-main">
+      <div id="notifLoadingState" class="notif-state">
+        <div class="notif-skel-row">
+          <div class="notif-skel notif-skel-avatar"></div>
+          <div class="notif-skel-lines">
+            <div class="notif-skel notif-skel-line notif-skel-line--long"></div>
+            <div class="notif-skel notif-skel-line notif-skel-line--short"></div>
+          </div>
         </div>
-        <div class="state" id="notifSummary">Loading...</div>
-        <div class="notification-list" id="notificationList"></div>
-      </section>
+        <div class="notif-skel-row">
+          <div class="notif-skel notif-skel-avatar"></div>
+          <div class="notif-skel-lines">
+            <div class="notif-skel notif-skel-line notif-skel-line--long"></div>
+            <div class="notif-skel notif-skel-line notif-skel-line--short"></div>
+          </div>
+        </div>
+        <div class="notif-skel-row">
+          <div class="notif-skel notif-skel-avatar"></div>
+          <div class="notif-skel-lines">
+            <div class="notif-skel notif-skel-line notif-skel-line--medium"></div>
+            <div class="notif-skel notif-skel-line notif-skel-line--short"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="notifEmpty" class="notif-empty" hidden>
+        <div class="notif-empty-icon"><i class="uil uil-bell-slash"></i></div>
+        <p class="notif-empty-title">No notifications yet</p>
+        <p class="notif-empty-sub">When someone likes or comments on your posts, you'll see it here.</p>
+      </div>
+
+      <div id="notificationList"></div>
     </main>
+
   </div>
+
   <script type="module" src="js/notifications.js"></script>
 </body>
 </html>

@@ -18,72 +18,180 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 async function loadNotifications() {
-  const summary = document.getElementById("notifSummary");
-  const list = document.getElementById("notificationList");
-  summary.textContent = "Loading...";
-  list.innerHTML = "";
+  const loadingEl = document.getElementById("notifLoadingState");
+  const emptyEl   = document.getElementById("notifEmpty");
+  const listEl    = document.getElementById("notificationList");
+
+  loadingEl.hidden = false;
+  emptyEl.hidden   = true;
+  listEl.innerHTML = "";
 
   try {
     const data = await apiFetch("/api/notifications?per_page=50", { method: "GET" });
-    summary.innerHTML = `Unread <span class="inline-badge">${data.unread_count || 0}</span>`;
+    loadingEl.hidden = true;
 
-    if (!(data.notifications || []).length) {
-      list.innerHTML = '<div class="state state-illustrated"><div class="state-emoji">🔔</div><div>No notifications yet.<br />Aucune notification pour le moment.</div></div>';
+    const notifications = data.notifications || [];
+    if (!notifications.length) {
+      emptyEl.hidden = false;
       return;
     }
 
-    list.innerHTML = data.notifications.map((notification) => renderNotification(notification)).join("");
+    // Group by time period
+    const groups = groupByTime(notifications);
+    const fragment = document.createDocumentFragment();
 
-    list.querySelectorAll("[data-mark-read]").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        await apiFetch(`/api/notifications/${btn.dataset.markRead}/read`, { method: "PATCH" });
-        await loadNotifications();
+    for (const [label, items] of Object.entries(groups)) {
+      if (!items.length) continue;
+      const section = document.createElement("section");
+
+      const labelEl = document.createElement("div");
+      labelEl.className = "notif-section-label";
+      labelEl.textContent = label;
+      section.appendChild(labelEl);
+
+      items.forEach((n) => {
+        section.appendChild(buildNotifRow(n));
       });
+
+      fragment.appendChild(section);
+    }
+
+    listEl.appendChild(fragment);
+
+    // Delegate delete clicks
+    listEl.addEventListener("click", async (e) => {
+      const deleteBtn = e.target.closest("[data-delete-id]");
+      if (deleteBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        await apiFetch(`/api/notifications/${deleteBtn.dataset.deleteId}`, { method: "DELETE" });
+        deleteBtn.closest(".notif-row")?.remove();
+        if (!listEl.querySelector(".notif-row")) {
+          emptyEl.hidden = false;
+        }
+        return;
+      }
+
+      // Mark as read on row click
+      const row = e.target.closest(".notif-row[data-notif-id]");
+      if (row && !row.dataset.read) {
+        const id = row.dataset.notifId;
+        row.dataset.read = "1";
+        row.classList.remove("notif-row--unread");
+        const dot = row.querySelector(".notif-row::before");
+        if (dot) dot.style.display = "none";
+        apiFetch(`/api/notifications/${id}/read`, { method: "PATCH" }).catch(() => {});
+      }
     });
 
-    list.querySelectorAll("[data-delete-notification]").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        await apiFetch(`/api/notifications/${btn.dataset.deleteNotification}`, { method: "DELETE" });
-        await loadNotifications();
-      });
-    });
   } catch (error) {
-    summary.textContent = error.message || "Failed to load notifications.";
+    loadingEl.hidden = true;
+    const errEl = document.createElement("p");
+    errEl.style.cssText = "text-align:center;padding:32px;color:var(--muted)";
+    errEl.textContent = error.message || "Failed to load notifications.";
+    listEl.appendChild(errEl);
   }
 }
 
-function renderNotification(notification) {
-  const avatar = getUserAvatarUrl(notification.actor, getAssetUrl);
+function groupByTime(notifications) {
+  const now = Date.now();
+  const DAY   = 86_400_000;
+  const WEEK  = 7 * DAY;
 
-  return `
-    <article class="notification-item ${notification.is_read ? "" : "unread"}">
-      <img class="notification-avatar" src="${escapeAttr(avatar)}" alt="Actor" />
-      <div>
-        <div class="notification-title">${escapeHtml(notification.title || notification.type)}</div>
-        <div class="notification-message">${escapeHtml(notification.message || "")}</div>
-        <div class="notification-meta">${escapeHtml(formatRelativeTime(notification.created_at))}</div>
-      </div>
-      <div class="notification-actions">
-        ${notification.is_read ? "" : `<button class="iconbtn" data-mark-read="${notification.id}" title="Mark as read">✓</button>`}
-        <button class="iconbtn" data-delete-notification="${notification.id}" title="Delete">✕</button>
-      </div>
-    </article>
+  const groups = { "Today": [], "This week": [], "Earlier": [] };
+
+  notifications.forEach((n) => {
+    const age = now - new Date(n.created_at).getTime();
+    if (age < DAY)        groups["Today"].push(n);
+    else if (age < WEEK)  groups["This week"].push(n);
+    else                  groups["Earlier"].push(n);
+  });
+
+  return groups;
+}
+
+function buildNotifRow(notification) {
+  const avatar = getUserAvatarUrl(notification.actor, getAssetUrl);
+  const { icon, color, text } = describeNotification(notification);
+
+  const a = document.createElement("a");
+  a.className = `notif-row${notification.is_read ? "" : " notif-row--unread"}`;
+  a.href = notificationHref(notification);
+  a.dataset.notifId = notification.id;
+  if (notification.is_read) a.dataset.read = "1";
+
+  a.innerHTML = `
+    <div class="notif-avatar-wrap">
+      <img class="notif-avatar" src="${escapeAttr(avatar)}" alt="" />
+      <div class="notif-type-icon ${color}">${icon}</div>
+    </div>
+    <div class="notif-body">
+      <p class="notif-text">${text}</p>
+      <span class="notif-time">${formatRelativeTime(notification.created_at)}</span>
+    </div>
+    <button class="notif-delete-btn" data-delete-id="${notification.id}" title="Remove">
+      <i class="uil uil-times"></i>
+    </button>
   `;
+
+  return a;
+}
+
+function describeNotification(n) {
+  const actor = escapeHtml(n.actor?.display_name || n.actor?.username || "Someone");
+  const title = n.title || "";
+  const msg   = n.message || "";
+  const type  = (n.type || "").toLowerCase();
+
+  let icon  = "🔔";
+  let color = "notif-type-icon--default";
+  let text  = `<strong class="notif-actor">${actor}</strong> ${escapeHtml(msg)}`;
+
+  if (type.includes("react") || type.includes("like")) {
+    icon  = "❤️";
+    color = "notif-type-icon--reaction";
+    text  = `<strong class="notif-actor">${actor}</strong> reacted to your post`;
+    if (msg) text += `: "${escapeHtml(msg)}"`;
+  } else if (type.includes("comment")) {
+    icon  = "💬";
+    color = "notif-type-icon--comment";
+    text  = `<strong class="notif-actor">${actor}</strong> commented: "${escapeHtml(msg)}"`;
+  } else if (type.includes("follow")) {
+    icon  = "👤";
+    color = "notif-type-icon--follow";
+    text  = `<strong class="notif-actor">${actor}</strong> started following you`;
+  } else if (type.includes("mention")) {
+    icon  = "@";
+    color = "notif-type-icon--mention";
+    text  = `<strong class="notif-actor">${actor}</strong> mentioned you: "${escapeHtml(msg)}"`;
+  } else if (msg) {
+    text = `<strong class="notif-actor">${escapeHtml(title || actor)}</strong> ${escapeHtml(msg)}`;
+  }
+
+  return { icon, color, text };
+}
+
+function notificationHref(n) {
+  if (n.related_type === "post" && n.related_id)    return `feed.html#post-${n.related_id}`;
+  if (n.related_type === "user" && n.related_id)    return `profile.html?id=${n.related_id}`;
+  if (n.related_type === "comment" && n.related_id) return `feed.html#post-${n.related_id}`;
+  return "#";
 }
 
 function formatRelativeTime(dateLike) {
-  const date = new Date(dateLike);
-  const diffSec = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (diffSec < 60) return "Just now";
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
-  return `${Math.floor(diffHr / 24)}d ago`;
+  const diffSec = Math.floor((Date.now() - new Date(dateLike).getTime()) / 1000);
+  if (diffSec < 60)  return "Just now";
+  const m = Math.floor(diffSec / 60);
+  if (m < 60)  return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24)  return `${h}h`;
+  const d = Math.floor(h / 24);
+  if (d < 7)   return `${d}d`;
+  return `${Math.floor(d / 7)}w`;
 }
 
-function escapeHtml(value) {
-  return String(value ?? "")
+function escapeHtml(v) {
+  return String(v ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
@@ -91,6 +199,4 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
-function escapeAttr(value) {
-  return escapeHtml(value);
-}
+function escapeAttr(v) { return escapeHtml(v); }

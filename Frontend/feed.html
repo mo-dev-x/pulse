@@ -30,6 +30,7 @@
         </div>
 
         <div class="topbar-right">
+            <button class="iconbtn mobile-menu-trigger" id="mobileMenuTrigger" aria-label="Menu">☰</button>
             <button class="iconbtn" type="button" data-theme-toggle aria-label="Toggle theme">☀️</button>
             <button id="btnOpenCreateTop" class="btn btn-accent">Create</button>
 
@@ -248,6 +249,43 @@
         </div>
     </div>
     <div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+    <!-- Mobile slide-in navigation drawer -->
+    <div class="mobile-drawer-overlay" id="mobileDrawerOverlay"></div>
+    <aside class="mobile-drawer" id="mobileDrawer" aria-label="Navigation menu">
+      <div class="mobile-drawer-head">
+        <span class="brand">PULSE</span>
+        <button class="iconbtn" id="mobileDrawerClose" aria-label="Close menu">✕</button>
+      </div>
+      <nav class="mobile-drawer-nav">
+        <a class="mobile-drawer-link active" href="feed.html">
+          <i class="uil uil-home"></i><span>Home</span>
+        </a>
+        <a class="mobile-drawer-link" href="discover.html">
+          <i class="uil uil-compass"></i><span>Explore</span>
+        </a>
+        <a class="mobile-drawer-link" href="zone.html">
+          <i class="uil uil-map-marker"></i><span>Zones</span>
+        </a>
+        <a class="mobile-drawer-link" href="analytics.html">
+          <i class="uil uil-smile"></i><span>Mood Dashboard</span>
+        </a>
+        <a class="mobile-drawer-link" href="messages.html">
+          <i class="uil uil-envelope"></i><span>Messages</span>
+          <span class="inline-badge mobile-drawer-badge" data-message-badge hidden>0</span>
+        </a>
+        <a class="mobile-drawer-link" href="notifications.html">
+          <i class="uil uil-bell"></i><span>Notifications</span>
+          <span class="inline-badge mobile-drawer-badge" data-notification-badge hidden>0</span>
+        </a>
+        <a class="mobile-drawer-link" href="settings.html">
+          <i class="uil uil-setting"></i><span>Settings</span>
+        </a>
+        <a class="mobile-drawer-link" href="profile.html">
+          <i class="uil uil-user"></i><span>Profile</span>
+        </a>
+      </nav>
+    </aside>
 
     <script src="js/zone_autocomplete.js"></script>
     <script type="module" src="js/feed.js"></script>

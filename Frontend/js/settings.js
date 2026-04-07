@@ -47,6 +47,26 @@ async function loadSettings() {
     avatarPreview.src = getUserAvatarUrl(currentUser, getAssetUrl);
   }
 
+  const pseudonymInput = document.getElementById("settingsPseudonym");
+  const pseudonymBtn = document.getElementById("savePseudonymBtn");
+  const cooldownNote = document.getElementById("pseudonymCooldownNote");
+  if (pseudonymInput) {
+    pseudonymInput.value = currentUser.pseudonym || "";
+    const canChange = currentUser.can_change_pseudonym !== false;
+    pseudonymInput.disabled = !canChange;
+    if (pseudonymBtn) pseudonymBtn.disabled = !canChange;
+    if (cooldownNote) {
+      if (!canChange && currentUser.pseudonym_last_changed) {
+        const nextDate = new Date(currentUser.pseudonym_last_changed);
+        nextDate.setDate(nextDate.getDate() + 90);
+        cooldownNote.hidden = false;
+        cooldownNote.textContent = `You can change your pseudonym again on ${nextDate.toLocaleDateString()}.`;
+      } else {
+        cooldownNote.hidden = true;
+      }
+    }
+  }
+
   await Promise.all([loadSessions(), refreshTwoFactorState()]);
 }
 
@@ -175,6 +195,23 @@ function wireForms() {
     setup.hidden = false;
     setup.innerHTML = `<div><strong>Backup codes:</strong> ${escapeHtml((data.backup_codes || []).join(", "))}</div>`;
     showMessage("settingsSecurityMessage", "Backup codes regenerated.");
+  });
+
+  document.getElementById("pseudonymForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    hideMessage("pseudonymMessage");
+    const newPseudonym = document.getElementById("settingsPseudonym")?.value.trim();
+    if (!newPseudonym) return;
+    try {
+      const data = await apiFetch("/api/auth/update-pseudonym", {
+        method: "PATCH",
+        body: JSON.stringify({ pseudonym: newPseudonym }),
+      });
+      await loadSettings();
+      showMessage("pseudonymMessage", `Pseudonym updated to "${escapeHtml(data.pseudonym)}".`);
+    } catch (err) {
+      showMessage("pseudonymMessage", err?.message || "Failed to update pseudonym.");
+    }
   });
 
   document.getElementById("requestPushPermission")?.addEventListener("click", async () => {
