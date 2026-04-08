@@ -22,6 +22,18 @@
   --bg-grad-base-top: #05060d;
   --bg-grad-base-mid: #070816;
   --bg-grad-base-bottom: #05060d;
+
+  /* Semantic surface tokens (adapt to theme) */
+  --surface-1: rgba(255, 255, 255, 0.03);
+  --surface-2: rgba(255, 255, 255, 0.06);
+  --surface-hover: rgba(255, 255, 255, 0.06);
+  --surface-input: rgba(0, 0, 0, 0.25);
+  --surface-composer: rgba(0, 0, 0, 0.35);
+  --surface-dropdown: rgba(10, 12, 22, 0.99);
+  --surface-toast: rgba(16, 16, 28, 0.97);
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-soft: rgba(255, 255, 255, 0.10);
+  --border-medium: rgba(255, 255, 255, 0.12);
 }
 
 [data-theme="light"] {
@@ -30,7 +42,7 @@
   --panel2: rgba(255, 255, 255, 0.96);
   --border: rgba(15, 23, 42, 0.10);
   --text: rgba(15, 23, 42, 0.94);
-  --muted: rgba(15, 23, 42, 0.62);
+  --muted: rgba(15, 23, 42, 0.52);
   --accent: #e63b75;
   --accent2: #ff7d95;
   --bg-auth: #dbeafe;
@@ -46,4 +58,16 @@
   --bg-grad-base-top: #f8fbff;
   --bg-grad-base-mid: #edf3ff;
   --bg-grad-base-bottom: #f7f9ff;
+
+  /* Semantic surface tokens — light overrides */
+  --surface-1: rgba(15, 23, 42, 0.04);
+  --surface-2: rgba(15, 23, 42, 0.07);
+  --surface-hover: rgba(15, 23, 42, 0.06);
+  --surface-input: rgba(15, 23, 42, 0.05);
+  --surface-composer: rgba(15, 23, 42, 0.06);
+  --surface-dropdown: rgba(248, 250, 255, 0.99);
+  --surface-toast: rgba(255, 255, 255, 0.98);
+  --border-subtle: rgba(15, 23, 42, 0.06);
+  --border-soft: rgba(15, 23, 42, 0.09);
+  --border-medium: rgba(15, 23, 42, 0.11);
 }

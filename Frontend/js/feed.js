@@ -491,7 +491,7 @@ function renderPostCard(post) {
         </div>
       </div>
       <div class="post-menu">
-        ${post.mine ? `<button class="iconbtn" data-action="delete" title="Delete post">🗑️</button>` : ""}
+        ${post.mine ? `<button class="iconbtn" data-action="delete" title="Delete post" aria-label="Delete post"><i class="uil uil-trash-alt"></i></button>` : ""}
       </div>
     </div>
 
@@ -515,11 +515,11 @@ function renderPostCard(post) {
       </div>
 
       <div class="post-secondary-actions">
-        <button class="iconbtn ${post.isBookmarked ? "bookmark-active" : ""}" data-action="bookmark" title="Toggle bookmark">
-          ${post.isBookmarked ? "🔖" : "📑"}
+        <button class="iconbtn ${post.isBookmarked ? "bookmark-active" : ""}" data-action="bookmark" title="Toggle bookmark" aria-label="Bookmark post">
+          <i class="uil ${post.isBookmarked ? "uil-bookmark-full" : "uil-bookmark"}"></i>
         </button>
-        <button class="iconbtn" data-action="toggle-comments" title="Toggle comments">
-          💬 ${post.commentCount || 0}
+        <button class="iconbtn" data-action="toggle-comments" title="Toggle comments" aria-label="Toggle comments">
+          <i class="uil uil-comment-dots"></i> ${post.commentCount || 0}
         </button>
       </div>
     </div>

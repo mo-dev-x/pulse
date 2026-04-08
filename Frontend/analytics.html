@@ -25,8 +25,20 @@
       </div>
     </div>
     <div class="topbar-right">
-      <button class="iconbtn" data-theme-toggle aria-label="Toggle theme">☀️</button>
-      <a class="btn btn-ghost" href="feed.html">Feed</a>
+      <button class="topbar-icon-btn" data-theme-toggle aria-label="Toggle theme" title="Toggle theme">
+        <i class="uil uil-sun"></i>
+      </button>
+      <a class="topbar-icon-btn" href="messages.html" title="Messages">
+        <i class="uil uil-comment-dots"></i>
+        <span class="inline-badge" data-message-badge hidden>0</span>
+      </a>
+      <a class="topbar-icon-btn" href="notifications.html" title="Notifications">
+        <i class="uil uil-bell"></i>
+        <span class="inline-badge" data-notification-badge hidden>0</span>
+      </a>
+      <a class="topbar-icon-btn" href="feed.html" title="Back to feed">
+        <i class="uil uil-arrow-left"></i>
+      </a>
     </div>
   </header>
 
@@ -47,7 +59,7 @@
           </div>
         </section>
 
-        <section class="panel analytics-card chart-shell">
+        <section class="panel analytics-card chart-shell chart-shell--emotion">
           <div class="panel-title"><span>Emotion breakdown</span></div>
           <canvas id="emotionChart"></canvas>
         </section>

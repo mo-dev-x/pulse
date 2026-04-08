@@ -82,6 +82,15 @@
         <div class="dm-messages-inner" id="messageThread"></div>
       </div>
 
+      <!-- Reply context strip (appears above compose bar when replying) -->
+      <div class="dm-reply-context" id="dmReplyContext" hidden>
+        <span class="dm-reply-label">Replying to:</span>
+        <span class="dm-reply-preview"></span>
+        <button class="dm-reply-cancel" type="button" id="dmReplyCancelBtn" aria-label="Cancel reply">
+          <i class="uil uil-times"></i>
+        </button>
+      </div>
+
       <!-- Compose bar -->
       <form class="dm-compose" id="messageComposer" hidden>
         <button class="dm-icon-btn" type="button" id="imageAttachBtn" title="Send image">

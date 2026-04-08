@@ -147,19 +147,53 @@ function renderEmotionChart(emotions) {
   if (!ctx || !window.Chart) return;
   emotionChart?.destroy();
 
-  const keys = ["joy", "sadness", "anger", "fear", "surprise", "disgust", "neutral"];
+  const keys    = ["joy", "sadness", "anger", "fear", "surprise", "disgust", "neutral"];
+  const labels  = ["Joy 😊", "Sadness 😢", "Anger 😠", "Fear 😨", "Surprise 😮", "Disgust 🤢", "Neutral 😐"];
+  const colors  = ["#FFD93D", "#74B9FF", "#E74C3C", "#A29BFE", "#FD79A8", "#55EFC4", "#8e9aaf"];
+  const data    = keys.map((key) => emotions[key] || 0);
+  const total   = data.reduce((a, b) => a + b, 0);
+
+  // If no data, show equal slices with muted colors so the shape is still visible
+  const displayData = total === 0 ? keys.map(() => 1) : data;
+
   emotionChart = new Chart(ctx, {
     type: "doughnut",
     data: {
-      labels: keys,
+      labels,
       datasets: [{
-        data: keys.map((key) => emotions[key] || 0),
-        backgroundColor: ["#FFD93D", "#74B9FF", "#E74C3C", "#A29BFE", "#FD79A8", "#55EFC4", "#b4b9c7"],
+        data: displayData,
+        backgroundColor: colors,
+        borderWidth: 3,
+        borderColor: "transparent",
+        hoverOffset: 12,
       }],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
+      cutout: "68%",
+      plugins: {
+        legend: {
+          position: "bottom",
+          labels: {
+            color: getComputedStyle(document.documentElement).getPropertyValue("--text").trim() || "#fff",
+            padding: 14,
+            font: { size: 13, weight: "600", family: "system-ui, sans-serif" },
+            usePointStyle: true,
+            pointStyleWidth: 10,
+          },
+        },
+        tooltip: {
+          callbacks: {
+            label: (item) => {
+              if (total === 0) return ` No data`;
+              const pct = Math.round((item.parsed / total) * 100);
+              return ` ${item.label.split(" ")[0]}: ${pct}%`;
+            },
+          },
+        },
+      },
+      animation: { animateRotate: true, animateScale: true, duration: 600 },
     },
   });
 }

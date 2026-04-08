@@ -2,9 +2,9 @@
   position: absolute;
   top: 18px;
   right: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.04);
-  color: #e5e7eb;
+  border: 1px solid var(--border-soft);
+  background: var(--surface-1);
+  color: var(--text);
   border-radius: 999px;
   padding: 8px 12px;
   font-weight: 800;
@@ -13,7 +13,7 @@
 
 .auth-note {
   margin: 0 0 12px;
-  color: rgba(229, 231, 235, 0.74);
+  color: var(--muted);
   line-height: 1.45;
 }
 
@@ -60,8 +60,8 @@
 
 .skeleton-card {
   border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  background: var(--surface-1);
   padding: 14px;
 }
 

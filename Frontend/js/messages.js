@@ -62,6 +62,26 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Audio record
   document.getElementById("audioRecordBtn")?.addEventListener("click", toggleAudioRecording);
 
+  // Reply on bubble-wrap button click
+  document.getElementById("messageThread")?.addEventListener("click", (e) => {
+    const btn = e.target.closest(".dm-reply-btn");
+    if (!btn) return;
+    e.stopPropagation();
+    const preview = btn.dataset.replyPreview || "";
+    const ctx = document.getElementById("dmReplyContext");
+    if (!ctx) return;
+    ctx.dataset.replyToId = btn.dataset.replyId;
+    const previewEl = ctx.querySelector(".dm-reply-preview");
+    if (previewEl) previewEl.textContent = preview;
+    ctx.hidden = false;
+    document.getElementById("messageInput")?.focus();
+  });
+
+  document.getElementById("dmReplyCancelBtn")?.addEventListener("click", () => {
+    const ctx = document.getElementById("dmReplyContext");
+    if (ctx) { ctx.hidden = true; ctx.dataset.replyToId = ""; }
+  });
+
   // Right-click context menu for messages
   setupContextMenu();
 
@@ -200,6 +220,9 @@ async function pollMessages(conversationId) {
     // Remember if user was near the bottom before update
     const nearBottom = area.scrollHeight - area.scrollTop - area.clientHeight < 120;
 
+    // Remove optimistic bubbles before re-rendering real messages
+    thread.querySelectorAll(".dm-optimistic").forEach((el) => el.remove());
+
     thread.innerHTML = renderMessageGroups(messages);
 
     if (nearBottom) area.scrollTop = area.scrollHeight;
@@ -236,7 +259,17 @@ function renderMessageGroups(messages) {
       const isAudio = m.content?.startsWith("[audio]");
       const isMedia = isAudio || m.content?.startsWith("[image]") || m.content?.startsWith("[video]");
       const extraClass = isAudio ? " dm-bubble--audio" : isMedia ? " dm-bubble--media" : "";
-      return `<div class="dm-bubble${extraClass}" data-pos="${pos}" data-msg-id="${m.id}" data-is-mine="${m.is_mine}">${renderBubbleContent(m.content)}</div>`;
+      // Build a short preview for the reply label (strip prefixes, cap at 40 chars)
+      const rawPreview = isMedia ? (isAudio ? "🎤 Voice message" : "📎 Media") : (m.content || "");
+      const preview = rawPreview.startsWith("↩ ") ? rawPreview.slice(rawPreview.indexOf("\n") + 1) : rawPreview;
+      const previewShort = preview.length > 40 ? preview.slice(0, 40) + "…" : preview;
+      return `
+        <div class="dm-bubble-wrap dm-bubble-wrap--${side}">
+          <button class="dm-reply-btn" data-reply-id="${m.id}" data-reply-preview="${escapeAttr(previewShort)}" aria-label="Reply" title="Reply">
+            <i class="uil uil-corner-up-left"></i>
+          </button>
+          <div class="dm-bubble${extraClass}" data-pos="${pos}" data-msg-id="${m.id}" data-is-mine="${m.is_mine}">${renderBubbleContent(m.content)}</div>
+        </div>`;
     }).join("");
 
     const last    = msgs[n - 1];
@@ -283,19 +316,73 @@ async function sendMessage() {
   const input   = document.getElementById("messageInput");
   const content = input.value.trim();
   if (!content) return;
+
+  // Clear reply context UI immediately
+  const replyCtx = document.getElementById("dmReplyContext");
+  let replyingToId = null;
+  let replyPrefix   = "";
+  if (replyCtx && !replyCtx.hidden) {
+    replyingToId = replyCtx.dataset.replyToId || null;
+    const previewEl = replyCtx.querySelector(".dm-reply-preview");
+    if (previewEl) replyPrefix = `↩ ${previewEl.textContent.trim()}\n`;
+    replyCtx.hidden = true;
+    replyCtx.dataset.replyToId = "";
+  }
+
+  const fullContent = replyPrefix ? replyPrefix + content : content;
+
+  // Optimistic: append bubble immediately
   input.value = "";
-  await apiFetch(`/api/messages/conversations/${currentConversationId}`, {
-    method: "POST",
-    body: JSON.stringify({ content }),
-  });
-  await loadThread(currentConversationId);
-  await loadConversations(currentConversationId);
+  appendOptimisticBubble(fullContent);
+
+  try {
+    await apiFetch(`/api/messages/conversations/${currentConversationId}`, {
+      method: "POST",
+      body: JSON.stringify({ content: fullContent }),
+    });
+    // Trigger a silent poll to sync real IDs
+    lastKnownMessageId = null;
+    await pollMessages(currentConversationId);
+  } catch (err) {
+    showDmToast(err.message || "Failed to send message.");
+  }
+}
+
+/** Append a temporary optimistic bubble at the bottom of the thread. */
+function appendOptimisticBubble(content) {
+  const thread = document.getElementById("messageThread");
+  const area   = document.getElementById("messagesArea");
+  if (!thread) return;
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "dm-msg-group dm-msg-group--mine dm-optimistic";
+  wrapper.innerHTML = `
+    <div class="dm-bubbles">
+      <div class="dm-bubble" data-pos="solo">${escapeHtml(content)}</div>
+      <span class="dm-msg-time">Sending…</span>
+    </div>`;
+  thread.appendChild(wrapper);
+  area.scrollTop = area.scrollHeight;
+}
+
+function showDmToast(msg) {
+  const container = document.getElementById("toastContainer") || document.body;
+  const el = document.createElement("div");
+  el.className = "toast error";
+  el.textContent = msg;
+  el.style.cssText = "position:fixed;bottom:80px;right:18px;z-index:200;padding:12px 14px;border-radius:14px;background:var(--surface-toast);border:1px solid var(--accent);color:var(--text);font-size:14px;";
+  container.appendChild(el);
+  setTimeout(() => el.remove(), 4000);
 }
 
 // ── Send image/video message ───────────────────────────────────────────────
 
 async function sendMediaMessage(file) {
   if (!currentConversationId) return;
+
+  // Show optimistic placeholder
+  appendOptimisticBubble(`📎 Sending ${file.type.startsWith("video") ? "video" : "image"}…`);
+
   const form = new FormData();
   form.append("media", file, file.name);
   try {
@@ -303,10 +390,10 @@ async function sendMediaMessage(file) {
       method: "POST",
       body: form,
     });
-    await loadThread(currentConversationId);
-    await loadConversations(currentConversationId);
-  } catch {
-    // Silently fail — backend may not support it yet
+    lastKnownMessageId = null;
+    await pollMessages(currentConversationId);
+  } catch (err) {
+    showDmToast(err.message || "Failed to send image/video. Check that the file is ≤ 5 MB.");
   }
 }
 
@@ -366,6 +453,7 @@ function setAudioBtnRecording(active) {
 
 async function sendAudioMessage(blob) {
   if (!currentConversationId) return;
+  appendOptimisticBubble("🎤 Sending voice message…");
   const ext  = blob.type.includes("ogg") ? "ogg" : blob.type.includes("mp4") ? "mp4" : "webm";
   const form = new FormData();
   form.append("audio", blob, `voice.${ext}`);
@@ -374,10 +462,10 @@ async function sendAudioMessage(blob) {
       method: "POST",
       body: form,
     });
-    await loadThread(currentConversationId);
-    await loadConversations(currentConversationId);
-  } catch {
-    alert("Could not send audio message. Please try again.");
+    lastKnownMessageId = null;
+    await pollMessages(currentConversationId);
+  } catch (err) {
+    showDmToast(err.message || "Could not send voice message. Please try again.");
   }
 }
 
@@ -439,11 +527,12 @@ function setupContextMenu() {
         `/api/messages/conversations/${ctxTargetConvId}/messages/${ctxTargetMsgId}`,
         { method: "DELETE" }
       );
-      // Remove the bubble (and its group if now empty)
+      // Remove the bubble-wrap (and its group if now empty)
       const bubble = document.querySelector(`.dm-bubble[data-msg-id="${ctxTargetMsgId}"]`);
       if (bubble) {
+        const bubbleWrap = bubble.closest(".dm-bubble-wrap") || bubble;
         const bubblesWrap = bubble.closest(".dm-bubbles");
-        bubble.remove();
+        bubbleWrap.remove();
         if (bubblesWrap && !bubblesWrap.querySelector(".dm-bubble")) {
           bubblesWrap.closest(".dm-msg-group")?.remove();
         }
