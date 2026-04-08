@@ -2,7 +2,21 @@
    Notifications — Instagram-style layout
    ============================================================ */
 
-html, body { min-height: 100%; }
+html, body { min-height: 100%; color: var(--text); }
+
+html { background: var(--bg); }
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(900px 520px at 18% 15%, var(--bg-grad-1), transparent 60%),
+    radial-gradient(820px 480px at 78% 18%, var(--bg-grad-2), transparent 62%),
+    linear-gradient(180deg, var(--bg-grad-base-top) 0%, var(--bg-grad-base-mid) 55%, var(--bg-grad-base-bottom) 100%);
+}
 
 .notif-offline {
   position: fixed;
@@ -22,6 +36,7 @@ html, body { min-height: 100%; }
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background: transparent;
 }
 
 /* ── Header ──────────────────────────────────────── */

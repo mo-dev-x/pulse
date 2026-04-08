@@ -62,6 +62,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Audio record
   document.getElementById("audioRecordBtn")?.addEventListener("click", toggleAudioRecording);
 
+  // Right-click context menu for messages
+  setupContextMenu();
+
   await loadConversations();
   updateUnreadBadge();
 });
@@ -116,7 +119,7 @@ function renderConversation(conv, active) {
     <button class="dm-conv-row${active ? " dm-conv-row--active" : ""}"
             data-conversation-id="${conv.id}" type="button">
       <div class="dm-conv-avatar-wrap">
-        <img class="dm-conv-avatar" src="${escapeAttr(avatar)}" alt="${escapeAttr(name)}" />
+        <img class="dm-conv-avatar" src="${escapeAttr(avatar)}" alt="${escapeAttr(name)}" loading="lazy" />
         ${unread ? `<span class="dm-conv-dot"></span>` : ""}
       </div>
       <div class="dm-conv-body">
@@ -155,6 +158,10 @@ async function loadThread(conversationId) {
   const titleName = currentOtherUser?.display_name || "Conversation";
   titleEl.innerHTML = escapeHtml(titleName) + (currentOtherUser?.is_admin ? '<span class="admin-star" title="Admin">⭐</span>' : '');
   document.getElementById("threadAvatar").src = getUserAvatarUrl(currentOtherUser, getAssetUrl);
+  const profileLink = document.getElementById("threadProfileLink");
+  if (profileLink && currentOtherUser?.username) {
+    profileLink.href = `profile.html?u=${encodeURIComponent(currentOtherUser.username)}`;
+  }
 
   const messages = data.messages || [];
   lastKnownMessageId = messages.length ? messages[messages.length - 1].id : null;
@@ -226,7 +233,10 @@ function renderMessageGroups(messages) {
 
     const bubbles = msgs.map((m, i) => {
       const pos = n === 1 ? "solo" : i === 0 ? "first" : i === n - 1 ? "last" : "mid";
-      return `<div class="dm-bubble" data-pos="${pos}">${renderBubbleContent(m.content)}</div>`;
+      const isAudio = m.content?.startsWith("[audio]");
+      const isMedia = isAudio || m.content?.startsWith("[image]") || m.content?.startsWith("[video]");
+      const extraClass = isAudio ? " dm-bubble--audio" : isMedia ? " dm-bubble--media" : "";
+      return `<div class="dm-bubble${extraClass}" data-pos="${pos}" data-msg-id="${m.id}" data-is-mine="${m.is_mine}">${renderBubbleContent(m.content)}</div>`;
     }).join("");
 
     const last    = msgs[n - 1];
@@ -234,7 +244,7 @@ function renderMessageGroups(messages) {
       (last.is_mine && last.is_read ? " · Seen" : "");
 
     const avatarHtml = !is_mine
-      ? `<img class="dm-group-avatar" src="${escapeAttr(getUserAvatarUrl(currentOtherUser, getAssetUrl))}" alt="" />`
+      ? `<img class="dm-group-avatar" src="${escapeAttr(getUserAvatarUrl(currentOtherUser, getAssetUrl))}" alt="" loading="lazy" />`
       : "";
 
     return `
@@ -369,6 +379,80 @@ async function sendAudioMessage(blob) {
   } catch {
     alert("Could not send audio message. Please try again.");
   }
+}
+
+// ── Right-click context menu ───────────────────────────────────────────────
+
+let ctxTargetMsgId = null;
+let ctxTargetConvId = null;
+
+function setupContextMenu() {
+  const menu = document.getElementById("dmCtxMenu");
+  const unsendBtn = document.getElementById("dmCtxUnsend");
+
+  function showMenuAt(msgId, convId, x, y) {
+    ctxTargetMsgId = msgId;
+    ctxTargetConvId = convId;
+    menu.hidden = false;
+    menu.style.left = `${Math.max(8, Math.min(x, window.innerWidth - 160))}px`;
+    menu.style.top  = `${Math.max(8, Math.min(y, window.innerHeight - 80))}px`;
+  }
+
+  const threadEl = document.getElementById("messageThread");
+
+  // Desktop: right-click
+  threadEl?.addEventListener("contextmenu", (e) => {
+    const bubble = e.target.closest(".dm-bubble[data-is-mine='true']");
+    if (!bubble) return;
+    e.preventDefault();
+    showMenuAt(Number(bubble.dataset.msgId), currentConversationId, e.clientX, e.clientY);
+  });
+
+  // Mobile: long-press (touch-and-hold)
+  let longPressTimer = null;
+  threadEl?.addEventListener("touchstart", (e) => {
+    const bubble = e.target.closest(".dm-bubble[data-is-mine='true']");
+    if (!bubble) return;
+    longPressTimer = setTimeout(() => {
+      const touch = e.touches[0];
+      showMenuAt(Number(bubble.dataset.msgId), currentConversationId, touch.clientX, touch.clientY - 60);
+      navigator.vibrate?.(30);
+    }, 500);
+  }, { passive: true });
+  threadEl?.addEventListener("touchend",  () => clearTimeout(longPressTimer), { passive: true });
+  threadEl?.addEventListener("touchmove", () => clearTimeout(longPressTimer), { passive: true });
+
+  // Dismiss menu on outside click / touch
+  document.addEventListener("click", () => { menu.hidden = true; });
+  document.addEventListener("touchstart", (e) => {
+    if (!e.target.closest(".dm-bubble") && !e.target.closest(".dm-ctx-menu")) menu.hidden = true;
+  }, { passive: true });
+  document.addEventListener("contextmenu", (e) => {
+    if (!e.target.closest(".dm-bubble[data-is-mine='true']")) menu.hidden = true;
+  });
+
+  unsendBtn?.addEventListener("click", async () => {
+    menu.hidden = true;
+    if (!ctxTargetMsgId || !ctxTargetConvId) return;
+    try {
+      await apiFetch(
+        `/api/messages/conversations/${ctxTargetConvId}/messages/${ctxTargetMsgId}`,
+        { method: "DELETE" }
+      );
+      // Remove the bubble (and its group if now empty)
+      const bubble = document.querySelector(`.dm-bubble[data-msg-id="${ctxTargetMsgId}"]`);
+      if (bubble) {
+        const bubblesWrap = bubble.closest(".dm-bubbles");
+        bubble.remove();
+        if (bubblesWrap && !bubblesWrap.querySelector(".dm-bubble")) {
+          bubblesWrap.closest(".dm-msg-group")?.remove();
+        }
+      }
+      lastKnownMessageId = null; // force re-sync on next poll
+    } catch {
+      // silent
+    }
+  });
 }
 
 // ── Polling ────────────────────────────────────────────────────────────────

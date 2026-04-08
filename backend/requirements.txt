@@ -31,5 +31,8 @@ pyotp==2.9.0
 qrcode==7.4.2
 gunicorn==21.2.0
 
+# Web Push notifications
+pywebpush>=1.14.0
+
 # Development (optional)
 requests==2.31.0

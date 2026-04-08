@@ -26,6 +26,12 @@ function getApiBaseUrl() {
 export const API = getApiBaseUrl();
 window.PULSE_API_BASE = API;
 
+/** Absolute origin of the deployed frontend (empty string when running on localhost). */
+export const FRONTEND_ORIGIN = (
+  typeof window !== "undefined" &&
+  (!isLocalHostname(window.location.hostname) || window.location.protocol === "https:")
+) ? window.location.origin : "";
+
 const PERSISTENT_TOKEN_KEY = "pulse_token";
 const SESSION_TOKEN_KEY = "pulse_session_token";
 const USER_KEY = "pulse_user";

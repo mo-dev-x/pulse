@@ -8,7 +8,8 @@ import {
 import { getDefaultAvatarUrl, getPostAvatarUrl, getProfileHref, getUserAvatarUrl } from "./avatar.js";
 import { initLanguageControls, t } from "./i18n.js";
 import { initMentionAutocomplete } from "./search.js";
-import { initOfflineBanner, initThemeToggle, initUnreadBadges } from "./theme.js";
+import { initGlobalErrorHandler, initOfflineBanner, initThemeToggle, initUnreadBadges } from "./theme.js";
+import { initInstallPrompt, initPushNotifications } from "./pwa.js";
 
 const REACTION_EMOJIS = ["❤️", "👍", "👎", "😊", "😢", "😂", "😮", "🔥", "💪", "🙏"];
 
@@ -44,8 +45,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   requireAuth();
   initLanguageControls();
   initThemeToggle();
+  initGlobalErrorHandler();
   initOfflineBanner();
   initUnreadBadges();
+  initInstallPrompt();
+  // Delay push subscription slightly so the page is interactive first
+  setTimeout(() => initPushNotifications(), 3000);
   setupUserMenu();
   setupModal();
   setupCreateResendLink();
@@ -456,7 +461,7 @@ function renderPostCard(post) {
       <div class="post-user">
         ${post.profileHref ? `
           <a class="post-user-link" href="${escapeAttr(post.profileHref)}" aria-label="View ${escapeAttr(post.authorName)}'s profile">
-            <img class="avatar" src="${escapeAttr(post.avatarUrl)}" alt="${escapeAttr(post.authorName)}" />
+            <img class="avatar" src="${escapeAttr(post.avatarUrl)}" alt="${escapeAttr(post.authorName)}" loading="lazy" />
             <div class="post-meta">
               <div class="u">
                 ${escapeHtml(post.authorName)}${post.isAdmin ? '<span class="admin-star" title="Admin">⭐</span>' : ''}
@@ -466,7 +471,7 @@ function renderPostCard(post) {
             </div>
           </a>
         ` : `
-          <img class="avatar" src="${escapeAttr(post.avatarUrl)}" alt="User" />
+          <img class="avatar" src="${escapeAttr(post.avatarUrl)}" alt="User" loading="lazy" />
           <div class="post-meta">
             <div class="u">
               ${escapeHtml(post.authorName)}
@@ -601,7 +606,7 @@ function renderMedia(post) {
   if (post.imagePath) {
     return `
       <div class="post-media">
-        <img src="${escapeAttr(getAssetUrl(post.imagePath))}" alt="Post media" />
+        <img src="${escapeAttr(getAssetUrl(post.imagePath))}" alt="Post media" loading="lazy" />
       </div>
     `;
   }
@@ -1123,7 +1128,7 @@ function renderSearchResults(users) {
     return `
       <div class="search-result-item">
         <a class="search-result-left search-result-link" href="profile.html?u=${encodeURIComponent(user.username)}">
-          <img class="avatar" src="${escapeAttr(avatarUrl)}" alt="User" />
+          <img class="avatar" src="${escapeAttr(avatarUrl)}" alt="User" loading="lazy" />
           <div>
             <div class="search-result-name">${escapeHtml(user.display_name || user.username)}${user.is_admin ? '<span class="admin-star" title="Admin">⭐</span>' : ''}</div>
             <div class="search-result-handle">@${escapeHtml(user.username)}</div>

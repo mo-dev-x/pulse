@@ -3,7 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#ff4d7d" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="assets/icon-192.svg" />
   <title>PULSE — Discover</title>
+  <link rel="stylesheet" href="https://unicons.iconscout.com/release/v4.0.8/css/line.css" />
   <link rel="stylesheet" href="css/variables.css">
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/components.css">
@@ -13,7 +17,10 @@
 <body>
   <div id="offlineBanner" class="error" hidden>You are offline. Discovery feed is unavailable.</div>
   <header class="topbar">
-    <div class="topbar-left"><a class="brand" href="feed.html">PULSE</a></div>
+    <div class="topbar-left">
+      <button class="iconbtn mobile-menu-trigger" id="mobileMenuTrigger" aria-label="Menu">☰</button>
+      <a class="brand" href="feed.html">PULSE</a>
+    </div>
     <div class="topbar-center">
       <div class="search small">
         <i class="uil uil-filter"></i>
@@ -26,17 +33,22 @@
       </div>
     </div>
     <div class="topbar-right">
-      <button class="iconbtn" data-theme-toggle aria-label="Toggle theme">☀️</button>
-      <a class="btn btn-ghost" href="feed.html">Feed</a>
+      <button class="topbar-icon-btn" data-theme-toggle aria-label="Toggle theme" title="Toggle theme">
+        <i class="uil uil-sun"></i>
+      </button>
+      <a class="topbar-icon-btn" href="feed.html" title="Back to feed">
+        <i class="uil uil-arrow-left"></i>
+      </a>
     </div>
   </header>
-  <div class="app app-shell-main-right">
+  <div class="app app-discover">
     <main class="main">
       <section class="panel analytics-card">
         <div class="panel-title"><span>Discovery</span></div>
         <div class="state" id="discoverState">Loading discovery feed...</div>
       </section>
       <section id="discoverFeed" class="feed"></section>
+      <div id="discoverSentinel" class="feed-sentinel"></div>
     </main>
     <aside class="right">
       <section class="panel analytics-card">
@@ -45,6 +57,32 @@
       </section>
     </aside>
   </div>
+  <!-- Mobile navigation drawer -->
+  <div class="mobile-drawer-overlay" id="mobileDrawerOverlay"></div>
+  <aside class="mobile-drawer" id="mobileDrawer" aria-label="Navigation menu">
+    <div class="mobile-drawer-head">
+      <span class="brand">PULSE</span>
+      <button class="iconbtn" id="mobileDrawerClose" aria-label="Close menu">✕</button>
+    </div>
+    <nav class="mobile-drawer-nav">
+      <a class="mobile-drawer-link" href="feed.html"><i class="uil uil-home"></i><span>Home</span></a>
+      <a class="mobile-drawer-link active" href="discover.html"><i class="uil uil-compass"></i><span>Explore</span></a>
+      <a class="mobile-drawer-link" href="zone.html"><i class="uil uil-map-marker"></i><span>Zones</span></a>
+      <a class="mobile-drawer-link" href="analytics.html"><i class="uil uil-smile"></i><span>Mood Dashboard</span></a>
+      <a class="mobile-drawer-link" href="messages.html">
+        <i class="uil uil-envelope"></i><span>Messages</span>
+        <span class="inline-badge mobile-drawer-badge" data-message-badge hidden>0</span>
+      </a>
+      <a class="mobile-drawer-link" href="notifications.html">
+        <i class="uil uil-bell"></i><span>Notifications</span>
+        <span class="inline-badge mobile-drawer-badge" data-notification-badge hidden>0</span>
+      </a>
+      <a class="mobile-drawer-link" href="settings.html"><i class="uil uil-setting"></i><span>Settings</span></a>
+      <a class="mobile-drawer-link" href="profile.html"><i class="uil uil-user"></i><span>Profile</span></a>
+    </nav>
+  </aside>
+
   <script type="module" src="js/discover.js"></script>
+  <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');</script>
 </body>
 </html>

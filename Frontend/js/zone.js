@@ -1,7 +1,7 @@
 import { apiFetch, getAssetUrl, requireAuth } from "./auth.js";
 import { getPostAvatarUrl, getProfileHref, getUserAvatarUrl } from "./avatar.js";
 import { initLanguageControls } from "./i18n.js";
-import { initOfflineBanner, initThemeToggle, initUnreadBadges } from "./theme.js";
+import { initMobileDrawer, initOfflineBanner, initThemeToggle, initUnreadBadges } from "./theme.js";
 
 let currentZoneId = null;
 
@@ -11,6 +11,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   initThemeToggle();
   initOfflineBanner();
   initUnreadBadges();
+  initMobileDrawer();
   await loadCurrentUser();
   setupZoneSearch();
 
@@ -103,6 +104,17 @@ async function loadZoneFeed(zoneId) {
     metaEl.textContent = data.zone?.description || "Public posts for this zone";
     history.replaceState({}, "", `zone.html?id=${encodeURIComponent(zoneId)}`);
 
+    // Populate sidebar zone card
+    const zone = data.zone;
+    if (zone) {
+      const typeLabel = (zone.zone_type || zone.type || "").replace(/_/g, " ");
+      document.getElementById("zoneSidebarZoneName").textContent = zone.name;
+      document.getElementById("zoneSidebarZoneType").textContent = typeLabel || "—";
+      document.getElementById("zoneSidebarPostCount").textContent = String(data.total || 0);
+      document.getElementById("zoneSidebarZoneDesc").textContent = zone.description || "";
+      document.getElementById("zoneSidebarZoneCard").hidden = false;
+    }
+
     if (!(data.posts || []).length) {
       stateEl.innerHTML = '<div class="state-illustrated"><div class="state-emoji">📍</div><div>No public posts in this zone yet.<br />Aucune publication publique dans cette zone pour le moment.</div></div>';
       feedEl.innerHTML = "";
@@ -127,14 +139,14 @@ function renderPostCard(post) {
         <div class="post-user">
           ${!isAnonymous && author.username ? `
             <a class="post-user-link" href="${escapeAttr(getProfileHref(author.username))}" aria-label="View ${escapeAttr(author.display_name || author.username || "User")}'s profile">
-              <img class="avatar" src="${escapeAttr(avatarUrl)}" alt="${escapeAttr(author.display_name || author.username || "User")}" />
+              <img class="avatar" src="${escapeAttr(avatarUrl)}" alt="${escapeAttr(author.display_name || author.username || "User")}" loading="lazy" />
               <div class="post-meta">
                 <div class="u">${escapeHtml(author.display_name || author.username || "User")}${author.is_admin ? '<span class="admin-star" title="Admin">⭐</span>' : ''}</div>
                 <div class="m">@${escapeHtml(author.username || "user")}</div>
               </div>
             </a>
           ` : `
-            <img class="avatar" src="${escapeAttr(avatarUrl)}" alt="User" />
+            <img class="avatar" src="${escapeAttr(avatarUrl)}" alt="User" loading="lazy" />
             <div class="post-meta">
               <div class="u">${escapeHtml(author.pseudonym || "Anonymous")}</div>
               <div class="m">@anonymous</div>

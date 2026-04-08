@@ -3,6 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#ff4d7d" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="assets/icon-192.svg" />
   <title>PULSE — Messages</title>
   <link rel="stylesheet" href="css/variables.css">
   <link rel="stylesheet" href="css/base.css">
@@ -18,7 +21,9 @@
     <!-- ── Left: conversation list ── -->
     <aside class="dm-sidebar" id="dmSidebar">
       <div class="dm-sidebar-header">
-        <a class="dm-brand" href="feed.html" title="Back to feed">PULSE</a>
+        <a class="dm-icon-btn dm-back-to-feed" href="feed.html" title="Back to feed">
+          <i class="uil uil-arrow-left"></i>
+        </a>
         <span class="dm-sidebar-title">Messages
           <span class="dm-badge" id="messageBadge" hidden>0</span>
         </span>
@@ -64,13 +69,12 @@
         <button class="dm-icon-btn dm-back-btn" id="backBtn" title="Back">
           <i class="uil uil-arrow-left"></i>
         </button>
-        <img class="dm-thread-avatar" id="threadAvatar" src="" alt="User" />
-        <div class="dm-thread-meta">
-          <span class="dm-thread-name" id="threadTitle">—</span>
-        </div>
-        <div class="dm-thread-actions">
-          <button class="dm-icon-btn" title="Info"><i class="uil uil-info-circle"></i></button>
-        </div>
+        <a class="dm-thread-profile-link" id="threadProfileLink" href="#" title="View profile">
+          <img class="dm-thread-avatar" id="threadAvatar" src="" alt="User" />
+          <div class="dm-thread-meta">
+            <span class="dm-thread-name" id="threadTitle">—</span>
+          </div>
+        </a>
       </div>
 
       <!-- Scrollable messages area -->
@@ -104,6 +108,14 @@
     </section>
   </div>
 
+  <!-- Right-click context menu for messages -->
+  <div class="dm-ctx-menu" id="dmCtxMenu" hidden>
+    <button class="dm-ctx-item dm-ctx-item--danger" id="dmCtxUnsend">
+      <i class="uil uil-trash-alt"></i> Unsend
+    </button>
+  </div>
+
   <script type="module" src="js/messages.js"></script>
+  <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');</script>
 </body>
 </html>

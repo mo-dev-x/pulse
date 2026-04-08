@@ -152,6 +152,13 @@ BACKGROUND_JOBS_ENABLED=false
 BACKGROUND_JOBS_EAGER=false
 BACKGROUND_JOB_TIMEOUT=300
 
+# Web Push (VAPID) — optional, generates OS-level push notifications
+# Generate keys once: python -c "from py_vapid import Vapid; v=Vapid(); v.generate_keys(); print(v.public_key.decode(), v.private_key.decode())"
+PUSH_ENABLED=false
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+VAPID_CLAIMS_SUB=mailto:admin@pulse.app
+
 # Optional Meilisearch Search Scaffold
 ENABLE_MEILISEARCH=false
 MEILISEARCH_URL=http://127.0.0.1:7700

@@ -1,4 +1,4 @@
-import { apiFetch, requireAuth, logout, getAssetUrl } from "./auth.js";
+import { apiFetch, requireAuth, logout, getAssetUrl, FRONTEND_ORIGIN } from "./auth.js";
 import { getPostAvatarUrl, getProfileHref, getUserAvatarUrl } from "./avatar.js";
 import { initLanguageControls } from "./i18n.js";
 import { initOfflineBanner, initThemeToggle, initUnreadBadges } from "./theme.js";
@@ -234,7 +234,13 @@ function setupActions() {
 
   els.btnShareProfile?.addEventListener("click", async () => {
     try {
-      await navigator.clipboard.writeText(window.location.href);
+      const username = profileUser?.username || currentUser?.username;
+      if (!FRONTEND_ORIGIN) {
+        showToast("Profile links only work on the deployed app.", "error");
+        return;
+      }
+      const url = `${FRONTEND_ORIGIN}/profile.html?u=${encodeURIComponent(username)}`;
+      await navigator.clipboard.writeText(url);
       showToast("Profile link copied", "success");
     } catch {
       showToast("Could not copy the profile link.", "error");
@@ -367,7 +373,7 @@ function renderPeopleList(people, type) {
     return `
       <div class="person-row">
         <a class="person-left" href="profile.html?u=${encodeURIComponent(person.username)}">
-          <img class="avatar" src="${escapeAttr(avatarUrl)}" alt="User" />
+          <img class="avatar" src="${escapeAttr(avatarUrl)}" alt="User" loading="lazy" />
           <div class="person-meta">
             <div class="person-name">${escapeHtml(person.display_name || person.username)}${person.is_admin ? '<span class="admin-star" title="Admin">⭐</span>' : ''}</div>
             <div class="person-handle">@${escapeHtml(person.username)}</div>
@@ -873,6 +879,7 @@ function renderMedia(posts) {
   <img
     src="${escapeAttr(getAssetUrl(post.imagePath))}"
     alt="Post media"
+    loading="lazy"
     onerror="this.closest('.media-item').innerHTML='<div style=&quot;padding:14px;color:rgba(229,231,235,.65)&quot;>Media unavailable ❌</div>';"
   />`;
     els.mediaGrid.appendChild(item);
@@ -933,7 +940,7 @@ function normalizePost(p) {
       <div class="post-user">
         ${post.profileHref ? `
           <a class="post-user-link" href="${escapeAttr(post.profileHref)}" aria-label="View ${escapeAttr(post.authorName)}'s profile">
-            <img class="avatar" src="${escapeAttr(post.avatarUrl)}" alt="${escapeAttr(post.authorName)}" />
+            <img class="avatar" src="${escapeAttr(post.avatarUrl)}" alt="${escapeAttr(post.authorName)}" loading="lazy" />
             <div class="post-meta">
               <div class="u">
                 ${escapeHtml(post.authorName)}${post.isAdmin ? '<span class="admin-star" title="Admin">⭐</span>' : ''}
@@ -977,6 +984,7 @@ function normalizePost(p) {
         <img
           src="${escapeAttr(getAssetUrl(post.imagePath))}"
           alt="Post media"
+          loading="lazy"
           onerror="this.closest('.post-media').innerHTML='<div style=&quot;padding:14px;color:rgba(229,231,235,.65)&quot;>Media unavailable ❌</div>';"
         />
       </div>
@@ -1181,7 +1189,7 @@ function renderSearchResults(users) {
     return `
       <div class="search-result-item">
         <a class="search-result-left search-result-link" href="profile.html?u=${encodeURIComponent(user.username)}">
-          <img class="avatar" src="${escapeAttr(avatarUrl)}" alt="User" />
+          <img class="avatar" src="${escapeAttr(avatarUrl)}" alt="User" loading="lazy" />
           <div>
             <div class="search-result-name">${escapeHtml(user.display_name || user.username)}${user.is_admin ? '<span class="admin-star" title="Admin">⭐</span>' : ''}</div>
             <div class="search-result-handle">@${escapeHtml(user.username)}</div>

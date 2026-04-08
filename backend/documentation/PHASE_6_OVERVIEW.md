@@ -658,21 +658,41 @@ Response 201: { "subscription_id": 12 }
 
 #### Delivery Service
 
-Create `app/services/push_service.py`:
+`app/services/push_service.py` — implemented with **VAPID Web Push** (`pywebpush`):
 
 ```python
 def send_push_notification(user_id: int, title: str, body: str, data: dict = None):
     """
-    Dispatch a push notification to all active subscriptions for a user.
-    Silently skips if FCM is not configured (PUSH_ENABLED=false).
+    Dispatch a Web Push notification to all active 'web' subscriptions for a user.
+    Requires PUSH_ENABLED=true, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY in config.
+    Silently no-ops when push is disabled or VAPID keys are absent.
+    Auto-deactivates expired subscriptions (HTTP 404/410 from browser endpoint).
     """
-    if not current_app.config.get('PUSH_ENABLED', False):
-        return
-    # FCM HTTP v1 API call here
-    ...
 ```
 
-Hook into `notification_service.py` — after creating a DB notification, call `send_push_notification` in a background thread so it never blocks the request.
+The subscription token stored in `push_subscriptions.token` is the JSON-serialised
+`PushSubscription.toJSON()` from the browser — containing `endpoint`, `keys.auth`,
+and `keys.p256dh`. The backend passes this directly to `pywebpush.webpush()`.
+
+**VAPID key generation (one-time, run on your server):**
+```bash
+pip install pywebpush
+python -c "from py_vapid import Vapid; v=Vapid(); v.generate_keys(); print('VAPID_PUBLIC_KEY=' + v.public_key.decode()); print('VAPID_PRIVATE_KEY=' + v.private_key.decode())"
+```
+
+Add to `.env`:
+```
+PUSH_ENABLED=true
+VAPID_PUBLIC_KEY=<output from above>
+VAPID_PRIVATE_KEY=<output from above>
+VAPID_CLAIMS_SUB=mailto:admin@pulse.app
+```
+
+A new unauthenticated endpoint `GET /api/push/vapid-public-key` exposes the public key
+to the frontend so it can subscribe without embedding the key in JS source.
+
+Hook into `notification_service.py` — after creating a DB notification, `enqueue_task`
+dispatches `push_tasks.deliver_push` asynchronously so push delivery never blocks the request.
 
 > **AD-054** — See Architecture Decisions section below.
 
@@ -868,7 +888,12 @@ Add to `.env`:
 ```
 REDIS_URL=redis://localhost:6379/0
 PUSH_ENABLED=false
-FCM_SERVER_KEY=***
+
+# Web Push (VAPID) — generate once with pywebpush:
+# python -c "from py_vapid import Vapid; v=Vapid(); v.generate_keys(); ..."
+VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+VAPID_CLAIMS_SUB=mailto:admin@pulse.app
 ```
 
 ---

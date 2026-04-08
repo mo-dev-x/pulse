@@ -245,6 +245,26 @@ def send_media_message(conversation_id):
     return jsonify({'message': message.to_dict(current_user_id=current_user_id)}), 201
 
 
+@bp.route('/messages/conversations/<int:conversation_id>/messages/<int:message_id>', methods=['DELETE'])
+@jwt_required()
+def delete_message(conversation_id, message_id):
+    """Delete (unsend) a message — only the original sender can do this."""
+    current_user_id = int(get_jwt_identity())
+    conversation, error_response = _get_conversation_or_403(conversation_id, current_user_id)
+    if error_response:
+        return error_response
+
+    message = db.session.get(Message, message_id)
+    if not message or message.conversation_id != conversation_id:
+        return jsonify({'error': 'Message not found'}), 404
+    if message.sender_id != current_user_id:
+        return jsonify({'error': 'You can only unsend your own messages'}), 403
+
+    db.session.delete(message)
+    db.session.commit()
+    return jsonify({'deleted': True}), 200
+
+
 @bp.route('/messages/conversations/<int:conversation_id>/read', methods=['PATCH'])
 @jwt_required()
 def mark_conversation_read(conversation_id):

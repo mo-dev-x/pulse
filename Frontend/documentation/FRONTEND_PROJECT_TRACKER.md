@@ -1,6 +1,6 @@
 # 🫀 PULSE FRONTEND — PROJECT TRACKER
 
-**Last Updated:** 2026-04-07
+**Last Updated:** 2026-04-08
 **University:** Université Laval  
 **Project:** Pulse Frontend (Privacy-First Campus Wellness Platform)  
 **Tech Stack:** Vanilla JavaScript (ES Modules) + HTML5 + CSS3  
@@ -228,6 +228,24 @@ Frontend/
 - [x] Empty states (bilingual, illustrated) ✅
 - [x] Error boundaries + offline state ✅
 
+### PWA & Platform Polish (post-F6)
+- [x] Web App Manifest (`manifest.json`) — install prompt, shortcuts, icons ✅
+- [x] Service Worker (`sw.js`) — cache-first for static assets, network-first for API, offline fallback page ✅
+- [x] Real Web Push notifications via VAPID/pywebpush — OS-level notifications even when app is closed ✅
+- [x] In-app install banner (`pwa.js`) — `beforeinstallprompt` with persistent dismiss ✅
+- [x] Push subscription flow — requests permission, syncs to `/api/push/subscribe` ✅
+- [x] SW push handler — shows OS notification, click navigates to correct page ✅
+- [x] Skip-to-content link auto-injected on all pages via `initThemeToggle()` ✅
+- [x] Toast container auto-injected on any page missing one ✅
+- [x] Global unhandled rejection handler (`initGlobalErrorHandler()`) shows error toasts ✅
+- [x] `loading="lazy"` on all dynamically-rendered `<img>` tags across all JS modules ✅
+- [x] Mobile long-press (500ms touch-and-hold) on own DM bubbles opens delete menu ✅
+- [x] Zone sidebar populated with live post count, type, and description ✅
+- [x] Discover page: infinite scroll via IntersectionObserver with `?page=` pagination ✅
+- [x] Mobile drawer added to discover and zone pages ✅
+- [x] Share profile uses `FRONTEND_ORIGIN` — blocked with toast on localhost ✅
+- [x] `vercel.json` headers: `sw.js` served `no-cache` + `Service-Worker-Allowed: /` ✅
+
 ---
 
 ## 🔗 BACKEND API REFERENCE (All Endpoints Available)
@@ -299,10 +317,14 @@ All 74+ backend endpoints are live. Key ones for frontend:
 | `search.html` / `search.js` | ✅ Working | Unified search page with tabs, paging, search skeletons, mention autocomplete helper used by composer/comments |
 | `discover.html` / `discover.js` | ✅ Working | Discovery feed with sentiment filter + trending zones sidebar |
 | `auth.js` | ✅ Working | Token helpers, 401 auth cleanup, language-aware API requests |
-| `theme.js` | ✅ Working | Theme persistence, toggle behaviour, offline banner helpers |
+| `theme.js` | ✅ Working | Theme persistence, toggle, offline banner, skip link + toast injection, global error handler |
+| `pwa.js` | ✅ Working | Install prompt banner, Web Push subscription (VAPID) |
 | `zone_autocomplete.js` | ✅ Working | Integrated into post composer modal |
 | `i18n.js` / `router.js` | ✅ Working | Language toggles + index hash router |
 | `api.js` | ⚠️ Empty | Placeholder file |
+| `manifest.json` | ✅ Working | PWA manifest — name, icons, display:standalone, shortcuts |
+| `sw.js` | ✅ Working | Service worker: cache-first static, network-first API, push handler, offline fallback |
+| `offline.html` | ✅ Working | Offline fallback page served by SW when navigation fails |
 
 ---
 
@@ -320,9 +342,9 @@ All 74+ backend endpoints are live. Key ones for frontend:
 
 **📌 Remember:** Update this tracker after every completed phase!
 
-**Backend Status:** ✅ All 6 phases complete — 74+ endpoints available  
-**Frontend Status:** ✅ All phases complete (~100%) — all pages fully wired
-**Last Updated:** 2026-04-07
+**Backend Status:** ✅ All 6 phases complete — 74+ endpoints available + VAPID push  
+**Frontend Status:** ✅ All phases complete + PWA — installable, offline-capable, push-enabled
+**Last Updated:** 2026-04-08
 **Next Milestone:** Translation coverage expansion, in-browser accessibility verification, and regression testing
 
 **📝 Note:** All frontend architecture decisions will be documented in `FRONTEND_ARCHITECTURE_DECISIONS.md` as they are made.

@@ -122,7 +122,7 @@ function buildNotifRow(notification) {
 
   a.innerHTML = `
     <div class="notif-avatar-wrap">
-      <img class="notif-avatar" src="${escapeAttr(avatar)}" alt="" />
+      <img class="notif-avatar" src="${escapeAttr(avatar)}" alt="" loading="lazy" />
       <div class="notif-type-icon ${color}">${icon}</div>
     </div>
     <div class="notif-body">

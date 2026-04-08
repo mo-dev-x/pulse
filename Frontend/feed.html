@@ -4,6 +4,9 @@
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <meta name="theme-color" content="#ff4d7d" />
+        <link rel="manifest" href="manifest.json" />
+        <link rel="apple-touch-icon" href="assets/icon-192.svg" />
         <title>PULSE — Feed</title>
         <link rel="stylesheet" href="https://unicons.iconscout.com/release/v4.0.8/css/line.css">
         <link rel="stylesheet" href="css/variables.css">
@@ -289,6 +292,7 @@
 
     <script src="js/zone_autocomplete.js"></script>
     <script type="module" src="js/feed.js"></script>
+    <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');</script>
 </body>
 
 </html>

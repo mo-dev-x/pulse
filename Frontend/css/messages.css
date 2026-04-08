@@ -3,7 +3,7 @@
    ============================================================ */
 
 /* Full-screen canvas */
-html, body { height: 100%; overflow: hidden; }
+html, body { height: 100%; overflow: hidden; color: var(--text); }
 
 .dm-offline-banner {
   position: fixed;
@@ -45,16 +45,10 @@ html, body { height: 100%; overflow: hidden; }
   flex-shrink: 0;
 }
 
-/* PULSE logo — links to feed */
-.dm-brand {
-  font-size: 18px;
-  font-weight: 900;
-  letter-spacing: -0.5px;
-  background: linear-gradient(90deg, var(--accent), var(--accent2));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+/* Back to feed link in sidebar header */
+.dm-back-to-feed {
   text-decoration: none;
+  color: var(--text);
   flex-shrink: 0;
 }
 
@@ -261,7 +255,22 @@ html, body { height: 100%; overflow: hidden; }
   flex-shrink: 0;
 }
 
-.dm-thread-meta { flex: 1; min-width: 0; }
+.dm-thread-profile-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  text-decoration: none;
+  color: var(--text);
+  border-radius: 10px;
+  padding: 4px 6px;
+  margin: -4px -6px;
+  transition: background 0.15s;
+}
+.dm-thread-profile-link:hover { background: rgba(255,255,255,0.06); }
+
+.dm-thread-meta { min-width: 0; }
 
 .dm-thread-name {
   display: block;
@@ -486,6 +495,15 @@ html, body { height: 100%; overflow: hidden; }
   50%       { opacity: 0.5; }
 }
 
+/* ── Audio / media bubble — clean, no border or padding ──── */
+.dm-bubble--audio,
+.dm-bubble--media {
+  padding: 4px;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
 /* ── Audio message bubble ─────────────────────────── */
 .dm-audio {
   display: block;
@@ -496,6 +514,37 @@ html, body { height: 100%; overflow: hidden; }
   height: 40px;
   accent-color: var(--accent);
 }
+
+/* ── Right-click context menu ─────────────────────── */
+.dm-ctx-menu {
+  position: fixed;
+  z-index: 200;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  min-width: 140px;
+}
+.dm-ctx-menu[hidden] { display: none; }
+
+.dm-ctx-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.dm-ctx-item:hover { background: rgba(255,255,255,0.07); }
+.dm-ctx-item--danger { color: var(--accent); }
 
 /* ── Mobile ───────────────────────────────────────── */
 @media (max-width: 768px) {

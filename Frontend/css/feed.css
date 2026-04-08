@@ -60,8 +60,11 @@ body::before{
   letter-spacing: 0.2px;
   font-size: 22px;
   text-decoration: none;
-  color: inherit;
   cursor: pointer;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .topbar-left{ display:flex; align-items:center; min-width: 0; }
@@ -176,6 +179,18 @@ body::before{
   grid-column: 3;
 }
 
+/* Discover: no sidebar — main takes cols 1-2, right takes col 3 */
+.app-discover {
+  grid-template-columns: 1fr 360px;
+}
+.app-discover > .main { min-width: 0; }
+
+/* Zone: sidebar + main, no right panel — main spans cols 2 to end */
+.app-sidebar-main > .main {
+  grid-column: 2 / -1;
+  min-width: 0;
+}
+
 /* Glass panel */
 .panel{
   position: relative;
@@ -280,6 +295,38 @@ body::before{
   font: inherit;
 }
 .iconbtn:hover{ background: rgba(255,255,255,0.06); opacity: 0.8; }
+
+/* Topbar icon button — circular, used in zone/discover headers */
+.topbar-icon-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 20px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.12s ease;
+  flex-shrink: 0;
+  font: inherit;
+}
+.topbar-icon-btn:hover { background: rgba(255,255,255,0.07); }
+
+/* Badge inside topbar icon button */
+.topbar-icon-btn .inline-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  font-size: 9px;
+  padding: 0 4px;
+}
 
 /* -----------------------------
    6) CENTER COLUMN (MAIN)
@@ -620,6 +667,10 @@ body::before{
   text-align:center;
   color: var(--muted);
   padding: 18px;
+}
+
+.feed-sentinel {
+  height: 1px;
 }
 
 /* -----------------------------
@@ -1479,16 +1530,20 @@ body::before{
 /* Large: hide right panel */
 @media (max-width: 1200px){
   .app{ grid-template-columns: 240px 1fr 300px; gap: 14px; }
+  .app-discover { grid-template-columns: 1fr 300px; }
   .topbar{ grid-template-columns: minmax(180px, 240px) minmax(0, 1fr) auto; }
 }
 
 /* Medium: hide right panel */
 @media (max-width: 1024px){
   .app{ grid-template-columns: 220px 1fr; }
+  .app-discover { grid-template-columns: 1fr; }
+  .app-discover > .right { display: none; }
   .right{ display:none; }
   .topbar{ grid-template-columns: minmax(160px, 220px) minmax(0, 1fr) auto; }
   .app-shell-main > .main,
   .app-shell-main-right > .main { grid-column: auto; }
+  .app-sidebar-main > .main { grid-column: 2 / -1; }
 }
 
 @media (max-width: 860px){
@@ -1516,6 +1571,7 @@ body::before{
   .app-shell-main > .main,
   .app-shell-main-right > .main,
   .app-shell-main-right > .right { grid-column: auto; }
+  .app-sidebar-main > .main { grid-column: auto; }
   .mobile-nav { display: block; }
   .mobile-create-fab { display: flex; }
   .toast-container{ right: 12px; bottom: calc(90px + env(safe-area-inset-bottom)); }

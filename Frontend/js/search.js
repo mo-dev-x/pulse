@@ -181,7 +181,7 @@ function renderSearchGroups(results, type) {
         ${users.length ? users.map((user) => `
           <a class="search-result-item search-result-link" href="profile.html?u=${encodeURIComponent(user.username)}">
             <div class="search-result-left">
-              <img class="avatar" src="${escapeAttr(getUserAvatarUrl(user, getAssetUrl))}" alt="User" />
+              <img class="avatar" src="${escapeAttr(getUserAvatarUrl(user, getAssetUrl))}" alt="User" loading="lazy" />
               <div>
                 <div class="search-result-name">${escapeHtml(user.display_name || user.username)}</div>
                 <div class="search-result-handle">@${escapeHtml(user.username)}</div>

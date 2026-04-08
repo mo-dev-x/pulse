@@ -28,11 +28,57 @@ export function applyTheme(theme) {
 
 export function initThemeToggle(root = document) {
   initTheme();
+  _ensureToastContainer();
+  _injectSkipLink();
   root.querySelectorAll("[data-theme-toggle]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const current = document.documentElement.getAttribute("data-theme") || "dark";
       applyTheme(current === "dark" ? "light" : "dark");
     });
+  });
+}
+
+/** Inject a toast container if the page doesn't already have one. */
+function _ensureToastContainer() {
+  if (document.getElementById("toastContainer")) return;
+  const el = document.createElement("div");
+  el.id = "toastContainer";
+  el.className = "toast-container";
+  el.setAttribute("aria-live", "polite");
+  el.setAttribute("aria-atomic", "true");
+  document.body.appendChild(el);
+}
+
+/** Inject a keyboard-accessible skip-to-content link. */
+function _injectSkipLink() {
+  if (document.getElementById("skipLink")) return;
+  const target = document.querySelector("main, .main, [role='main']");
+  if (!target) return;
+  if (!target.id) target.id = "main-content";
+  const link = document.createElement("a");
+  link.id = "skipLink";
+  link.href = "#main-content";
+  link.className = "skip-link";
+  link.textContent = "Skip to main content";
+  document.body.insertBefore(link, document.body.firstChild);
+}
+
+/**
+ * Catch unhandled promise rejections and show them as error toasts.
+ * Call once at app startup from each page's JS module.
+ */
+export function initGlobalErrorHandler() {
+  window.addEventListener("unhandledrejection", (event) => {
+    if (event.reason?.name === "AbortError") return; // ignore intentional cancels
+    const msg = event.reason?.message;
+    if (!msg) return;
+    const container = document.getElementById("toastContainer");
+    if (!container) return;
+    const toast = document.createElement("div");
+    toast.className = "toast error";
+    toast.textContent = msg;
+    container.appendChild(toast);
+    setTimeout(() => toast.remove(), 5000);
   });
 }
 
@@ -88,4 +134,27 @@ export function initUnreadBadges(root = document) {
   badgeTimer = setInterval(() => {
     refreshUnreadBadges(root);
   }, 60000);
+}
+
+export function initMobileDrawer() {
+  const drawer  = document.getElementById("mobileDrawer");
+  const overlay = document.getElementById("mobileDrawerOverlay");
+  const trigger = document.getElementById("mobileMenuTrigger");
+  const closeBtn = document.getElementById("mobileDrawerClose");
+  if (!drawer || !overlay) return;
+
+  const open = () => {
+    drawer.classList.add("open");
+    overlay.classList.add("open");
+    document.body.style.overflow = "hidden";
+  };
+  const close = () => {
+    drawer.classList.remove("open");
+    overlay.classList.remove("open");
+    document.body.style.overflow = "";
+  };
+
+  trigger?.addEventListener("click", open);
+  closeBtn?.addEventListener("click", close);
+  overlay.addEventListener("click", close);
 }

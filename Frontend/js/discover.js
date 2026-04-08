@@ -1,41 +1,77 @@
 import { apiFetch, requireAuth } from "./auth.js";
 import { getProfileHref } from "./avatar.js";
 import { initLanguageControls } from "./i18n.js";
-import { initThemeToggle, initOfflineBanner } from "./theme.js";
+import { initMobileDrawer, initThemeToggle, initOfflineBanner } from "./theme.js";
+
+let discoverPage = 1;
+let discoverLoading = false;
+let discoverHasNext = false;
 
 document.addEventListener("DOMContentLoaded", async () => {
   requireAuth();
   initLanguageControls();
   initThemeToggle();
   initOfflineBanner();
+  initMobileDrawer();
 
   document.getElementById("discoverSentiment")?.addEventListener("change", async () => {
-    await loadDiscover();
+    discoverPage = 1;
+    await loadDiscover({ append: false });
   });
 
-  await Promise.all([loadDiscover(), loadTrending()]);
+  await Promise.all([loadDiscover({ append: false }), loadTrending()]);
+  setupInfiniteScroll();
 });
 
-async function loadDiscover() {
+function setupInfiniteScroll() {
+  const sentinel = document.getElementById("discoverSentinel");
+  if (!sentinel) return;
+  const observer = new IntersectionObserver(async (entries) => {
+    if (!entries[0]?.isIntersecting || discoverLoading || !discoverHasNext) return;
+    discoverPage += 1;
+    await loadDiscover({ append: true });
+  }, { rootMargin: "200px" });
+  observer.observe(sentinel);
+}
+
+async function loadDiscover({ append = false } = {}) {
+  if (discoverLoading) return;
+  discoverLoading = true;
+
   const sentiment = document.getElementById("discoverSentiment").value;
   const state = document.getElementById("discoverState");
   const feed = document.getElementById("discoverFeed");
-  state.textContent = "Loading discovery feed...";
-  feed.innerHTML = renderSkeletonCards(3);
 
-  const params = new URLSearchParams();
-  if (sentiment) params.set("sentiment", sentiment);
-  const data = await apiFetch(`/api/posts/discover?${params.toString()}`, { method: "GET" });
-  const posts = data.posts || [];
-
-  if (!posts.length) {
-    state.innerHTML = '<div class="state-illustrated"><div class="state-emoji">🧭</div><div>No discovery posts yet.<br />Aucune publication de decouverte pour le moment.</div></div>';
-    feed.innerHTML = "";
-    return;
+  if (!append) {
+    state.textContent = "Loading discovery feed...";
+    state.style.display = "";
+    feed.innerHTML = renderSkeletonCards(3);
+    discoverPage = 1;
   }
 
-  state.style.display = "none";
-  feed.innerHTML = posts.map((post) => `
+  try {
+    const params = new URLSearchParams({ page: discoverPage, per_page: 20 });
+    if (sentiment) params.set("sentiment", sentiment);
+    const data = await apiFetch(`/api/posts/discover?${params.toString()}`, { method: "GET" });
+    const posts = data.posts || [];
+    discoverHasNext = data.has_next ?? false;
+
+    if (!append) feed.innerHTML = "";
+
+    if (!posts.length && !append) {
+      state.innerHTML = '<div class="state-illustrated"><div class="state-emoji">🧭</div><div>No discovery posts yet.<br />Aucune publication de decouverte pour le moment.</div></div>';
+      return;
+    }
+
+    state.style.display = "none";
+    feed.insertAdjacentHTML("beforeend", posts.map(renderPostCard).join(""));
+  } finally {
+    discoverLoading = false;
+  }
+}
+
+function renderPostCard(post) {
+  return `
     <article class="panel post">
       <div class="post-head">
         <div class="post-user">
@@ -49,7 +85,7 @@ async function loadDiscover() {
       </div>
       <div class="post-text">${escapeHtml(post.content || "")}</div>
     </article>
-  `).join("");
+  `;
 }
 
 async function loadTrending() {

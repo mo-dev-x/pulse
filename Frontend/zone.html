@@ -3,6 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="theme-color" content="#ff4d7d" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="assets/icon-192.svg" />
   <title>PULSE — Zone Feed</title>
   <link rel="stylesheet" href="https://unicons.iconscout.com/release/v4.0.8/css/line.css">
   <link rel="stylesheet" href="css/variables.css">
@@ -14,6 +17,7 @@
   <div id="offlineBanner" class="error" hidden>You are offline. Zone activity may be outdated.</div>
   <header class="topbar">
     <div class="topbar-left">
+      <button class="iconbtn mobile-menu-trigger" id="mobileMenuTrigger" aria-label="Menu">☰</button>
       <a class="brand" href="feed.html">PULSE</a>
     </div>
     <div class="topbar-center">
@@ -24,14 +28,24 @@
       <div id="zoneLookupResults" class="search-results"></div>
     </div>
     <div class="topbar-right">
-      <button class="iconbtn" data-theme-toggle aria-label="Toggle theme">☀️</button>
-      <a class="btn btn-ghost" href="messages.html">Messages <span class="inline-badge" data-message-badge hidden>0</span></a>
-      <a class="btn btn-ghost" href="notifications.html">Alerts <span class="inline-badge" data-notification-badge hidden>0</span></a>
-      <a class="btn btn-ghost" href="feed.html">Back to feed</a>
+      <button class="topbar-icon-btn" data-theme-toggle aria-label="Toggle theme" title="Toggle theme">
+        <i class="uil uil-sun"></i>
+      </button>
+      <a class="topbar-icon-btn" href="messages.html" title="Messages">
+        <i class="uil uil-comment-dots"></i>
+        <span class="inline-badge" data-message-badge hidden>0</span>
+      </a>
+      <a class="topbar-icon-btn" href="notifications.html" title="Notifications">
+        <i class="uil uil-bell"></i>
+        <span class="inline-badge" data-notification-badge hidden>0</span>
+      </a>
+      <a class="topbar-icon-btn" href="feed.html" title="Back to feed">
+        <i class="uil uil-arrow-left"></i>
+      </a>
     </div>
   </header>
 
-  <div class="app">
+  <div class="app app-sidebar-main">
     <aside class="sidebar">
       <div class="panel profile">
         <a href="feed.html" class="profile-link">
@@ -43,6 +57,22 @@
             </div>
           </div>
         </a>
+      </div>
+
+      <div class="panel" id="zoneSidebarZoneCard" hidden style="padding: 14px 16px; display: flex; flex-direction: column; gap: 10px;">
+        <div class="panel-title" style="margin: 0; padding: 0; border: none; font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px;">Current zone</div>
+        <div style="font-size: 16px; font-weight: 800; color: var(--text);" id="zoneSidebarZoneName"></div>
+        <p style="margin: 0; font-size: 13px; color: var(--muted); line-height: 1.45;" id="zoneSidebarZoneDesc"></p>
+        <div style="display: flex; gap: 16px; margin-top: 2px;">
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-size: 18px; font-weight: 800; color: var(--text);" id="zoneSidebarPostCount">—</span>
+            <span style="font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px;">Posts</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-size: 18px; font-weight: 800; color: var(--text); text-transform: capitalize;" id="zoneSidebarZoneType">—</span>
+            <span style="font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px;">Type</span>
+          </div>
+        </div>
       </div>
     </aside>
 
@@ -59,6 +89,32 @@
     </main>
   </div>
 
+  <!-- Mobile navigation drawer -->
+  <div class="mobile-drawer-overlay" id="mobileDrawerOverlay"></div>
+  <aside class="mobile-drawer" id="mobileDrawer" aria-label="Navigation menu">
+    <div class="mobile-drawer-head">
+      <span class="brand">PULSE</span>
+      <button class="iconbtn" id="mobileDrawerClose" aria-label="Close menu">✕</button>
+    </div>
+    <nav class="mobile-drawer-nav">
+      <a class="mobile-drawer-link" href="feed.html"><i class="uil uil-home"></i><span>Home</span></a>
+      <a class="mobile-drawer-link" href="discover.html"><i class="uil uil-compass"></i><span>Explore</span></a>
+      <a class="mobile-drawer-link active" href="zone.html"><i class="uil uil-map-marker"></i><span>Zones</span></a>
+      <a class="mobile-drawer-link" href="analytics.html"><i class="uil uil-smile"></i><span>Mood Dashboard</span></a>
+      <a class="mobile-drawer-link" href="messages.html">
+        <i class="uil uil-envelope"></i><span>Messages</span>
+        <span class="inline-badge mobile-drawer-badge" data-message-badge hidden>0</span>
+      </a>
+      <a class="mobile-drawer-link" href="notifications.html">
+        <i class="uil uil-bell"></i><span>Notifications</span>
+        <span class="inline-badge mobile-drawer-badge" data-notification-badge hidden>0</span>
+      </a>
+      <a class="mobile-drawer-link" href="settings.html"><i class="uil uil-setting"></i><span>Settings</span></a>
+      <a class="mobile-drawer-link" href="profile.html"><i class="uil uil-user"></i><span>Profile</span></a>
+    </nav>
+  </aside>
+
   <script type="module" src="js/zone.js"></script>
+  <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');</script>
 </body>
 </html>

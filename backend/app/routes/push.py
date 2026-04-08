@@ -11,6 +11,15 @@ from app.utils.i18n import get_localized_message
 bp = Blueprint('push', __name__)
 
 
+@bp.route('/push/vapid-public-key', methods=['GET'])
+def get_vapid_public_key():
+    """Return the VAPID public key for Web Push subscription (no auth required)."""
+    key = current_app.config.get('VAPID_PUBLIC_KEY')
+    if not key:
+        return jsonify({'error': 'Push notifications not configured on this server'}), 503
+    return jsonify({'public_key': key}), 200
+
+
 @bp.route('/push/subscribe', methods=['POST'])
 @jwt_required()
 def subscribe_push():

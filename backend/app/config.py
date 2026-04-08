@@ -128,6 +128,14 @@ class Config:
     PUSH_ENABLED = os.getenv('PUSH_ENABLED', 'false').lower() == 'true'
     FCM_SERVER_KEY = os.getenv('FCM_SERVER_KEY')
 
+    # Web Push (VAPID) — generate keys once:
+    #   pip install pywebpush
+    #   python -c "from py_vapid import Vapid; v=Vapid(); v.generate_keys(); print(v.public_key.decode(),v.private_key.decode())"
+    # Store the output as VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY in your .env
+    VAPID_PUBLIC_KEY = os.getenv('VAPID_PUBLIC_KEY')
+    VAPID_PRIVATE_KEY = os.getenv('VAPID_PRIVATE_KEY')
+    VAPID_CLAIMS_SUB = os.getenv('VAPID_CLAIMS_SUB', 'mailto:admin@pulse.app')
+
 
 class DevelopmentConfig(Config):
     """
