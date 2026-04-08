@@ -91,12 +91,42 @@
         </button>
       </div>
 
+      <!-- Audio recorder bar (recording state → preview state) -->
+      <div class="dm-audio-recorder" id="dmAudioRecorder" hidden>
+        <!-- Recording state -->
+        <div class="dm-audio-rec-state" id="dmRecState">
+          <button class="dm-icon-btn" type="button" id="dmRecCancelBtn" aria-label="Cancel recording" title="Cancel">
+            <i class="uil uil-times"></i>
+          </button>
+          <span class="dm-rec-dot" aria-hidden="true"></span>
+          <canvas class="dm-waveform-canvas" id="dmWaveformCanvas" aria-hidden="true"></canvas>
+          <span class="dm-rec-timer" id="dmRecTimer">0:00</span>
+          <button class="dm-icon-btn dm-rec-done-btn" type="button" id="dmRecDoneBtn" aria-label="Stop and preview" title="Stop recording">
+            <i class="uil uil-check-circle"></i>
+          </button>
+        </div>
+        <!-- Preview state (hidden until recording stops) -->
+        <div class="dm-audio-prev-state" id="dmPrevState" hidden>
+          <button class="dm-icon-btn" type="button" id="dmPrevDiscardBtn" aria-label="Discard recording" title="Discard">
+            <i class="uil uil-trash-alt"></i>
+          </button>
+          <button class="dm-icon-btn dm-prev-play-btn" type="button" id="dmPrevPlayBtn" aria-label="Play / pause preview" title="Play">
+            <i class="uil uil-play"></i>
+          </button>
+          <canvas class="dm-waveform-canvas" id="dmStaticCanvas" aria-hidden="true"></canvas>
+          <span class="dm-rec-timer" id="dmRecDuration">0:00</span>
+          <button class="dm-send-btn" type="button" id="dmPrevSendBtn" aria-label="Send voice message" title="Send">
+            <i class="uil uil-message"></i>
+          </button>
+        </div>
+      </div>
+
       <!-- Compose bar -->
       <form class="dm-compose" id="messageComposer" hidden>
         <button class="dm-icon-btn" type="button" id="imageAttachBtn" title="Send image">
           <i class="uil uil-image"></i>
         </button>
-        <input id="imageAttachInput" type="file" accept="image/*,video/*" hidden />
+        <input id="imageAttachInput" type="file" accept="image/*" hidden />
         <button class="dm-icon-btn dm-audio-btn" type="button" id="audioRecordBtn" title="Send audio">
           <i class="uil uil-microphone"></i>
         </button>

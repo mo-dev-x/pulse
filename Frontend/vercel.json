@@ -5,6 +5,11 @@
     { "src": "/feed", "dest": "/feed.html" },
     { "src": "/register", "dest": "/register.html" },
     { "src": "/verify-email", "dest": "/verify-email.html" },
+    { "src": "/reset-password", "dest": "/reset-password.html" },
+    { "src": "/forgot-password", "dest": "/forgot-password.html" },
+    { "src": "/login", "dest": "/login.html" },
+    { "src": "/profile", "dest": "/profile.html" },
+    { "src": "/settings", "dest": "/settings.html" },
     { "src": "/(.*)", "dest": "/$1" }
   ],
   "headers": [

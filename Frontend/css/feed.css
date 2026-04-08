@@ -643,18 +643,42 @@ body::before{
 .comment-meta{ color: var(--muted); font-size: 12px; margin-top: 2px; }
 .comment-content{ margin-top: 8px; color: var(--text); line-height: 1.45; word-break: break-word; }
 
-.comment-actions-inline{ display:flex; gap: 8px; }
+/* Header row: author/meta on the left, action buttons pinned to the right */
+.comment-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
 
-.inline-link{
+.comment-row > div:first-child {
+  min-width: 0;
+  flex: 1;
+}
+
+.comment-actions-inline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.inline-link {
   border: none;
   background: transparent;
   color: #9ec5ff;
   cursor: pointer;
-  font-weight: 700;
-  padding: 0;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 3px 7px;
+  border-radius: 6px;
   font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  transition: background 0.12s;
 }
-.danger-link{ color: #fca5a5; }
+.inline-link:hover { background: var(--surface-hover); }
+.danger-link { color: #fca5a5; }
 
 .comment-replies{
   display:grid;

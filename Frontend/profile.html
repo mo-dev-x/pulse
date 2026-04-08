@@ -176,9 +176,21 @@
                 </div>
 
                 <div class="profile-tabs">
-                    <button class="profile-tab active" data-tab="posts">Posts</button>
-                    <button class="profile-tab" data-tab="media">Media</button>
-                    <button class="profile-tab" data-tab="about">About</button>
+                    <button class="profile-tab active" data-tab="public">
+                        <i class="uil uil-globe"></i> Public
+                    </button>
+                    <button class="profile-tab profile-tab--anon hidden" id="tabAnonBtn" data-tab="anonymous">
+                        <i class="uil uil-mask"></i> Anonymous
+                    </button>
+                    <button class="profile-tab" data-tab="saved">
+                        <i class="uil uil-bookmark"></i> Saved
+                    </button>
+                    <button class="profile-tab" data-tab="media">
+                        <i class="uil uil-image"></i> Media
+                    </button>
+                    <button class="profile-tab" data-tab="about">
+                        <i class="uil uil-info-circle"></i> About
+                    </button>
                 </div>
             </section>
             <section class="panel pinned-panel" id="pinnedPanel">
@@ -190,10 +202,22 @@
                 <div class="state" id="pinnedState">No pinned post yet.</div>
             </section>
 
-            <!-- POSTS TAB -->
-            <section class="profile-tab-panel active" id="tab-posts">
-                <div class="feed" id="profilePostsFeed"></div>
-                <div class="state" id="profilePostsState">Loading posts…</div>
+            <!-- PUBLIC POSTS TAB -->
+            <section class="profile-tab-panel active" id="tab-public">
+                <div class="feed" id="profilePublicFeed"></div>
+                <div class="state" id="profilePublicState">Loading posts…</div>
+            </section>
+
+            <!-- ANONYMOUS POSTS TAB -->
+            <section class="profile-tab-panel" id="tab-anonymous">
+                <div class="feed" id="profileAnonFeed"></div>
+                <div class="state" id="profileAnonState">Loading anonymous posts…</div>
+            </section>
+
+            <!-- SAVED POSTS TAB -->
+            <section class="profile-tab-panel" id="tab-saved">
+                <div class="feed" id="profileSavedFeed"></div>
+                <div class="state" id="profileSavedState">Loading saved posts…</div>
             </section>
 
             <!-- MEDIA TAB -->

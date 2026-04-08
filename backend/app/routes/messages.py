@@ -33,7 +33,7 @@ from app.models import Conversation, Message, User
 from app.utils.i18n import get_localized_message
 
 _ALLOWED_AUDIO_EXTS = {'webm', 'ogg', 'mp4', 'm4a', 'wav', 'opus'}
-_ALLOWED_MEDIA_EXTS = {'jpg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'mov', 'webm'}
+_ALLOWED_MEDIA_EXTS = {'jpg', 'jpeg', 'png', 'gif', 'webp'}  # video upload disabled
 
 bp = Blueprint('messages', __name__)
 
@@ -161,10 +161,24 @@ def send_message(conversation_id):
     if not Message.validate_content(content):
         return jsonify({'error': get_localized_message(request, 'validation_error'), 'message': 'Message must be between 1 and 1000 characters'}), 400
 
+    # Optional reply threading
+    reply_to_id  = data.get('reply_to_id')
+    reply_preview = None
+    if reply_to_id:
+        replied = db.session.get(Message, int(reply_to_id))
+        if replied and replied.conversation_id == conversation_id:
+            # Store a short preview snapshot — never needs a JOIN to render the quote
+            raw = data.get('reply_preview') or replied.content or ''
+            reply_preview = raw[:255]
+        else:
+            reply_to_id = None  # invalid ref → ignore
+
     message = Message(
         conversation_id=conversation.id,
         sender_id=current_user_id,
         content=content,
+        reply_to_id=reply_to_id or None,
+        reply_preview=reply_preview,
     )
     db.session.add(message)
     conversation.last_message_at = datetime.now(timezone.utc).replace(tzinfo=None)
@@ -223,16 +237,14 @@ def send_media_message(conversation_id):
 
     raw_ext = media_file.filename.rsplit('.', 1)[-1].lower() if '.' in media_file.filename else ''
     if raw_ext not in _ALLOWED_MEDIA_EXTS:
-        return jsonify({'error': 'Unsupported file type'}), 400
+        return jsonify({'error': 'Unsupported file type. Only images (jpg, png, gif, webp) are accepted.'}), 400
 
     filename = f"{uuid.uuid4().hex}.{raw_ext}"
     upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads/')
     os.makedirs(upload_folder, exist_ok=True)
     media_file.save(os.path.join(upload_folder, filename))
 
-    is_video = raw_ext in {'mp4', 'mov', 'webm'}
-    prefix   = '[video]' if is_video else '[image]'
-    content  = f"{prefix}/api/uploads/{filename}"
+    content  = f"[image]/api/uploads/{filename}"
     message  = Message(
         conversation_id=conversation.id,
         sender_id=current_user_id,

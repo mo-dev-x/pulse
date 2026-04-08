@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 import os
 import re
 from flask import Flask, app, jsonify, request, send_from_directory
+from sqlalchemy import text
 from flask_caching import Cache
 from flask_sqlalchemy import SQLAlchemy
 from flask_jwt_extended import JWTManager
@@ -197,6 +198,12 @@ def create_app(config_name='development'):
     # Register blueprints
     register_blueprints(app)
 
+    # ── Lightweight schema migrations (idempotent, run on every boot) ──────────
+    # Adds columns that were introduced after the initial schema.sql was run.
+    # Each ALTER TABLE is wrapped in try/except so it silently skips when the
+    # column already exists (MySQL raises 1060 on duplicate column).
+    _migrate_schema(app)
+
     @app.route('/uploads/<path:filename>')
     def serve_uploaded_file(filename):
         return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
@@ -218,6 +225,24 @@ def create_app(config_name='development'):
             db.create_all()
     
     return app
+
+
+def _migrate_schema(app):
+    """Add columns introduced after the initial schema without dropping data."""
+    migrations = [
+        "ALTER TABLE messages ADD COLUMN reply_to_id INT NULL",
+        "ALTER TABLE messages ADD COLUMN reply_preview VARCHAR(255) NULL",
+        "ALTER TABLE messages ADD INDEX ix_messages_reply_to_id (reply_to_id)",
+    ]
+    with app.app_context():
+        with db.engine.connect() as conn:
+            for sql in migrations:
+                try:
+                    conn.execute(text(sql))
+                    conn.commit()
+                except Exception:
+                    # Column / index already exists — safe to ignore
+                    pass
 
 
 def register_blueprints(app):

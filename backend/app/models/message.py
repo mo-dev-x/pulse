@@ -16,6 +16,11 @@ class Message(db.Model):
     read_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False, index=True)
 
+    # Reply threading: stores a reference to the original message and a
+    # snapshot of its content so the quote renders without an extra query.
+    reply_to_id = db.Column(db.Integer, db.ForeignKey('messages.id', ondelete='SET NULL'), nullable=True, index=True)
+    reply_preview = db.Column(db.String(255), nullable=True)
+
     conversation = db.relationship('Conversation', backref=db.backref('messages', cascade='all, delete-orphan', lazy='dynamic'))
     sender = db.relationship('User', backref=db.backref('messages_sent', lazy='dynamic'))
 
@@ -29,6 +34,8 @@ class Message(db.Model):
             'read_at': self.read_at.isoformat() + 'Z' if self.read_at else None,
             'created_at': self.created_at.isoformat() + 'Z' if self.created_at else None,
             'is_mine': current_user_id == self.sender_id if current_user_id else False,
+            'reply_to_id': self.reply_to_id,
+            'reply_preview': self.reply_preview,
         }
 
     @staticmethod
