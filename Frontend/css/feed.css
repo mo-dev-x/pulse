@@ -200,6 +200,12 @@ body::before{
   box-shadow: 0 2px 8px rgba(0,0,0,0.28);
 }
 
+[data-theme="light"] .panel{
+  box-shadow:
+    0 1px 3px rgba(0,0,0,0.10),
+    0 4px 14px rgba(0,0,0,0.09);
+}
+
 /* -----------------------------
    4) LEFT SIDEBAR
 ------------------------------ */
@@ -468,7 +474,7 @@ body::before{
   display:block;
   object-fit: contain;
   max-height: min(70vh, 720px);
-  background: rgba(7,11,20,0.82);
+  background: var(--surface-input);
 }
 
 .post-actions{
@@ -666,10 +672,8 @@ body::before{
 .inline-link {
   border: none;
   background: transparent;
-  color: #9ec5ff;
+  color: var(--link);
   cursor: pointer;
-  font-weight: 600;
-  font-size: 12px;
   padding: 3px 7px;
   border-radius: 6px;
   font: inherit;
@@ -678,7 +682,7 @@ body::before{
   transition: background 0.12s;
 }
 .inline-link:hover { background: var(--surface-hover); }
-.danger-link { color: #fca5a5; }
+.danger-link { color: var(--error); }
 
 .comment-replies{
   display:grid;
@@ -925,8 +929,8 @@ body::before{
   max-height: 300px;
   object-fit: contain;
   border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(7,11,20,0.82);
+  border: 1px solid var(--border-soft);
+  background: var(--surface-input);
 }
 
 /* -----------------------------
@@ -1380,8 +1384,8 @@ body::before{
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background: rgba(7,11,20,0.70);
-  border: 1px solid rgba(255,255,255,0.10);
+  background: var(--panel);
+  border: 1px solid var(--border-soft);
   display: flex;
   flex-direction: column;
   justify-content: center;

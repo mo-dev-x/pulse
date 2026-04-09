@@ -82,6 +82,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   // Reply button click (desktop) + swipe-to-reply (mobile)
   setupReplyGestures();
 
+  // Image lightbox
+  setupLightbox();
+
+  // Custom voice-message players
+  setupVoicePlayers();
+
   // Right-click context menu for messages
   setupContextMenu();
 
@@ -316,13 +322,24 @@ function renderMessageGroups(messages) {
 function renderBubbleContent(content) {
   if (!content) return "";
   if (content.startsWith("[audio]")) {
-    // getAssetUrl resolves "/api/uploads/…" → absolute API URL
     const url = escapeAttr(getAssetUrl(content.slice(7)));
-    return `<audio class="dm-audio" controls src="${url}" preload="metadata" data-fix-duration></audio>`;
+    return `
+      <div class="dm-voice-player" data-src="${url}">
+        <button class="dm-voice-play" aria-label="Play voice message">
+          <i class="uil uil-play"></i>
+        </button>
+        <div class="dm-voice-track">
+          <div class="dm-voice-bar">
+            <div class="dm-voice-fill"></div>
+          </div>
+          <span class="dm-voice-time">0:00</span>
+        </div>
+        <audio class="dm-voice-audio" src="${url}" preload="metadata" data-fix-duration></audio>
+      </div>`;
   }
   if (content.startsWith("[image]")) {
     const url = escapeAttr(getAssetUrl(content.slice(7)));
-    return `<img class="dm-media-img" src="${url}" alt="Image" loading="lazy" />`;
+    return `<img class="dm-media-img" src="${url}" alt="Image" loading="lazy" data-lightbox="${url}" />`;
   }
   if (content.startsWith("[video]")) {
     const url = escapeAttr(getAssetUrl(content.slice(7)));
@@ -774,6 +791,134 @@ function triggerReply(btn) {
   document.getElementById("messageInput")?.focus();
 }
 
+// ── Custom voice-message player ───────────────────────────────────────────────
+function setupVoicePlayers() {
+  const thread = document.getElementById("messageThread");
+  if (!thread) return;
+
+  // Delegated play/pause on any custom player button
+  thread.addEventListener("click", (e) => {
+    const btn = e.target.closest(".dm-voice-play");
+    if (!btn) return;
+
+    const player = btn.closest(".dm-voice-player");
+    if (!player) return;
+
+    const audio = player.querySelector(".dm-voice-audio");
+    if (!audio) return;
+
+    const icon     = btn.querySelector("i");
+    const fill     = player.querySelector(".dm-voice-fill");
+    const timeEl   = player.querySelector(".dm-voice-time");
+
+    if (audio.paused) {
+      // Pause any other playing voices first
+      thread.querySelectorAll(".dm-voice-audio").forEach((a) => {
+        if (a !== audio && !a.paused) {
+          a.pause();
+          const p = a.closest(".dm-voice-player");
+          if (p) {
+            p.querySelector("i").className = "uil uil-play";
+            p.classList.remove("dm-voice-player--playing");
+          }
+        }
+      });
+      audio.play();
+      if (icon) icon.className = "uil uil-pause";
+      player.classList.add("dm-voice-player--playing");
+    } else {
+      audio.pause();
+      if (icon) icon.className = "uil uil-play";
+      player.classList.remove("dm-voice-player--playing");
+    }
+
+    // Wire progress/ended once per audio element
+    if (!audio._playerWired) {
+      audio._playerWired = true;
+
+      audio.addEventListener("timeupdate", () => {
+        if (!audio.duration || !isFinite(audio.duration)) return;
+        const pct = (audio.currentTime / audio.duration) * 100;
+        if (fill)   fill.style.width   = `${pct}%`;
+        if (timeEl) timeEl.textContent = formatAudioDuration(Math.floor(audio.currentTime));
+      });
+
+      audio.addEventListener("ended", () => {
+        if (icon)   icon.className = "uil uil-play";
+        if (fill)   fill.style.width = "0%";
+        if (timeEl && audio.duration && isFinite(audio.duration))
+          timeEl.textContent = formatAudioDuration(Math.floor(audio.duration));
+        player.classList.remove("dm-voice-player--playing");
+      });
+
+      audio.addEventListener("loadedmetadata", () => {
+        if (timeEl && audio.duration && isFinite(audio.duration))
+          timeEl.textContent = formatAudioDuration(Math.floor(audio.duration));
+      });
+    }
+  });
+
+  // Seek on track click
+  thread.addEventListener("click", (e) => {
+    const bar = e.target.closest(".dm-voice-bar");
+    if (!bar) return;
+    const player = bar.closest(".dm-voice-player");
+    if (!player) return;
+    const audio = player.querySelector(".dm-voice-audio");
+    if (!audio || !audio.duration || !isFinite(audio.duration)) return;
+    const rect = bar.getBoundingClientRect();
+    const pct  = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    audio.currentTime = pct * audio.duration;
+  });
+}
+
+// ── Image lightbox ────────────────────────────────────────────────────────────
+function openLightbox(src) {
+  let overlay = document.getElementById("dmLightbox");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "dmLightbox";
+    overlay.className = "dm-lightbox";
+    overlay.innerHTML = `
+      <div class="dm-lightbox-backdrop"></div>
+      <div class="dm-lightbox-panel">
+        <img class="dm-lightbox-img" alt="Full size image" />
+        <div class="dm-lightbox-actions">
+          <a class="dm-lightbox-download btn btn-sm" download>
+            <i class="uil uil-download-alt"></i> Download
+          </a>
+          <button class="dm-lightbox-close btn btn-sm">
+            <i class="uil uil-times"></i> Close
+          </button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    const close = () => { overlay.classList.remove("dm-lightbox--open"); };
+    overlay.querySelector(".dm-lightbox-backdrop").addEventListener("click", close);
+    overlay.querySelector(".dm-lightbox-close").addEventListener("click", close);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && overlay.classList.contains("dm-lightbox--open")) close();
+    });
+  }
+
+  const img  = overlay.querySelector(".dm-lightbox-img");
+  const dl   = overlay.querySelector(".dm-lightbox-download");
+  img.src    = src;
+  dl.href    = src;
+  // derive a filename from the URL path
+  dl.download = src.split("/").pop() || "image";
+  overlay.classList.add("dm-lightbox--open");
+}
+
+function setupLightbox() {
+  document.getElementById("messageThread")?.addEventListener("click", (e) => {
+    const img = e.target.closest("[data-lightbox]");
+    if (!img) return;
+    openLightbox(img.dataset.lightbox);
+  });
+}
+
 function setupReplyGestures() {
   const thread = document.getElementById("messageThread");
   if (!thread) return;
@@ -792,72 +937,111 @@ function setupReplyGestures() {
     if (ctx) { ctx.hidden = true; ctx.dataset.replyToId = ""; }
   });
 
-  // ── Mobile: swipe right on any bubble-wrap to reply ───────────────────────
-  // Works identically to Instagram — swipe right on your own or the other
-  // person's message, the bubble slides right, releasing past the threshold
-  // triggers reply and snaps back.
-  let swipeWrap    = null;   // currently tracked bubble-wrap
-  let swipeStartX  = 0;
-  let swipeStartY  = 0;
-  let swipeTriggered = false;
-  const SWIPE_THRESHOLD = 56;  // px right to trigger
-  const SWIPE_MAX       = 72;  // max visual drag distance
+  // ── Mobile swipe-to-reply ─────────────────────────────────────────────────
+  //
+  // Direction is per-side so the gesture always moves the bubble toward center:
+  //   "theirs" (left-aligned)  → swipe RIGHT  → translateX(+N)
+  //   "mine"   (right-aligned) → swipe LEFT   → translateX(-N)
+  //
+  // Scroll conflict is solved with a direction lock:
+  //   - The first LOCK_PX of movement decides whether this is a horizontal
+  //     swipe or a vertical scroll.
+  //   - Once locked horizontal, touchmove calls e.preventDefault() to suppress
+  //     scroll for the remainder of that touch.  The listener is registered
+  //     non-passive specifically so preventDefault is legal to call.
+  //   - Once locked vertical the bubble resets and the touch is fully handed
+  //     back to the scroll container — no further intervention.
+  //
+  // Long-press conflict: the context-menu touchmove handler already calls
+  //   clearTimeout(longPressTimer), so any finger movement cancels a long-press
+  //   before it fires.  A stationary long-press never exceeds LOCK_PX so the
+  //   swipe code ignores it entirely.
 
-  thread.addEventListener("touchstart", (e) => {
-    const wrap = e.target.closest(".dm-bubble-wrap");
+  const LOCK_PX    = 7;   // px of travel before committing to h or v
+  const TRIGGER_PX = 56;  // px that fires the reply action
+  const MAX_PX     = 72;  // maximum visual drag
+
+  let wrap      = null;   // bubble-wrap being tracked
+  let startX    = 0;
+  let startY    = 0;
+  let isMine    = false;  // drives direction sign
+  let axis      = null;   // null | "h" | "v"
+  let triggered = false;
+
+  function snap(animate) {
     if (!wrap) return;
-    // Don't interfere with the context-menu long-press
-    swipeWrap      = wrap;
-    swipeStartX    = e.touches[0].clientX;
-    swipeStartY    = e.touches[0].clientY;
-    swipeTriggered = false;
-    swipeWrap.style.transition = "none";
+    if (animate) {
+      wrap.style.transition = "transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1)";
+    }
+    wrap.style.transform = "";
+    wrap.classList.remove("dm-swiping");
+    wrap      = null;
+    axis      = null;
+    triggered = false;
+  }
+
+  // passive — we only read coordinates, no need to prevent anything yet
+  thread.addEventListener("touchstart", (e) => {
+    const el = e.target.closest(".dm-bubble-wrap");
+    if (!el) return;
+    wrap      = el;
+    startX    = e.touches[0].clientX;
+    startY    = e.touches[0].clientY;
+    isMine    = wrap.classList.contains("dm-bubble-wrap--mine");
+    axis      = null;
+    triggered = false;
+    wrap.style.transition = "none";
   }, { passive: true });
 
+  // NON-passive — allows e.preventDefault() once direction is confirmed horizontal
   thread.addEventListener("touchmove", (e) => {
-    if (!swipeWrap) return;
-    const dx = e.touches[0].clientX - swipeStartX;
-    const dy = e.touches[0].clientY - swipeStartY;
+    if (!wrap) return;
 
-    // Abort if it looks like vertical scrolling
-    if (Math.abs(dy) > Math.abs(dx) * 1.2) {
-      swipeWrap.style.transform = "";
-      swipeWrap = null;
+    const dx  = e.touches[0].clientX - startX;
+    const dy  = e.touches[0].clientY - startY;
+    const adx = Math.abs(dx);
+    const ady = Math.abs(dy);
+
+    // Still inside dead zone — no direction committed yet
+    if (axis === null) {
+      if (adx < LOCK_PX && ady < LOCK_PX) return;
+      axis = adx >= ady ? "h" : "v";
+    }
+
+    if (axis === "v") {
+      // Vertical: reset bubble, do nothing — native scroll proceeds unblocked
+      snap(false);
       return;
     }
 
-    // Only right-swipe
-    if (dx <= 0) return;
+    // Horizontal confirmed — block the scroll container for this touch
+    e.preventDefault();
 
-    const clamped = Math.min(dx, SWIPE_MAX);
-    swipeWrap.style.transform = `translateX(${clamped}px)`;
+    // Accept only the inward direction for each side
+    const inward = isMine ? dx < 0 : dx > 0;
+    if (!inward) return;
 
-    if (clamped >= SWIPE_THRESHOLD && !swipeTriggered) {
-      swipeTriggered = true;
+    const travel = Math.min(adx, MAX_PX);
+    const sign   = isMine ? -1 : 1;
+    wrap.style.transform = `translateX(${sign * travel}px)`;
+    wrap.classList.add("dm-swiping");   // reveals reply icon via CSS
+
+    if (travel >= TRIGGER_PX && !triggered) {
+      triggered = true;
       navigator.vibrate?.(12);
     }
-  }, { passive: true });
+  }, { passive: false });   // <-- must be false so preventDefault is permitted
 
   thread.addEventListener("touchend", () => {
-    if (!swipeWrap) return;
-    // Spring back
-    swipeWrap.style.transition = "transform 0.22s cubic-bezier(.25,.8,.25,1)";
-    swipeWrap.style.transform  = "";
-
-    if (swipeTriggered) {
-      const btn = swipeWrap.querySelector(".dm-reply-btn");
+    if (!wrap) return;
+    if (triggered) {
+      const btn = wrap.querySelector(".dm-reply-btn");
       if (btn) triggerReply(btn);
     }
-
-    swipeWrap = null;
+    snap(true);
   }, { passive: true });
 
-  thread.addEventListener("touchcancel", () => {
-    if (!swipeWrap) return;
-    swipeWrap.style.transition = "transform 0.22s cubic-bezier(.25,.8,.25,1)";
-    swipeWrap.style.transform  = "";
-    swipeWrap = null;
-  }, { passive: true });
+  thread.addEventListener("touchcancel", () => snap(true), { passive: true });
 }
 
 // ── Right-click context menu ───────────────────────────────────────────────

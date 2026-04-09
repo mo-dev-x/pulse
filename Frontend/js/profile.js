@@ -39,8 +39,13 @@ const els = {
   sideWebsite: document.getElementById("sideWebsite"),
   sideJoined: document.getElementById("sideJoined"),
 
-  profilePostsFeed: document.getElementById("profilePostsFeed"),
-  profilePostsState: document.getElementById("profilePostsState"),
+  profilePublicFeed: document.getElementById("profilePublicFeed"),
+  profilePublicState: document.getElementById("profilePublicState"),
+  profileAnonFeed: document.getElementById("profileAnonFeed"),
+  profileAnonState: document.getElementById("profileAnonState"),
+  profileSavedFeed: document.getElementById("profileSavedFeed"),
+  profileSavedState: document.getElementById("profileSavedState"),
+  tabAnonBtn: document.getElementById("tabAnonBtn"),
   mediaGrid: document.getElementById("mediaGrid"),
   mediaState: document.getElementById("mediaState"),
 
@@ -109,18 +114,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupGlobalUserSearch();
 
   try {
-    if (els.profilePostsFeed) {
-      els.profilePostsFeed.innerHTML = renderSkeletonCards(3);
-    }
-    if (els.mediaGrid) {
-      els.mediaGrid.innerHTML = renderSkeletonCards(2);
-    }
+    if (els.profilePublicFeed) els.profilePublicFeed.innerHTML = renderSkeletonCards(3);
+    if (els.mediaGrid)         els.mediaGrid.innerHTML        = renderSkeletonCards(2);
     await initProfilePage();
   } catch (err) {
     console.error("Profile page init error:", err);
-    if (els.profilePostsState) {
-      els.profilePostsState.textContent = err.message || "Could not load profile.";
-      els.profilePostsState.style.display = "block";
+    if (els.profilePublicState) {
+      els.profilePublicState.textContent = err.message || "Could not load profile.";
+      els.profilePublicState.style.display = "block";
     }
     if (els.mediaState) {
       els.mediaState.textContent = "Could not load media.";
@@ -154,7 +155,8 @@ async function initProfilePage() {
   renderCurrentUserChrome();
   renderViewedProfile();
   renderPinnedPost();
-  renderPosts(visiblePosts);
+  renderPublicPosts();
+  renderAnonPosts();
   renderMedia(visiblePosts);
 
   document.title = `PULSE — ${profileUser.display_name || profileUser.username || "Profile"}`;
@@ -205,18 +207,26 @@ function setupMenu() {
   });
 }
 
+let savedPostsLoaded = false;
+
 function setupTabs() {
-  const tabs = document.querySelectorAll(".profile-tab");
+  const tabs   = document.querySelectorAll(".profile-tab");
   const panels = document.querySelectorAll(".profile-tab-panel");
 
   tabs.forEach((tab) => {
-    tab.addEventListener("click", () => {
-      tabs.forEach((t) => t.classList.remove("active"));
+    tab.addEventListener("click", async () => {
+      tabs.forEach((t)   => t.classList.remove("active"));
       panels.forEach((p) => p.classList.remove("active"));
-
       tab.classList.add("active");
+
       const key = tab.dataset.tab;
-      document.getElementById(`tab-${key}`).classList.add("active");
+      document.getElementById(`tab-${key}`)?.classList.add("active");
+
+      // Lazy-load saved posts the first time that tab is opened
+      if (key === "saved" && !savedPostsLoaded) {
+        savedPostsLoaded = true;
+        await renderSavedPosts();
+      }
     });
   });
 }
@@ -814,13 +824,11 @@ function renderPinnedPost() {
   const pinnedPost = getPinnedPost();
 
   if (!pinnedPost) {
-    els.pinnedState.textContent = viewingOwnProfile
-      ? "No pinned post yet."
-      : "This profile has no pinned post.";
-    els.pinnedState.style.display = "block";
+    setHidden(els.pinnedPanel, true);
     return;
   }
 
+  setHidden(els.pinnedPanel, false);
   els.pinnedState.style.display = "none";
   els.pinnedPostBox.appendChild(createPostCard(pinnedPost));
 }
@@ -837,24 +845,76 @@ function getPinnedPost() {
   return null;
 }
 
-function renderPosts(posts) {
-  if (!els.profilePostsFeed || !els.profilePostsState) return;
+function renderPublicPosts() {
+  const feed  = els.profilePublicFeed;
+  const state = els.profilePublicState;
+  if (!feed || !state) return;
 
-  els.profilePostsFeed.innerHTML = "";
+  feed.innerHTML = "";
+  const sorted = sortPostsByDate(publicPosts);
 
-  if (!posts.length) {
-    els.profilePostsState.textContent = viewingOwnProfile
-      ? "You don’t have posts yet."
-      : "No public posts yet.";
-    els.profilePostsState.style.display = "block";
+  if (!sorted.length) {
+    state.textContent    = viewingOwnProfile ? "You have no public posts yet." : "No public posts yet.";
+    state.style.display  = "block";
     return;
   }
 
-  els.profilePostsState.style.display = "none";
+  state.style.display = "none";
+  sorted.forEach((post) => feed.appendChild(createPostCard(post)));
+}
 
-  posts.forEach((post) => {
-    els.profilePostsFeed.appendChild(createPostCard(post));
-  });
+function renderAnonPosts() {
+  // Anonymous tab is only available to the profile owner
+  if (!viewingOwnProfile) {
+    setHidden(els.tabAnonBtn, true);
+    return;
+  }
+
+  setHidden(els.tabAnonBtn, false);
+
+  const feed  = els.profileAnonFeed;
+  const state = els.profileAnonState;
+  if (!feed || !state) return;
+
+  feed.innerHTML = "";
+  const sorted = sortPostsByDate(anonymousPosts);
+
+  if (!sorted.length) {
+    state.textContent   = "You have no anonymous posts yet.";
+    state.style.display = "block";
+    return;
+  }
+
+  state.style.display = "none";
+  sorted.forEach((post) => feed.appendChild(createPostCard(post)));
+}
+
+async function renderSavedPosts() {
+  const feed  = els.profileSavedFeed;
+  const state = els.profileSavedState;
+  if (!feed || !state) return;
+
+  feed.innerHTML      = renderSkeletonCards(3);
+  state.style.display = "none";
+
+  try {
+    const data  = await apiFetch("/api/bookmarks?per_page=100", { method: "GET" });
+    const items = (data.bookmarks || []).map((entry) => normalizePost(entry.post)).filter(Boolean);
+
+    feed.innerHTML = "";
+
+    if (!items.length) {
+      state.textContent   = "No saved posts yet. Bookmark posts from the feed to see them here.";
+      state.style.display = "block";
+      return;
+    }
+
+    items.forEach((post) => feed.appendChild(createPostCard(post)));
+  } catch (err) {
+    feed.innerHTML      = "";
+    state.textContent   = err.message || "Could not load saved posts.";
+    state.style.display = "block";
+  }
 }
 
 function renderMedia(posts) {
@@ -920,11 +980,7 @@ function normalizePost(p) {
     emotionLabel: p.emotion_label || "",
     emotionDisplay: p.emotion_display || "",
     imagePath: firstImage?.file_path || "",
-    reactions: {
-      love: p.reactions?.["❤️"] ?? 0,
-      fire: p.reactions?.["🔥"] ?? 0,
-      sad: p.reactions?.["😢"] ?? 0,
-    },
+    reactions: p.reactions || {},
   }
 }
   function createPostCard(post) {
@@ -993,12 +1049,8 @@ function normalizePost(p) {
       }
 
     <div class="post-actions">
-      <div class="actions-left">
-        <div class="reaction">
-          <button class="react-btn" disabled>❤️ <span>${post.reactions.love ?? 0}</span></button>
-          <button class="react-btn" disabled>🔥 <span>${post.reactions.fire ?? 0}</span></button>
-          <button class="react-btn" disabled>😢 <span>${post.reactions.sad ?? 0}</span></button>
-        </div>
+      <div class="post-reaction-stats">
+        ${buildReactionStats(post.reactions)}
       </div>
     </div>
   `;
@@ -1040,6 +1092,39 @@ async function onPinToggle(post) {
     showToast(err.message || "Pin action failed", "error");
   }
 }
+
+  function buildReactionStats(reactions = {}) {
+    const EMOJI_MAP = {
+      "❤️": { label: "Love",    icon: "uil-heart"       },
+      "🔥": { label: "Fire",    icon: "uil-fire"        },
+      "😢": { label: "Sad",     icon: "uil-tear"        },
+      "😂": { label: "Haha",    icon: "uil-grin"        },
+      "😮": { label: "Wow",     icon: "uil-surprise"    },
+      "👍": { label: "Like",    icon: "uil-thumbs-up"   },
+    };
+
+    // Build from the raw reactions object (keys are emoji strings)
+    const entries = Object.entries(reactions)
+      .filter(([, count]) => Number(count) > 0)
+      .sort(([, a], [, b]) => Number(b) - Number(a));
+
+    if (!entries.length) {
+      return `<span class="reaction-stat-empty">No reactions yet</span>`;
+    }
+
+    return entries.map(([emoji, count]) => {
+      const meta  = EMOJI_MAP[emoji] || {};
+      const label = meta.label || emoji;
+      const icon  = meta.icon
+        ? `<i class="uil ${meta.icon}" aria-hidden="true"></i>`
+        : `<span aria-hidden="true">${escapeHtml(emoji)}</span>`;
+      return `
+        <span class="reaction-stat" title="${escapeAttr(label)}">
+          ${icon}
+          <span class="reaction-stat-count">${Number(count)}</span>
+        </span>`;
+    }).join("");
+  }
 
   function sentimentBadge(sentiment, emotionDisplay = "", emotionLabel = "") {
     const raw = String(emotionDisplay || emotionLabel || sentiment || "neutral").trim();

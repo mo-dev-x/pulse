@@ -250,7 +250,7 @@ Frontend/
 
 ## 🔗 BACKEND API REFERENCE (All Endpoints Available)
 
-All 74+ backend endpoints are live. Key ones for frontend:
+All 94 backend endpoints are live. Key ones for frontend:
 
 | Frontend Feature | Method | Endpoint |
 |-----------------|--------|----------|
@@ -283,16 +283,16 @@ All 74+ backend endpoints are live. Key ones for frontend:
 
 ---
 
-## 📈 METRICS TARGETS
+## 📈 METRICS
 
-| Metric | Start | Target (F6 Complete) |
-|--------|-------|----------------------|
-| Pages / Views | 15 (`index`, `login`, `register`, `verify-email`, `forgot-password`, `reset-password`, `feed`, `profile`, `zone`, `analytics`, `notifications`, `messages`, `settings`, `search`, `discover`) | 15+ |
-| JS Modules | 20 (`auth`, `api`, `i18n`, `router`, `theme`, `login`, `register`, `verify_email`, `forgot_password`, `reset_password`, `feed`, `profile`, `zone`, `zone_autocomplete`, `analytics`, `notifications`, `messages`, `settings`, `search`, `discover`) | 15+ |
-| CSS Files | 9 (`variables`, `base`, `components`, `login`, `feed`, `profile`, `analytics`, `messages`, `notifications`) | 9 |
-| Bilingual Coverage | Partial | 100% |
-| Lighthouse Score | — | ≥ 90 (Perf + A11y) |
-| WCAG | — | 2.1 AA |
+| Metric | Target | Actual |
+|--------|--------|--------|
+| HTML Pages | 15+ | **16** (`index`, `login`, `register`, `verify-email`, `forgot-password`, `reset-password`, `feed`, `profile`, `zone`, `analytics`, `notifications`, `messages`, `settings`, `search`, `discover`, `offline`) |
+| JS Modules | 15+ | **22** (`auth`, `api`, `i18n`, `router`, `theme`, `pwa`, `avatar`, `login`, `register`, `verify_email`, `forgot_password`, `reset_password`, `feed`, `profile`, `zone`, `zone_autocomplete`, `analytics`, `notifications`, `messages`, `settings`, `search`, `discover`) |
+| CSS Files | 9 | **9** (`variables`, `base`, `components`, `login`, `feed`, `profile`, `analytics`, `messages`, `notifications`) |
+| Bilingual Coverage (page-level JS) | 100% | **100%** — all 14 user-facing page modules import and use `i18n.js`; 8 utility/infrastructure modules (`auth`, `api`, `router`, `theme`, `pwa`, `avatar`, `zone_autocomplete`, `i18n` itself) have no UI strings to translate |
+| HTML `lang` attribute | All pages | **16 / 16** — every `.html` file declares a `lang` attribute |
+| Backend API Endpoints | 74+ | **94** routes registered across all route blueprints |
 
 ---
 
@@ -342,7 +342,7 @@ All 74+ backend endpoints are live. Key ones for frontend:
 
 **📌 Remember:** Update this tracker after every completed phase!
 
-**Backend Status:** ✅ All 6 phases complete — 74+ endpoints available + VAPID push  
+**Backend Status:** ✅ All 6 phases complete — 94 endpoints available + VAPID push  
 **Frontend Status:** ✅ All phases complete + PWA — installable, offline-capable, push-enabled
 **Last Updated:** 2026-04-08
 **Next Milestone:** Translation coverage expansion, in-browser accessibility verification, and regression testing

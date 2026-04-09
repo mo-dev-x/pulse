@@ -484,6 +484,84 @@ html, body { height: 100%; overflow: hidden; color: var(--text); }
   object-fit: cover;
 }
 
+.dm-media-img[data-lightbox] {
+  cursor: zoom-in;
+}
+
+/* ── Image lightbox ───────────────────────────────── */
+.dm-lightbox {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  align-items: center;
+  justify-content: center;
+}
+
+.dm-lightbox--open {
+  display: flex;
+}
+
+.dm-lightbox-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(6px);
+}
+
+.dm-lightbox-panel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  max-width: min(90vw, 900px);
+  max-height: 90vh;
+  animation: lb-in 0.18s ease;
+}
+
+@keyframes lb-in {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.dm-lightbox-img {
+  display: block;
+  max-width: 100%;
+  max-height: calc(90vh - 64px);
+  border-radius: 14px;
+  object-fit: contain;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+}
+
+.dm-lightbox-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.dm-lightbox-download,
+.dm-lightbox-close {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  border: 1px solid var(--border-soft);
+  background: var(--surface-2);
+  color: var(--text);
+  transition: background 0.12s;
+}
+
+.dm-lightbox-download:hover,
+.dm-lightbox-close:hover {
+  background: var(--surface-hover);
+}
+
 /* ── Audio record button ──────────────────────────── */
 .dm-audio-btn { color: var(--muted); }
 .dm-audio-btn--recording {
@@ -505,14 +583,78 @@ html, body { height: 100%; overflow: hidden; color: var(--text); }
 }
 
 /* ── Audio message bubble ─────────────────────────── */
-.dm-audio {
-  display: block;
-  width: 100%;
+/* ── Custom voice-message player ────────────────────── */
+.dm-voice-player {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
   min-width: 200px;
   max-width: 280px;
-  border-radius: 12px;
-  height: 40px;
-  accent-color: var(--accent);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.dm-voice-audio {
+  display: none; /* hidden — controlled via JS */
+}
+
+.dm-voice-play {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: transform 0.12s, opacity 0.12s;
+}
+.dm-voice-play:active { transform: scale(0.9); opacity: 0.85; }
+
+.dm-voice-track {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.dm-voice-bar {
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border-medium);
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.dm-voice-fill {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 0%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.1s linear;
+}
+
+.dm-voice-time {
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+/* Playing state — fill animates via JS, play icon changes */
+.dm-voice-player--playing .dm-voice-bar {
+  background: var(--border-soft);
 }
 
 /* ── Right-click context menu ─────────────────────── */
@@ -596,6 +738,11 @@ html, body { height: 100%; overflow: hidden; color: var(--text); }
 /* Always faintly visible on touch devices (no hover state) */
 @media (hover: none) {
   .dm-reply-btn { opacity: 0.45; }
+}
+
+/* Fully visible while actively swiping */
+.dm-swiping .dm-reply-btn {
+  opacity: 1;
 }
 
 .dm-reply-btn:hover  { background: var(--surface-hover); color: var(--text); }
@@ -709,6 +856,7 @@ html, body { height: 100%; overflow: hidden; color: var(--text); }
   gap: 10px;
   padding: 10px 14px 14px;
 }
+.dm-audio-rec-state[hidden],
 .dm-audio-prev-state[hidden] { display: none; }
 
 /* Pulsing recording dot */
