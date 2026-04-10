@@ -271,9 +271,10 @@
   display: grid;
   place-items: center;
   background: var(--surface-2);
-  font-size: 22px;
+  color: var(--muted);
   flex-shrink: 0;
 }
+.summary-emoji .ui-icon{ --ui-icon-size: 20px; }
 
 .summary-main{
   font-weight: 900;
@@ -366,10 +367,7 @@
   color: var(--muted);
 }
 
-.reaction-stat i {
-  font-size: 16px;
-  color: var(--accent);
-}
+.reaction-stat .ui-icon--accent { --ui-icon-size: 16px; }
 
 .reaction-stat-count {
   font-weight: 700;
@@ -568,6 +566,16 @@
 
   .profile-stats{
     max-width: 100%;
+    grid-template-columns: repeat(3, 1fr);
+    width: 100%;
+  }
+
+  .stat-card{
+    padding: 10px 8px;
+  }
+
+  .stat-value{
+    font-size: 17px;
   }
 
   .media-grid{

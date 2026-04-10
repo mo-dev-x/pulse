@@ -27,14 +27,14 @@
 
         <div class="topbar-center">
             <div class="search">
-                <i class="uil uil-search"></i>
+                <i class="ui-icon ui-icon--muted uil uil-search"></i>
                 <input id="globalSearch" type="search" placeholder="Search people, posts and campus vibes" />
             </div>
             <div id="searchResults" class="search-results"></div>
         </div>
 
         <div class="topbar-right">
-            <button class="iconbtn" type="button" data-theme-toggle aria-label="Toggle theme"><i class="uil uil-sun"></i></button>
+            <button class="iconbtn" type="button" data-theme-toggle aria-label="Toggle theme"><i class="ui-icon ui-icon--action uil uil-sun"></i></button>
             <button id="btnOpenCreateTop" class="btn btn-accent">Create</button>
 
             <div class="userchip" id="userChip">
@@ -70,42 +70,42 @@
 
             <nav class="panel nav">
                 <a class="nav-item" href="feed.html">
-                    <span><i class="uil uil-home"></i></span>Home
+                    <span><i class="ui-icon ui-icon--action uil uil-home"></i></span>Home
                 </a>
 
                 <a class="nav-item" href="discover.html">
-                    <span><i class="uil uil-compass"></i></span>Explore
+                    <span><i class="ui-icon ui-icon--action uil uil-compass"></i></span>Explore
                 </a>
 
                 <a class="nav-item" href="zone.html">
-                    <i class="uil uil-map-marker"></i>
+                    <i class="ui-icon ui-icon--action uil uil-map-marker"></i>
                     <span>Zones</span>
                 </a>
 
                 <a class="nav-item" href="analytics.html">
-                    <i class="uil uil-smile"></i>
+                    <i class="ui-icon ui-icon--action uil uil-smile"></i>
                     <span>Mood Dashboard</span>
                 </a>
 
                 <a class="nav-item" href="messages.html">
-                    <i class="uil uil-envelope"></i>
+                    <i class="ui-icon ui-icon--action uil uil-envelope"></i>
                     <span>Messages</span>
                     <span class="inline-badge" data-message-badge hidden>0</span>
                 </a>
 
                 <a class="nav-item" href="notifications.html">
-                    <i class="uil uil-bell"></i>
+                    <i class="ui-icon ui-icon--action uil uil-bell"></i>
                     <span>Notifications</span>
                     <span class="inline-badge" data-notification-badge hidden>0</span>
                 </a>
 
                 <a class="nav-item" href="settings.html">
-                    <i class="uil uil-setting"></i>
+                    <i class="ui-icon ui-icon--action uil uil-setting"></i>
                     <span>Settings</span>
                 </a>
 
                 <a class="nav-item active" href="profile.html">
-                    <i class="uil uil-user"></i>
+                    <i class="ui-icon ui-icon--action uil uil-user"></i>
                     <span>Profile</span>
                 </a>
 
@@ -133,23 +133,23 @@
                             </div>
                             <div class="profile-hero-actions">
                                 <button class="btn btn-ghost" id="btnFollowers">
-                                    <i class="uil uil-users-alt"></i> Followers
+                                    <i class="ui-icon ui-icon--action uil uil-users-alt"></i> Followers
                                 </button>
 
                                 <button class="btn btn-ghost" id="btnFollowing">
-                                    <i class="uil uil-user-plus"></i> Following
+                                    <i class="ui-icon ui-icon--action uil uil-user-plus"></i> Following
                                 </button>
 
                                 <button class="btn btn-ghost" id="btnFriends">
-                                    <i class="uil uil-heart"></i> Friends
+                                    <i class="ui-icon ui-icon--action uil uil-heart"></i> Friends
                                 </button>
 
                                 <button class="btn btn-accent hidden" id="btnFollowToggle">
-                                    <i class="uil uil-user-plus"></i> Follow
+                                    <i class="ui-icon ui-icon--action uil uil-user-plus"></i> Follow
                                 </button>
 
                                 <button class="btn btn-ghost" id="btnEditProfile">
-                                    <i class="uil uil-edit"></i> Edit Profile
+                                    <i class="ui-icon ui-icon--action uil uil-edit"></i> Edit Profile
                                 </button>
                             </div>
                         </div>
@@ -177,19 +177,19 @@
 
                 <div class="profile-tabs">
                     <button class="profile-tab active" data-tab="public">
-                        <i class="uil uil-globe"></i> Public
+                        <i class="ui-icon ui-icon--action uil uil-globe"></i> Public
                     </button>
                     <button class="profile-tab profile-tab--anon hidden" id="tabAnonBtn" data-tab="anonymous">
-                        <i class="uil uil-mask"></i> Anonymous
+                        <i class="ui-icon ui-icon--action uil uil-mask"></i> Anonymous
                     </button>
                     <button class="profile-tab" data-tab="saved">
-                        <i class="uil uil-bookmark"></i> Saved
+                        <i class="ui-icon ui-icon--action uil uil-bookmark"></i> Saved
                     </button>
                     <button class="profile-tab" data-tab="media">
-                        <i class="uil uil-image"></i> Media
+                        <i class="ui-icon ui-icon--action uil uil-image"></i> Media
                     </button>
                     <button class="profile-tab" data-tab="about">
-                        <i class="uil uil-info-circle"></i> About
+                        <i class="ui-icon ui-icon--action uil uil-info-circle"></i> About
                     </button>
                 </div>
             </section>
@@ -277,7 +277,7 @@
 
                         <div class="summary-list">
                             <div class="summary-box">
-                                <div class="summary-emoji">📝</div>
+                                <div class="summary-emoji"><i class="ui-icon ui-icon--muted uil uil-file-alt"></i></div>
                                 <div>
                                     <div class="summary-main" id="summaryPublicPosts">0 public posts</div>
                                     <div class="summary-sub">Visible on profile</div>
@@ -285,7 +285,7 @@
                             </div>
 
                             <div class="summary-box" id="summaryAnonymousRow">
-                                <div class="summary-emoji">🕶️</div>
+                                <div class="summary-emoji"><i class="ui-icon ui-icon--muted uil uil-eye-slash"></i></div>
                                 <div>
                                     <div class="summary-main" id="summaryAnonymousPosts">0 anonymous posts</div>
                                     <div class="summary-sub">Visible only to you</div>
@@ -293,7 +293,7 @@
                             </div>
 
                             <div class="summary-box">
-                                <div class="summary-emoji">👥</div>
+                                <div class="summary-emoji"><i class="ui-icon ui-icon--muted uil uil-users-alt"></i></div>
                                 <div>
                                     <div class="summary-main" id="summaryFollowers">0 followers</div>
                                     <div class="summary-sub">People following this profile</div>
@@ -301,7 +301,7 @@
                             </div>
 
                             <div class="summary-box">
-                                <div class="summary-emoji">➡️</div>
+                                <div class="summary-emoji"><i class="ui-icon ui-icon--muted uil uil-user-arrows"></i></div>
                                 <div>
                                     <div class="summary-main" id="summaryFollowing">0 following</div>
                                     <div class="summary-sub">People this profile follows</div>
@@ -319,7 +319,7 @@
                 <div class="mini-profile-head">
                     <h3>Profile details</h3>
                     <button class="iconbtn" id="btnEditSide" title="Edit profile">
-                        <i class="uil uil-edit"></i>
+                        <i class="ui-icon ui-icon--action uil uil-edit"></i>
                     </button>
                 </div>
 
@@ -353,10 +353,10 @@
 
                 <div class="quick-actions">
                     <button class="btn btn-ghost btn-full" id="btnShareProfile">
-                        <i class="uil uil-share-alt"></i> Share profile
+                        <i class="ui-icon ui-icon--action uil uil-share-alt"></i> Share profile
                     </button>
                     <button class="btn btn-ghost btn-full" id="btnViewFeed">
-                        <i class="uil uil-estate"></i> Back to feed
+                        <i class="ui-icon ui-icon--action uil uil-estate"></i> Back to feed
                     </button>
                 </div>
             </section>
@@ -368,7 +368,7 @@
         <div class="modal-card modal-card-small" role="dialog" aria-modal="true" aria-label="People list">
             <div class="modal-head">
                 <div class="modal-title" id="peopleModalTitle">People</div>
-                <button id="btnClosePeopleModal" class="iconbtn" aria-label="Close">✖️</button>
+                <button id="btnClosePeopleModal" class="iconbtn" aria-label="Close"><i class="ui-icon ui-icon--action uil uil-times"></i></button>
             </div>
 
             <div class="modal-body">
@@ -383,7 +383,7 @@
         <div class="modal-card" role="dialog" aria-modal="true" aria-label="Edit profile">
             <div class="modal-head">
                 <div class="modal-title">Edit Profile</div>
-                <button id="btnCloseEditModal" class="iconbtn" aria-label="Close">✖️</button>
+                <button id="btnCloseEditModal" class="iconbtn" aria-label="Close"><i class="ui-icon ui-icon--action uil uil-times"></i></button>
             </div>
 
             <form id="editProfileForm" class="modal-body">
@@ -403,13 +403,13 @@
 
                 <label class="label" for="editAvatarFile">Profile picture</label>
                 <label class="file">
-                    <i class="uil uil-image"></i>Choose image
+                    <i class="ui-icon ui-icon--action uil uil-image"></i>Choose image
                     <input id="editAvatarFile" type="file" accept="image/*" />
                 </label>
 
                 <label class="label" for="editHeaderFile">Header image</label>
                 <label class="file">
-                    <i class="uil uil-panorama-h-alt"></i>Choose header
+                    <i class="ui-icon ui-icon--action uil uil-panorama-h-alt"></i>Choose header
                     <input id="editHeaderFile" type="file" accept="image/*" />
                 </label>
 

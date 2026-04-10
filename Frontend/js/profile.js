@@ -778,15 +778,15 @@ function renderViewedProfile() {
   if (els.statFollowing) els.statFollowing.textContent = String(followingCount);
 
   if (els.btnFollowers) {
-    els.btnFollowers.innerHTML = `<i class="uil uil-users-alt"></i> Followers (${followerCount})`;
+    els.btnFollowers.innerHTML = `<i class="ui-icon ui-icon--action uil uil-users-alt"></i> Followers (${followerCount})`;
   }
 
   if (els.btnFollowing) {
-    els.btnFollowing.innerHTML = `<i class="uil uil-user-plus"></i> Following (${followingCount})`;
+    els.btnFollowing.innerHTML = `<i class="ui-icon ui-icon--action uil uil-user-plus"></i> Following (${followingCount})`;
   }
 
   if (els.btnFriends) {
-    els.btnFriends.innerHTML = `<i class="uil uil-heart"></i> Friends`;
+    els.btnFriends.innerHTML = `<i class="ui-icon ui-icon--action uil uil-heart"></i> Friends`;
   }
 
   if (els.aboutName) els.aboutName.textContent = displayName;
@@ -842,8 +842,8 @@ function updateProfileActions() {
 
   if (els.btnFollowToggle && !viewingOwnProfile) {
     els.btnFollowToggle.innerHTML = isFollowing
-      ? `<i class="uil uil-check"></i> Following`
-      : `<i class="uil uil-user-plus"></i> Follow`;
+      ? `<i class="ui-icon ui-icon--action uil uil-check"></i> Following`
+      : `<i class="ui-icon ui-icon--action uil uil-user-plus"></i> Follow`;
 
     els.btnFollowToggle.classList.toggle("btn-accent", !isFollowing);
     els.btnFollowToggle.classList.toggle("btn-ghost", isFollowing);
@@ -1085,7 +1085,7 @@ function normalizePost(p) {
       <div class="post-menu">
         ${canPin
         ? `<button class="iconbtn" data-pin-action="${isPinned ? "unpin" : "pin"}" title="${isPinned ? "Unpin post" : "Pin post"}">
-                ${isPinned ? "📌" : "📍"}
+                <i class="ui-icon ui-icon--action uil ${isPinned ? "uil-map-pin" : "uil-map-pin-alt"}" aria-hidden="true"></i>
               </button>`
         : ""
       }
@@ -1176,7 +1176,7 @@ async function onPinToggle(post) {
       const meta  = EMOJI_MAP[emoji] || {};
       const label = meta.label || emoji;
       const icon  = meta.icon
-        ? `<i class="uil ${meta.icon}" aria-hidden="true"></i>`
+        ? `<i class="ui-icon ui-icon--accent uil ${meta.icon}" aria-hidden="true"></i>`
         : `<span aria-hidden="true">${escapeHtml(emoji)}</span>`;
       return `
         <span class="reaction-stat" title="${escapeAttr(label)}">

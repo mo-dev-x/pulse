@@ -20,7 +20,9 @@ export function applyTheme(theme) {
   localStorage.setItem(THEME_KEY, next);
 
   document.querySelectorAll("[data-theme-toggle]").forEach((btn) => {
-    btn.textContent = next === "dark" ? "☀️" : "🌙";
+    btn.innerHTML = next === "dark"
+      ? '<i class="ui-icon ui-icon--action uil uil-sun" aria-hidden="true"></i>'
+      : '<i class="ui-icon ui-icon--action uil uil-moon" aria-hidden="true"></i>';
     btn.setAttribute("aria-label", next === "dark" ? "Switch to light mode" : "Switch to dark mode");
   });
 

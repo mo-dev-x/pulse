@@ -6,6 +6,7 @@
   <title>PULSE — Offline</title>
   <link rel="stylesheet" href="css/variables.css">
   <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="https://unicons.iconscout.com/release/v4.0.8/css/line.css" />
   <style>
     body {
       display: flex;
@@ -25,7 +26,8 @@
       max-width: 380px;
       width: 90%;
     }
-    .offline-icon { font-size: 64px; margin-bottom: 16px; }
+    .offline-icon { margin-bottom: 16px; color: var(--muted); }
+    .offline-icon .ui-icon { --ui-icon-size: 64px; }
     .offline-title { font-size: 22px; font-weight: 800; color: var(--text); margin: 0 0 8px; }
     .offline-sub { font-size: 14px; color: var(--muted); line-height: 1.5; margin: 0 0 28px; }
     .btn-retry {
@@ -45,7 +47,7 @@
 </head>
 <body>
   <div class="offline-card">
-    <div class="offline-icon">📡</div>
+    <div class="offline-icon"><i class="ui-icon ui-icon--muted uil uil-wifi-slash"></i></div>
     <h1 class="offline-title">You're offline</h1>
     <p class="offline-sub">
       PULSE needs a connection to load new content.<br />

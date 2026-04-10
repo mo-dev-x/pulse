@@ -39,7 +39,7 @@ function showInstallBanner() {
       <span>Add to your home screen for the best experience</span>
     </div>
     <button class="btn pwa-install-btn" id="pwaInstallBtn">Install</button>
-    <button class="iconbtn pwa-dismiss-btn" id="pwaDismissBtn" aria-label="Dismiss install prompt">✕</button>
+    <button class="iconbtn pwa-dismiss-btn" id="pwaDismissBtn" aria-label="Dismiss install prompt"><i class="ui-icon ui-icon--action uil uil-times" aria-hidden="true"></i></button>
   `;
   document.body.appendChild(banner);
 

@@ -219,7 +219,7 @@ function renderZoneBreakdown(zones) {
     return;
   }
 
-  root.innerHTML = zones.map((zone) => {
+  const buildRows = (list) => list.map((zone) => {
     const score = Number(zone.avg_sentiment || 0);
     const width = Math.min(100, Math.max(8, Math.abs(score) * 100));
     return `
@@ -231,7 +231,30 @@ function renderZoneBreakdown(zones) {
     `;
   }).join("");
 
-  root.querySelectorAll("[data-zone-activity-id]").forEach((btn) => {
+  root.innerHTML = `
+    <div class="zone-search-wrap">
+      <input class="zone-search-input" type="search" placeholder="Search zones…" aria-label="Search zones" />
+    </div>
+    <div class="zone-list">${buildRows(zones)}</div>
+  `;
+
+  const searchInput = root.querySelector(".zone-search-input");
+  const listEl = root.querySelector(".zone-list");
+
+  searchInput.addEventListener("input", () => {
+    const q = searchInput.value.trim().toLowerCase();
+    const filtered = q ? zones.filter(z => (z.zone_name || z.zone?.name || "").toLowerCase().includes(q)) : zones;
+    listEl.innerHTML = filtered.length
+      ? buildRows(filtered)
+      : '<div class="zone-no-results">No matching zones</div>';
+    attachZoneClicks(listEl, zones);
+  });
+
+  attachZoneClicks(listEl, zones);
+}
+
+function attachZoneClicks(listEl, zones) {
+  listEl.querySelectorAll("[data-zone-activity-id]").forEach((btn) => {
     btn.addEventListener("click", async () => {
       selectedZoneId = Number(btn.dataset.zoneActivityId);
       renderZoneBreakdown(zones);

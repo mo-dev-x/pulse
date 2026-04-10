@@ -23,6 +23,36 @@ a {
   color: inherit;
 }
 
+.ui-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1em;
+  height: 1em;
+  line-height: 1;
+  vertical-align: -0.125em;
+  color: inherit;
+  font-size: var(--ui-icon-size, 1em);
+  flex-shrink: 0;
+}
+
+.ui-icon::before {
+  line-height: 1;
+}
+
+.ui-icon--muted {
+  color: var(--muted);
+}
+
+.ui-icon--accent {
+  color: var(--accent);
+}
+
+.ui-icon--action {
+  color: currentColor;
+  transition: color 0.12s ease, opacity 0.12s ease, transform 0.12s ease;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

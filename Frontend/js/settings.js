@@ -266,7 +266,7 @@ async function loadSessions() {
           </div>
         </div>
         <div class="notification-actions">
-          <button class="iconbtn" data-revoke-session="${session.id}" title="Revoke session">✕</button>
+          <button class="iconbtn" data-revoke-session="${session.id}" title="Revoke session" aria-label="Revoke session"><i class="ui-icon ui-icon--action uil uil-times" aria-hidden="true"></i></button>
         </div>
       </article>
     `;
@@ -314,7 +314,15 @@ function describeSession(session) {
           : "Browser";
 
   return {
-    icon: isMobile ? "📱" : isMac ? "💻" : isWindows ? "🖥️" : isLinux ? "🧩" : "🌐",
+    icon: isMobile
+      ? '<i class="ui-icon ui-icon--muted uil uil-mobile-android" aria-hidden="true"></i>'
+      : isMac
+        ? '<i class="ui-icon ui-icon--muted uil uil-laptop" aria-hidden="true"></i>'
+        : isWindows
+          ? '<i class="ui-icon ui-icon--muted uil uil-desktop" aria-hidden="true"></i>'
+          : isLinux
+            ? '<i class="ui-icon ui-icon--muted uil uil-server" aria-hidden="true"></i>'
+            : '<i class="ui-icon ui-icon--muted uil uil-globe" aria-hidden="true"></i>',
     title: `${os} ${browser}`.trim(),
     subtitle: ua || "Unknown device",
     deviceType: deviceType.charAt(0).toUpperCase() + deviceType.slice(1),

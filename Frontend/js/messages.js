@@ -153,8 +153,12 @@ async function loadConversations(selectId = null) {
 function renderConversation(conv, active) {
   const avatar = getUserAvatarUrl(conv.other_user, getAssetUrl);
   const name   = conv.other_user?.display_name || "Unknown";
+  const _lmc = conv.last_message?.content;
   const preview = conv.last_message
-    ? (conv.last_message.content?.startsWith("[audio]") ? "🎤 Voice message" : conv.last_message.content)
+    ? (_lmc?.startsWith("[audio]") ? "🎤 Voice message"
+      : _lmc?.startsWith("[image]") ? "📷 Image"
+      : _lmc?.startsWith("[video]") ? "🎥 Video"
+      : _lmc)
     : "No messages yet.";
   const ts     = conv.last_message?.created_at ? formatRelativeTime(conv.last_message.created_at) : "";
   const unread = Number(conv.unread_count || 0) > 0;
@@ -337,7 +341,7 @@ function renderMessageGroups(messages) {
       return `
         <div class="dm-bubble-wrap dm-bubble-wrap--${side}" data-msg-id="${m.id}">
           <button class="dm-reply-btn" data-reply-id="${m.id}" data-reply-preview="${escapeAttr(labelShort)}" aria-label="Reply" title="Reply">
-            <i class="uil uil-corner-up-left"></i>
+            <i class="ui-icon ui-icon--action uil uil-corner-up-left"></i>
           </button>
           <div class="dm-bubble${extraClass}" data-pos="${pos}" data-msg-id="${m.id}" data-is-mine="${m.is_mine}">
             ${quoteHtml}${renderBubbleContent(displayContent)}
@@ -372,7 +376,7 @@ function renderBubbleContent(content) {
     return `
       <div class="dm-voice-player" data-src="${url}">
         <button class="dm-voice-play" aria-label="Play voice message">
-          <i class="uil uil-play"></i>
+          <i class="ui-icon ui-icon--action uil uil-play"></i>
         </button>
         <div class="dm-voice-track">
           <div class="dm-voice-bar">
@@ -621,10 +625,10 @@ function togglePreviewPlay() {
   const icon = document.getElementById("dmPrevPlayBtn")?.querySelector("i");
   if (previewAudio.paused) {
     previewAudio.play();
-    if (icon) icon.className = "uil uil-pause";
+    if (icon) icon.className = "ui-icon ui-icon--action uil uil-pause";
   } else {
     previewAudio.pause();
-    if (icon) icon.className = "uil uil-play";
+    if (icon) icon.className = "ui-icon ui-icon--action uil uil-play";
   }
 }
 
@@ -664,14 +668,14 @@ function showPreviewState() {
 
   // Reset play button icon
   const playIcon = document.getElementById("dmPrevPlayBtn")?.querySelector("i");
-  if (playIcon) playIcon.className = "uil uil-play";
+  if (playIcon) playIcon.className = "ui-icon ui-icon--action uil uil-play";
 
   // Set up preview Audio element for play/pause
   if (audioBlob) {
     audioObjUrl  = URL.createObjectURL(audioBlob);
     previewAudio = new Audio(audioObjUrl);
     previewAudio.addEventListener("ended", () => {
-      if (playIcon) playIcon.className = "uil uil-play";
+      if (playIcon) playIcon.className = "ui-icon ui-icon--action uil uil-play";
     });
   }
 
@@ -873,24 +877,24 @@ function setupVoicePlayers() {
           a.pause();
           const p = a.closest(".dm-voice-player");
           if (p) {
-            p.querySelector("i").className = "uil uil-play";
+            p.querySelector("i").className = "ui-icon ui-icon--action uil uil-play";
             p.classList.remove("dm-voice-player--playing");
           }
         }
       });
       // Set UI optimistically; roll back if play() is interrupted (e.g. rapid click)
-      if (icon) icon.className = "uil uil-pause";
+      if (icon) icon.className = "ui-icon ui-icon--action uil uil-pause";
       player.classList.add("dm-voice-player--playing");
       audio.play().catch((err) => {
         if (err.name !== "AbortError") {
           console.warn("[voice] play() failed:", err.message);
         }
-        if (icon) icon.className = "uil uil-play";
+        if (icon) icon.className = "ui-icon ui-icon--action uil uil-play";
         player.classList.remove("dm-voice-player--playing");
       });
     } else {
       audio.pause();
-      if (icon) icon.className = "uil uil-play";
+      if (icon) icon.className = "ui-icon ui-icon--action uil uil-play";
       player.classList.remove("dm-voice-player--playing");
     }
 
@@ -906,7 +910,7 @@ function setupVoicePlayers() {
       });
 
       audio.addEventListener("ended", () => {
-        if (icon)   icon.className = "uil uil-play";
+        if (icon)   icon.className = "ui-icon ui-icon--action uil uil-play";
         if (fill)   fill.style.width = "0%";
         if (timeEl && audio.duration && isFinite(audio.duration))
           timeEl.textContent = formatAudioDuration(Math.floor(audio.duration));
@@ -947,10 +951,10 @@ function openLightbox(src) {
         <img class="dm-lightbox-img" alt="Full size image" />
         <div class="dm-lightbox-actions">
           <a class="dm-lightbox-download btn btn-sm" download>
-            <i class="uil uil-download-alt"></i> Download
+            <i class="ui-icon ui-icon--action uil uil-download-alt"></i> Download
           </a>
           <button class="dm-lightbox-close btn btn-sm">
-            <i class="uil uil-times"></i> Close
+            <i class="ui-icon ui-icon--action uil uil-times"></i> Close
           </button>
         </div>
       </div>`;
@@ -1187,7 +1191,7 @@ function setupContextMenu() {
       if (unsendBtn) {
         const prev = unsendBtn.textContent;
         unsendBtn.textContent = "Failed — try again";
-        setTimeout(() => { unsendBtn.innerHTML = '<i class="uil uil-trash-alt"></i> Unsend'; }, 2000);
+        setTimeout(() => { unsendBtn.innerHTML = '<i class="ui-icon ui-icon--action uil uil-trash-alt"></i> Unsend'; }, 2000);
       }
     }
   });

@@ -130,7 +130,7 @@ function buildNotifRow(notification) {
       <span class="notif-time">${formatRelativeTime(notification.created_at)}</span>
     </div>
     <button class="notif-delete-btn" data-delete-id="${notification.id}" title="Remove">
-      <i class="uil uil-times"></i>
+      <i class="ui-icon ui-icon--action uil uil-times"></i>
     </button>
   `;
 
@@ -143,25 +143,25 @@ function describeNotification(n) {
   const msg   = n.message || "";
   const type  = (n.type || "").toLowerCase();
 
-  let icon  = "🔔";
+  let icon  = '<i class="ui-icon ui-icon--action uil uil-bell" aria-hidden="true"></i>';
   let color = "notif-type-icon--default";
   let text  = `<strong class="notif-actor">${actor}</strong> ${escapeHtml(msg)}`;
 
   if (type.includes("react") || type.includes("like")) {
-    icon  = "❤️";
+    icon  = '<i class="ui-icon ui-icon--action uil uil-heart" aria-hidden="true"></i>';
     color = "notif-type-icon--reaction";
     text  = `<strong class="notif-actor">${actor}</strong> reacted to your post`;
     if (msg) text += `: "${escapeHtml(msg)}"`;
   } else if (type.includes("comment")) {
-    icon  = "💬";
+    icon  = '<i class="ui-icon ui-icon--action uil uil-comment-dots" aria-hidden="true"></i>';
     color = "notif-type-icon--comment";
     text  = `<strong class="notif-actor">${actor}</strong> commented: "${escapeHtml(msg)}"`;
   } else if (type.includes("follow")) {
-    icon  = "👤";
+    icon  = '<i class="ui-icon ui-icon--action uil uil-user-plus" aria-hidden="true"></i>';
     color = "notif-type-icon--follow";
     text  = `<strong class="notif-actor">${actor}</strong> started following you`;
   } else if (type.includes("mention")) {
-    icon  = "@";
+    icon  = '<i class="ui-icon ui-icon--action uil uil-at" aria-hidden="true"></i>';
     color = "notif-type-icon--mention";
     text  = `<strong class="notif-actor">${actor}</strong> mentioned you: "${escapeHtml(msg)}"`;
   } else if (msg) {

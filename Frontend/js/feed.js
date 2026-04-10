@@ -92,9 +92,9 @@ function showVerificationBanner(user) {
   banner.id = "verifyBanner";
   banner.className = "verify-banner";
   banner.innerHTML = `
-    <span>📧 Please verify your email to post.</span>
+    <span><i class="ui-icon ui-icon--action uil uil-envelope-check" aria-hidden="true"></i> Please verify your email to post.</span>
     <a class="verify-banner-link" href="verify-email.html">Verify now →</a>
-    <button class="verify-banner-close" aria-label="Dismiss">✕</button>
+    <button class="verify-banner-close" aria-label="Dismiss"><i class="ui-icon ui-icon--action uil uil-times" aria-hidden="true"></i></button>
   `;
   banner.querySelector(".verify-banner-close").addEventListener("click", () => banner.remove());
 
@@ -492,7 +492,7 @@ function renderPostCard(post) {
         </div>
       </div>
       <div class="post-menu">
-        ${post.mine ? `<button class="iconbtn" data-action="delete" title="Delete post" aria-label="Delete post"><i class="uil uil-trash-alt"></i></button>` : ""}
+        ${post.mine ? `<button class="iconbtn" data-action="delete" title="Delete post" aria-label="Delete post"><i class="ui-icon ui-icon--action uil uil-trash-alt"></i></button>` : ""}
       </div>
     </div>
 
@@ -517,10 +517,10 @@ function renderPostCard(post) {
 
       <div class="post-secondary-actions">
         <button class="iconbtn ${post.isBookmarked ? "bookmark-active" : ""}" data-action="bookmark" title="Toggle bookmark" aria-label="Bookmark post">
-          <i class="uil ${post.isBookmarked ? "uil-bookmark-full" : "uil-bookmark"}"></i>
+          <i class="ui-icon ui-icon--action uil ${post.isBookmarked ? "uil-bookmark-full" : "uil-bookmark"}"></i>
         </button>
         <button class="iconbtn" data-action="toggle-comments" title="Toggle comments" aria-label="Toggle comments">
-          <i class="uil uil-comment-dots"></i> ${post.commentCount || 0}
+          <i class="ui-icon ui-icon--action uil uil-comment-dots"></i> ${post.commentCount || 0}
         </button>
       </div>
     </div>
@@ -925,7 +925,7 @@ function updateCommentCount(postId, comments) {
   if (!post) return;
   post.commentCount = total;
   const button = document.querySelector(`.post[data-id="${postId}"] [data-action="toggle-comments"]`);
-  if (button) button.textContent = `💬 ${total}`;
+  if (button) button.innerHTML = `<i class="ui-icon ui-icon--action uil uil-comment-dots" aria-hidden="true"></i> ${total}`;
 }
 
 function hydrateExpandedCommentBlocks() {
