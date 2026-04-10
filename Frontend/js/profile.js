@@ -1,7 +1,8 @@
-import { apiFetch, requireAuth, logout, getAssetUrl, FRONTEND_ORIGIN } from "./auth.js";
+import { apiFetch, apiCall, requireAuth, logout, getAssetUrl, FRONTEND_ORIGIN } from "./auth.js";
 import { getPostAvatarUrl, getProfileHref, getUserAvatarUrl } from "./avatar.js";
 import { initLanguageControls } from "./i18n.js";
 import { initOfflineBanner, initThemeToggle, initUnreadBadges } from "./theme.js";
+import { notify, runAsyncUI } from "./notify.js";
 
 const els = {
   topbarAvatar: document.getElementById("topbarAvatar"),
@@ -100,6 +101,7 @@ let visiblePosts = [];
 let viewingOwnProfile = true;
 let currentPinnedPostId = null;
 let pendingHeaderObjectUrl = null;
+let _initInFlight = false; // guard: prevents concurrent initProfilePage() executions
 
 document.addEventListener("DOMContentLoaded", async () => {
   requireAuth();
@@ -114,24 +116,35 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupGlobalUserSearch();
 
   try {
-    if (els.profilePublicFeed) els.profilePublicFeed.innerHTML = renderSkeletonCards(3);
-    if (els.mediaGrid)         els.mediaGrid.innerHTML        = renderSkeletonCards(2);
+    if (els.profilePublicFeed)  els.profilePublicFeed.innerHTML   = renderSkeletonCards(3);
+    if (els.profilePublicState) els.profilePublicState.style.display = "none";
+    if (els.profileAnonState)   els.profileAnonState.style.display  = "none";
+    if (els.profileSavedState)  els.profileSavedState.style.display = "none";
+    if (els.mediaGrid)          els.mediaGrid.innerHTML            = renderSkeletonCards(2);
+    if (els.mediaState)         els.mediaState.style.display       = "none";
     await initProfilePage();
   } catch (err) {
-    console.error("Profile page init error:", err);
+    console.error("[profile] Init failed:", err);
+    const msg = err?.message || "Could not load profile. Check your connection and try again.";
+    // Clear skeletons and show the error prominently
+    if (els.profilePublicFeed)  els.profilePublicFeed.innerHTML = "";
     if (els.profilePublicState) {
-      els.profilePublicState.textContent = err.message || "Could not load profile.";
+      els.profilePublicState.textContent   = msg;
       els.profilePublicState.style.display = "block";
     }
+    if (els.mediaGrid)    els.mediaGrid.innerHTML = "";
     if (els.mediaState) {
-      els.mediaState.textContent = "Could not load media.";
+      els.mediaState.textContent   = "Could not load media.";
       els.mediaState.style.display = "block";
     }
-    showToast(err.message || "Could not load profile", "error");
+    notify(msg, "error");
   }
 });
 
 async function initProfilePage() {
+  if (_initInFlight) return;
+  _initInFlight = true;
+  try {
   const meRes = await apiFetch("/api/auth/me", { method: "GET" });
   currentUser = meRes.user;
 
@@ -160,6 +173,9 @@ async function initProfilePage() {
   renderMedia(visiblePosts);
 
   document.title = `PULSE — ${profileUser.display_name || profileUser.username || "Profile"}`;
+  } finally {
+    _initInFlight = false;
+  }
 }
 
 function getRequestedUsername() {
@@ -170,22 +186,37 @@ function getRequestedUsername() {
 }
 
 async function loadProfilePosts() {
+  console.debug("[profile:posts] Fetching posts for", profileUser.username, viewingOwnProfile ? "(own)" : "(other)");
+
   if (viewingOwnProfile) {
     const [myPostsRes, myAnonRes] = await Promise.all([
-      apiFetch("/api/posts/me", { method: "GET" }),
-      apiFetch("/api/posts/me/anonymous", { method: "GET" }),
+      apiCall("profile/posts/public", () => apiFetch("/api/posts/me", { method: "GET" })),
+      apiCall("profile/posts/anon", () => apiFetch("/api/posts/me/anonymous", { method: "GET" })),
     ]);
+
+    if (!Array.isArray(myPostsRes.posts)) {
+      console.warn("[profile:posts] /api/posts/me returned unexpected shape:", myPostsRes);
+    }
+    if (!Array.isArray(myAnonRes.posts)) {
+      console.warn("[profile:posts] /api/posts/me/anonymous returned unexpected shape:", myAnonRes);
+    }
 
     publicPosts = (myPostsRes.posts || []).map(normalizePost);
     anonymousPosts = (myAnonRes.posts || []).map(normalizePost);
   } else {
-    const userPostsRes = await apiFetch(`/api/posts/@${encodeURIComponent(profileUser.username)}`, {
-      method: "GET",
-    });
+    const userPostsRes = await apiCall("profile/posts/user", () =>
+      apiFetch(`/api/posts/@${encodeURIComponent(profileUser.username)}`, { method: "GET" })
+    );
+
+    if (!Array.isArray(userPostsRes.posts)) {
+      console.warn("[profile:posts] /api/posts/@username returned unexpected shape:", userPostsRes);
+    }
 
     publicPosts = (userPostsRes.posts || []).map(normalizePost);
     anonymousPosts = [];
   }
+
+  console.debug("[profile:posts] Loaded public=%d, anon=%d", publicPosts.length, anonymousPosts.length);
 }
 
 function setupMenu() {
@@ -246,14 +277,14 @@ function setupActions() {
     try {
       const username = profileUser?.username || currentUser?.username;
       if (!FRONTEND_ORIGIN) {
-        showToast("Profile links only work on the deployed app.", "error");
+        notify("Profile links only work on the deployed app.", "error");
         return;
       }
       const url = `${FRONTEND_ORIGIN}/profile.html?u=${encodeURIComponent(username)}`;
       await navigator.clipboard.writeText(url);
-      showToast("Profile link copied", "success");
+      notify("Profile link copied", "success");
     } catch {
-      showToast("Could not copy the profile link.", "error");
+      notify("Could not copy the profile link.", "error");
     }
   });
   els.btnFollowers?.addEventListener("click", async () => {
@@ -313,17 +344,17 @@ async function toggleFollowProfile() {
       await apiFetch(`/api/unfollow/@${encodeURIComponent(username)}`, {
         method: "DELETE",
       });
-      showToast(`Unfollowed @${username}`, "success");
+      notify(`Unfollowed @${username}`, "success");
     } else {
       await apiFetch(`/api/follow/@${encodeURIComponent(username)}`, {
         method: "POST",
       });
-      showToast(`Now following @${username}`, "success");
+      notify(`Now following @${username}`, "success");
     }
 
     await initProfilePage();
   } catch (err) {
-    showToast(err.message || "Follow action failed", "error");
+    notify(err.message || "Follow action failed", "error");
   } finally {
     if (els.btnFollowToggle) {
       els.btnFollowToggle.disabled = false;
@@ -350,30 +381,33 @@ async function openPeopleModal(type) {
       : `Friends of @${profileUser.username}`;
   }
 
-  try {
-    const endpoint = type === "friends"
-      ? "/api/users/me/friends"
-      : `/api/users/@${encodeURIComponent(profileUser.username)}/${type}`;
+  const endpoint = type === "friends"
+    ? "/api/users/me/friends"
+    : `/api/users/@${encodeURIComponent(profileUser.username)}/${type}`;
 
-    const data = await apiFetch(endpoint, { method: "GET" });
+  const emptyMessages = {
+    followers: "No followers yet.",
+    following:  "No following yet.",
+    friends:    "No friends yet.",
+  };
 
-    const people = data[type] || [];
-
-    if (!people.length) {
-      els.peopleState.textContent =
-        type === "followers"
-          ? "No followers yet."
-          : type === "following"
-            ? "No following yet."
-            : "No friends yet.";
-      return;
-    }
-
-    els.peopleState.style.display = "none";
-    renderPeopleList(people, type);
-  } catch (err) {
-    els.peopleState.textContent = err.message || "Could not load people.";
-  }
+  await runAsyncUI({
+    fn:        () => apiCall(`profile/people/${type}`, () =>
+      apiFetch(endpoint, { method: "GET" })
+    ),
+    isEmpty:   (data) => !(data[type] || []).length,
+    onEmpty:   () => {
+      els.peopleState.textContent = emptyMessages[type] || "Nothing here yet.";
+    },
+    onSuccess: (data) => {
+      els.peopleState.style.display = "none";
+      renderPeopleList(data[type] || [], type);
+    },
+    onError:   (err) => {
+      els.peopleState.textContent = err.message || "Could not load people.";
+      notify(err.message || "Could not load people.", "error");
+    },
+  });
 }
 
 function renderPeopleList(people, type) {
@@ -418,7 +452,7 @@ async function unfollowFromPeopleList(username, btn) {
       method: "DELETE",
     });
 
-    showToast(`Unfollowed @${username}`, "success");
+    notify(`Unfollowed @${username}`, "success");
     await openPeopleModal("following");
     await initProfilePage();
   } catch (err) {
@@ -426,7 +460,7 @@ async function unfollowFromPeopleList(username, btn) {
       btn.disabled = false;
       btn.textContent = "Unfollow";
     }
-    showToast(err.message || "Unfollow failed", "error");
+    notify(err.message || "Unfollow failed", "error");
   }
 }
 
@@ -663,7 +697,7 @@ async function onEditProfileSubmit(e) {
       Number(els.editHeaderFocusY?.value || 50),
     );
 
-    showToast("Profile updated", "success");
+    notify("Profile updated", "success");
     closeEditModal();
     await initProfilePage();
   } catch (err) {
@@ -851,16 +885,27 @@ function renderPublicPosts() {
   if (!feed || !state) return;
 
   feed.innerHTML = "";
+  state.style.display = "none";
+
   const sorted = sortPostsByDate(publicPosts);
 
   if (!sorted.length) {
-    state.textContent    = viewingOwnProfile ? "You have no public posts yet." : "No public posts yet.";
-    state.style.display  = "block";
+    state.textContent   = viewingOwnProfile ? "You have no public posts yet." : "No public posts yet.";
+    state.style.display = "block";
     return;
   }
 
-  state.style.display = "none";
-  sorted.forEach((post) => feed.appendChild(createPostCard(post)));
+  sorted.forEach((post) => {
+    try {
+      feed.appendChild(createPostCard(post));
+    } catch (e) {
+      console.error("[profile] Post render failed id=%d:", post?.id, e);
+      const fallback = document.createElement("article");
+      fallback.className = "panel post";
+      fallback.innerHTML = `<p class="state" style="margin:0;text-align:left;">This post could not be displayed.</p>`;
+      feed.appendChild(fallback);
+    }
+  });
 }
 
 function renderAnonPosts() {
@@ -877,6 +922,8 @@ function renderAnonPosts() {
   if (!feed || !state) return;
 
   feed.innerHTML = "";
+  state.style.display = "none";
+
   const sorted = sortPostsByDate(anonymousPosts);
 
   if (!sorted.length) {
@@ -885,8 +932,17 @@ function renderAnonPosts() {
     return;
   }
 
-  state.style.display = "none";
-  sorted.forEach((post) => feed.appendChild(createPostCard(post)));
+  sorted.forEach((post) => {
+    try {
+      feed.appendChild(createPostCard(post));
+    } catch (e) {
+      console.error("[profile] Anon post render failed id=%d:", post?.id, e);
+      const fallback = document.createElement("article");
+      fallback.className = "panel post";
+      fallback.innerHTML = `<p class="state" style="margin:0;text-align:left;">This post could not be displayed.</p>`;
+      feed.appendChild(fallback);
+    }
+  });
 }
 
 async function renderSavedPosts() {
@@ -894,27 +950,31 @@ async function renderSavedPosts() {
   const state = els.profileSavedState;
   if (!feed || !state) return;
 
-  feed.innerHTML      = renderSkeletonCards(3);
-  state.style.display = "none";
-
-  try {
-    const data  = await apiFetch("/api/bookmarks?per_page=100", { method: "GET" });
-    const items = (data.bookmarks || []).map((entry) => normalizePost(entry.post)).filter(Boolean);
-
-    feed.innerHTML = "";
-
-    if (!items.length) {
+  await runAsyncUI({
+    fn:        () => apiCall("profile/saved-posts", () =>
+      apiFetch("/api/bookmarks?per_page=100", { method: "GET" })
+    ),
+    onLoad:    () => {
+      feed.innerHTML      = renderSkeletonCards(3);
+      state.style.display = "none";
+    },
+    isEmpty:   (data) => !(data.bookmarks || []).some((e) => e.post),
+    onEmpty:   () => {
+      feed.innerHTML      = "";
       state.textContent   = "No saved posts yet. Bookmark posts from the feed to see them here.";
       state.style.display = "block";
-      return;
-    }
-
-    items.forEach((post) => feed.appendChild(createPostCard(post)));
-  } catch (err) {
-    feed.innerHTML      = "";
-    state.textContent   = err.message || "Could not load saved posts.";
-    state.style.display = "block";
-  }
+    },
+    onSuccess: (data) => {
+      const items = (data.bookmarks || []).map((entry) => normalizePost(entry.post)).filter(Boolean);
+      feed.innerHTML = "";
+      items.forEach((post) => feed.appendChild(createPostCard(post)));
+    },
+    onError:   (err) => {
+      feed.innerHTML      = "";
+      state.textContent   = err.message || "Could not load saved posts.";
+      state.style.display = "block";
+    },
+  });
 }
 
 function renderMedia(posts) {
@@ -1079,17 +1139,17 @@ async function onPinToggle(post) {
       await apiFetch("/api/posts/pin", {
         method: "DELETE",
       });
-      showToast("Pinned post removed", "success");
+      notify("Pinned post removed", "success");
     } else {
       await apiFetch(`/api/posts/${post.id}/pin`, {
         method: "PATCH",
       });
-      showToast("Post pinned to profile", "success");
+      notify("Post pinned to profile", "success");
     }
 
     await initProfilePage();
   } catch (err) {
-    showToast(err.message || "Pin action failed", "error");
+    notify(err.message || "Pin action failed", "error");
   }
 }
 
@@ -1188,21 +1248,6 @@ function setHidden(el, hidden) {
   el.classList.toggle("hidden", Boolean(hidden));
 }
 
-function showToast(message, type = "info") {
-  const container = document.getElementById("toastContainer");
-  if (!container) return;
-
-  const toast = document.createElement("div");
-  toast.className = `toast ${type}`;
-  toast.textContent = message;
-
-  container.appendChild(toast);
-
-  setTimeout(() => {
-    toast.remove();
-  }, 2600);
-}
-
 function setupGlobalUserSearch() {
   const input = document.getElementById("globalSearch");
   const resultsEl = document.getElementById("searchResults");
@@ -1210,19 +1255,23 @@ function setupGlobalUserSearch() {
   if (!input || !resultsEl) return;
 
   let debounceTimer = null;
+  let activeController = null;
 
   input.addEventListener("input", () => {
     const query = input.value.trim();
     clearTimeout(debounceTimer);
+    activeController?.abort();
+    activeController = null;
 
     if (query.length < 2) {
       hideSearchResults();
       return;
     }
 
-    debounceTimer = setTimeout(async () => {
-      await searchUsers(query);
-    }, 250);
+    debounceTimer = setTimeout(() => {
+      activeController = new AbortController();
+      searchUsers(query, activeController.signal);
+    }, 300);
   });
 
   input.addEventListener("keydown", (event) => {
@@ -1239,20 +1288,29 @@ function setupGlobalUserSearch() {
   });
 }
 
-async function searchUsers(query) {
+async function searchUsers(query, signal) {
   const resultsEl = document.getElementById("searchResults");
   if (!resultsEl) return;
 
-  try {
-    const data = await apiFetch(`/api/search/users?q=${encodeURIComponent(query)}`, {
-      method: "GET",
-    });
-
-    renderSearchResults(data.users || []);
-  } catch (err) {
-    resultsEl.style.display = "block";
-    resultsEl.innerHTML = `<div class="search-empty">${escapeHtml(err.message || "Search failed")}</div>`;
-  }
+  await runAsyncUI({
+    fn:        () => apiCall("profile/search-users", () =>
+      apiFetch(`/api/search/users?q=${encodeURIComponent(query)}`, { method: "GET", signal })
+    ),
+    onLoad:    () => {
+      resultsEl.style.display = "block";
+      resultsEl.innerHTML = `
+        <div class="search-skeleton">
+          <div class="skeleton-line short"></div>
+          <div class="skeleton-line medium"></div>
+          <div class="skeleton-line short"></div>
+        </div>`;
+    },
+    onSuccess: (data) => renderSearchResults(data.users || []),
+    onError:   (err)  => {
+      if (err.name === "AbortError") return;
+      resultsEl.innerHTML = `<div class="search-empty">${escapeHtml(err.message || "Search failed")}</div>`;
+    },
+  });
 }
 
 function renderSearchResults(users) {

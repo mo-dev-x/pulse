@@ -1,12 +1,15 @@
-import { apiFetch, getAssetUrl, requireAuth } from "./auth.js";
+import { apiFetch, apiCall, getAssetUrl, requireAuth } from "./auth.js";
+import { notify } from "./notify.js";
 import { getUserAvatarUrl } from "./avatar.js";
 import { initLanguageControls } from "./i18n.js";
 import { initThemeToggle, initOfflineBanner } from "./theme.js";
+import { bus } from "./bus.js";
 
 let currentConversationId = null;
 let currentOtherUser = null;
 let pollTimer = null;
 let lastKnownMessageId = null;   // used by smooth polling
+let _pollRunning = false;        // guard: prevents concurrent poll executions
 
 // Audio recording state
 let mediaRecorder = null;
@@ -99,7 +102,22 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 async function loadConversations(selectId = null) {
   const list = document.getElementById("conversationList");
-  const data = await apiFetch("/api/messages/conversations", { method: "GET" });
+
+  // loading — only show skeleton on the initial load (no selectId means first render)
+  if (!selectId && !currentConversationId) {
+    list.innerHTML = `<div class="dm-empty-thread" style="padding:32px 16px;opacity:.6;">Loading conversations…</div>`;
+  }
+
+  let data;
+  try {
+    data = await apiCall("messages/conversations", () =>
+      apiFetch("/api/messages/conversations", { method: "GET" })
+    );
+  } catch (err) {
+    list.innerHTML = `<div class="dm-empty-thread" style="padding:32px 16px;">Could not load conversations.</div>`;
+    notify(err.message || "Could not load conversations.", "error");
+    return;
+  }
   const conversations = data.conversations || [];
 
   const totalUnread = conversations.reduce((sum, c) => sum + Number(c.unread_count || 0), 0);
@@ -174,10 +192,16 @@ async function loadThread(conversationId) {
       <div class="dm-skel dm-skel-theirs" style="width:35%"></div>
     </div>`;
 
-  const data = await apiFetch(
-    `/api/messages/conversations/${conversationId}?per_page=100`,
-    { method: "GET" }
-  );
+  let data;
+  try {
+    data = await apiCall("messages/thread", () =>
+      apiFetch(`/api/messages/conversations/${conversationId}?per_page=100`, { method: "GET" })
+    );
+  } catch (err) {
+    thread.innerHTML = `<div class="dm-loading" style="text-align:center;padding:2rem;opacity:.7;">Could not load messages.</div>`;
+    notify(err.message || "Could not load conversation.", "error");
+    return;
+  }
 
   currentOtherUser = data.conversation?.other_user || null;
   const titleEl   = document.getElementById("threadTitle");
@@ -198,7 +222,9 @@ async function loadThread(conversationId) {
   const area = document.getElementById("messagesArea");
   area.scrollTop = area.scrollHeight;
 
-  await apiFetch(`/api/messages/conversations/${conversationId}/read`, { method: "PATCH" });
+  apiFetch(`/api/messages/conversations/${conversationId}/read`, { method: "PATCH" })
+    .then(() => bus.emit("messages:read"))
+    .catch(() => {});
 
   startPolling(conversationId);
 }
@@ -206,7 +232,10 @@ async function loadThread(conversationId) {
 // ── Smooth poll — only updates DOM when new messages arrive ───────────────
 
 async function pollMessages(conversationId) {
+  // Prevent a slow network response from triggering overlapping polls
+  if (_pollRunning) return;
   if (currentConversationId !== conversationId) return;
+  _pollRunning = true;
 
   try {
     const data = await apiFetch(
@@ -235,10 +264,27 @@ async function pollMessages(conversationId) {
 
     if (nearBottom) area.scrollTop = area.scrollHeight;
 
-    await apiFetch(`/api/messages/conversations/${conversationId}/read`, { method: "PATCH" });
+    // Update sidebar conversation preview to match the latest message
+    const latest = messages[messages.length - 1];
+    if (latest) {
+      const row = document.querySelector(`[data-conversation-id="${conversationId}"]`);
+      const previewEl = row?.querySelector(".dm-conv-preview");
+      if (previewEl) {
+        const text = latest.content?.startsWith("[audio]")
+          ? "🎤 Voice message"
+          : (latest.content || "");
+        previewEl.textContent = escapeHtml(text).slice(0, 80);
+      }
+    }
+
+    apiFetch(`/api/messages/conversations/${conversationId}/read`, { method: "PATCH" })
+      .then(() => bus.emit("messages:read"))
+      .catch(() => {});
     await updateUnreadBadge();
   } catch {
-    // Polling errors are silent
+    // Polling errors are silent — network blips shouldn't disrupt the UI
+  } finally {
+    _pollRunning = false;
   }
 }
 
@@ -373,14 +419,16 @@ async function sendMessage() {
   appendOptimisticBubble(content, replyPreview);
 
   try {
-    await apiFetch(`/api/messages/conversations/${currentConversationId}`, {
-      method: "POST",
-      body: JSON.stringify({ content, reply_to_id: replyToId, reply_preview: replyPreview }),
-    });
+    await apiCall("messages/send", () =>
+      apiFetch(`/api/messages/conversations/${currentConversationId}`, {
+        method: "POST",
+        body: JSON.stringify({ content, reply_to_id: replyToId, reply_preview: replyPreview }),
+      })
+    );
     lastKnownMessageId = null;
     await pollMessages(currentConversationId);
   } catch (err) {
-    showDmToast(err.message || "Failed to send message.");
+    notify(err.message || "Failed to send message.", "error");
   }
 }
 
@@ -405,16 +453,6 @@ function appendOptimisticBubble(content, replyPreview = null) {
   area.scrollTop = area.scrollHeight;
 }
 
-function showDmToast(msg) {
-  const container = document.getElementById("toastContainer") || document.body;
-  const el = document.createElement("div");
-  el.className = "toast error";
-  el.textContent = msg;
-  el.style.cssText = "position:fixed;bottom:80px;right:18px;z-index:200;padding:12px 14px;border-radius:14px;background:var(--surface-toast);border:1px solid var(--accent);color:var(--text);font-size:14px;";
-  container.appendChild(el);
-  setTimeout(() => el.remove(), 4000);
-}
-
 // ── Send image message ─────────────────────────────────────────────────────
 
 async function sendMediaMessage(file) {
@@ -422,7 +460,7 @@ async function sendMediaMessage(file) {
 
   // Images only — reject videos before uploading
   if (!file.type.startsWith("image/")) {
-    showDmToast("Only images can be sent. Video upload is currently disabled.");
+    notify("Only images can be sent. Video upload is currently disabled.", "error");
     return;
   }
 
@@ -433,14 +471,16 @@ async function sendMediaMessage(file) {
   const form = new FormData();
   form.append("media", file, file.name);
   try {
-    await apiFetch(`/api/messages/conversations/${currentConversationId}/media`, {
-      method: "POST",
-      body: form,
-    });
+    await apiCall("messages/send-image", () =>
+      apiFetch(`/api/messages/conversations/${currentConversationId}/media`, {
+        method: "POST",
+        body: form,
+      })
+    );
     lastKnownMessageId = null;
     await pollMessages(currentConversationId);
   } catch (err) {
-    showDmToast(err.message || "Failed to send image. Check that the file is ≤ 5 MB.");
+    notify(err.message || "Failed to send image. Check that the file is ≤ 5 MB.", "error");
   } finally {
     URL.revokeObjectURL(previewUrl);
   }
@@ -484,13 +524,13 @@ function getSupportedAudioMime() {
 
 async function startAudioRecording() {
   if (!navigator.mediaDevices?.getUserMedia) {
-    showDmToast("Audio recording is not supported in this browser.");
+    notify("Audio recording is not supported in this browser.", "error");
     return;
   }
   try {
     recStream = await navigator.mediaDevices.getUserMedia({ audio: true });
   } catch {
-    showDmToast("Microphone access denied. Please allow it in your browser settings.");
+    notify("Microphone access denied. Please allow it in your browser settings.", "error");
     return;
   }
 
@@ -591,7 +631,7 @@ function togglePreviewPlay() {
 async function sendPreviewedAudio() {
   if (!audioBlob) return;
   if (audioBlob.size === 0) {
-    showDmToast("Recording is empty — please try again.");
+    notify("Recording is empty — please try again.", "error");
     return;
   }
   const btn = document.getElementById("dmPrevSendBtn");
@@ -765,14 +805,16 @@ async function sendAudioMessage(blob) {
   const form = new FormData();
   form.append("audio", blob, `voice.${ext}`);
   try {
-    await apiFetch(`/api/messages/conversations/${currentConversationId}/audio`, {
-      method: "POST",
-      body: form,
-    });
+    await apiCall("messages/send-audio", () =>
+      apiFetch(`/api/messages/conversations/${currentConversationId}/audio`, {
+        method: "POST",
+        body: form,
+      })
+    );
     lastKnownMessageId = null;
     await pollMessages(currentConversationId);
   } catch (err) {
-    showDmToast(err.message || "Could not send voice message. Please try again.");
+    notify(err.message || "Could not send voice message. Please try again.", "error");
   }
 }
 
@@ -795,6 +837,19 @@ function triggerReply(btn) {
 function setupVoicePlayers() {
   const thread = document.getElementById("messageThread");
   if (!thread) return;
+
+  // loadedmetadata does not bubble — use capture to show total duration
+  // in the time slot before the user presses play.
+  thread.addEventListener("loadedmetadata", (e) => {
+    const audio = e.target;
+    if (!audio.classList.contains("dm-voice-audio")) return;
+    const player = audio.closest(".dm-voice-player");
+    if (!player) return;
+    const timeEl = player.querySelector(".dm-voice-time");
+    if (timeEl && isFinite(audio.duration) && audio.duration > 0) {
+      timeEl.textContent = formatAudioDuration(Math.floor(audio.duration));
+    }
+  }, { capture: true });
 
   // Delegated play/pause on any custom player button
   thread.addEventListener("click", (e) => {
@@ -823,9 +878,16 @@ function setupVoicePlayers() {
           }
         }
       });
-      audio.play();
+      // Set UI optimistically; roll back if play() is interrupted (e.g. rapid click)
       if (icon) icon.className = "uil uil-pause";
       player.classList.add("dm-voice-player--playing");
+      audio.play().catch((err) => {
+        if (err.name !== "AbortError") {
+          console.warn("[voice] play() failed:", err.message);
+        }
+        if (icon) icon.className = "uil uil-play";
+        player.classList.remove("dm-voice-player--playing");
+      });
     } else {
       audio.pause();
       if (icon) icon.className = "uil uil-play";
@@ -894,7 +956,10 @@ function openLightbox(src) {
       </div>`;
     document.body.appendChild(overlay);
 
-    const close = () => { overlay.classList.remove("dm-lightbox--open"); };
+    const close = () => {
+      overlay.classList.remove("dm-lightbox--open");
+      document.body.style.overflow = "";
+    };
     overlay.querySelector(".dm-lightbox-backdrop").addEventListener("click", close);
     overlay.querySelector(".dm-lightbox-close").addEventListener("click", close);
     document.addEventListener("keydown", (e) => {
@@ -904,10 +969,13 @@ function openLightbox(src) {
 
   const img  = overlay.querySelector(".dm-lightbox-img");
   const dl   = overlay.querySelector(".dm-lightbox-download");
-  img.src    = src;
-  dl.href    = src;
-  // derive a filename from the URL path
-  dl.download = src.split("/").pop() || "image";
+  img.style.opacity = "0.5";
+  img.onload  = () => { img.style.opacity = "1"; };
+  img.onerror = () => { img.style.opacity = "1"; img.alt = "Image could not be loaded"; };
+  img.src     = src;
+  dl.href     = src;
+  dl.download = src.split("/").pop().split("?")[0] || "image";
+  document.body.style.overflow = "hidden";
   overlay.classList.add("dm-lightbox--open");
 }
 
@@ -1113,8 +1181,14 @@ function setupContextMenu() {
         }
       }
       lastKnownMessageId = null; // force re-sync on next poll
-    } catch {
-      // silent
+    } catch (err) {
+      console.error("[messages] Unsend failed:", err?.message || err);
+      // Brief visual feedback on the button since messages page has no toast container
+      if (unsendBtn) {
+        const prev = unsendBtn.textContent;
+        unsendBtn.textContent = "Failed — try again";
+        setTimeout(() => { unsendBtn.innerHTML = '<i class="uil uil-trash-alt"></i> Unsend'; }, 2000);
+      }
     }
   });
 }

@@ -1,4 +1,5 @@
-import { apiFetch, requireAuth } from "./auth.js";
+import { apiFetch, apiCall, requireAuth } from "./auth.js";
+import { notify, runAsyncUI } from "./notify.js";
 import { initLanguageControls } from "./i18n.js";
 import { initThemeToggle, initOfflineBanner } from "./theme.js";
 
@@ -26,20 +27,32 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 async function loadAnalytics(dateValue) {
   latestAnalyticsDate = dateValue;
-  const [campus, dailySeries, weeklySeries] = await Promise.all([
-    apiFetch(`/api/analytics/campus?date=${dateValue}`, { method: "GET" }),
-    loadDailySeries(dateValue),
-    loadWeeklySeries(dateValue),
-  ]);
+  const dateInput = document.getElementById("analyticsDate");
 
-  renderCampusOverview(campus);
-  renderDailyChart(dailySeries);
-  renderWeeklyChart(weeklySeries);
-  renderEmotionChart(campus.campus_overview?.emotion_distribution || {});
-  const defaultZone = (campus.zone_breakdown || []).find((zone) => zone.zone_id) || null;
-  selectedZoneId = defaultZone?.zone_id || null;
-  renderZoneBreakdown(campus.zone_breakdown || []);
-  await loadZoneActivity(selectedZoneId);
+  await runAsyncUI({
+    fn: () => Promise.all([
+      apiCall("analytics/campus", () =>
+        apiFetch(`/api/analytics/campus?date=${dateValue}`, { method: "GET" })
+      ),
+      loadDailySeries(dateValue),
+      loadWeeklySeries(dateValue),
+    ]),
+    onLoad:    () => { if (dateInput) dateInput.disabled = true; },
+    onSuccess: async ([campus, dailySeries, weeklySeries]) => {
+      renderCampusOverview(campus);
+      renderDailyChart(dailySeries);
+      renderWeeklyChart(weeklySeries);
+      renderEmotionChart(campus.campus_overview?.emotion_distribution || {});
+      const defaultZone = (campus.zone_breakdown || []).find((zone) => zone.zone_id) || null;
+      selectedZoneId = defaultZone?.zone_id || null;
+      renderZoneBreakdown(campus.zone_breakdown || []);
+      await loadZoneActivity(selectedZoneId);
+    },
+    onError:   (err) => {
+      notify(err.message || "Could not load analytics. Check your connection and try again.", "error");
+    },
+    onFinally: () => { if (dateInput) dateInput.disabled = false; },
+  });
 }
 
 async function loadDailySeries(dateValue) {
@@ -238,36 +251,41 @@ async function loadZoneActivity(zoneId) {
     return;
   }
 
-  root.innerHTML = '<div class="state">Loading zone activity...</div>';
-
-  try {
-    const data = await apiFetch(`/api/zones/${zoneId}/activity`, { method: "GET" });
-    const last24h = data.last_24h || {};
-    const recentPosts = data.recent_posts || [];
-    title.textContent = `${data.zone?.name || "Zone"} activity`;
-
-    if (!recentPosts.length) {
+  await runAsyncUI({
+    fn:        () => apiCall(`analytics/zone/${zoneId}`, () =>
+      apiFetch(`/api/zones/${zoneId}/activity`, { method: "GET" })
+    ),
+    onLoad:    () => {
+      root.innerHTML = '<div class="state">Loading zone activity...</div>';
+    },
+    isEmpty:   (data) => !(data.recent_posts || []).length,
+    onEmpty:   (data) => {
+      title.textContent = `${data.zone?.name || "Zone"} activity`;
       root.innerHTML = '<div class="state state-illustrated"><div class="state-emoji">📭</div><div>No recent public posts in this zone yet.<br />Aucune publication publique recente dans cette zone.</div></div>';
-      return;
-    }
-
-    root.innerHTML = `
-      <div class="activity-summary">
-        <div class="kpi-box"><div class="kpi-label">Posts 24h</div><div class="kpi-value">${Number(last24h.post_count || 0)}</div></div>
-        <div class="kpi-box"><div class="kpi-label">Reactions 24h</div><div class="kpi-value">${Number(last24h.reaction_count || 0)}</div></div>
-        <div class="kpi-box"><div class="kpi-label">Dominant mood</div><div class="kpi-value">${escapeHtml(last24h.dominant_sentiment || "neutral")}</div></div>
-      </div>
-      ${recentPosts.map((entry) => `
-        <article class="activity-post">
-          <div><strong>${escapeHtml(entry.author?.display_name || entry.author?.username || "Pulse User")}${entry.author?.is_admin ? '<span class="admin-star" title="Admin">⭐</span>' : ''}</strong></div>
-          <div style="margin-top:6px;">${escapeHtml(entry.content || "")}</div>
-          <div class="activity-post-meta">${escapeHtml(formatRelativeTime(entry.created_at || latestAnalyticsDate))}</div>
-        </article>
-      `).join("")}
-    `;
-  } catch (error) {
-    root.innerHTML = `<div class="state">${escapeHtml(error.message || "Failed to load zone activity.")}</div>`;
-  }
+    },
+    onSuccess: (data) => {
+      const last24h = data.last_24h || {};
+      const recentPosts = data.recent_posts || [];
+      title.textContent = `${data.zone?.name || "Zone"} activity`;
+      root.innerHTML = `
+        <div class="activity-summary">
+          <div class="kpi-box"><div class="kpi-label">Posts 24h</div><div class="kpi-value">${Number(last24h.post_count || 0)}</div></div>
+          <div class="kpi-box"><div class="kpi-label">Reactions 24h</div><div class="kpi-value">${Number(last24h.reaction_count || 0)}</div></div>
+          <div class="kpi-box"><div class="kpi-label">Dominant mood</div><div class="kpi-value">${escapeHtml(last24h.dominant_sentiment || "neutral")}</div></div>
+        </div>
+        ${recentPosts.map((entry) => `
+          <article class="activity-post">
+            <div><strong>${escapeHtml(entry.author?.display_name || entry.author?.username || "Pulse User")}${entry.author?.is_admin ? '<span class="admin-star" title="Admin">⭐</span>' : ''}</strong></div>
+            <div style="margin-top:6px;">${escapeHtml(entry.content || "")}</div>
+            <div class="activity-post-meta">${escapeHtml(formatRelativeTime(entry.created_at || latestAnalyticsDate))}</div>
+          </article>
+        `).join("")}
+      `;
+    },
+    onError:   (err) => {
+      root.innerHTML = `<div class="state">${escapeHtml(err.message || "Failed to load zone activity.")}</div>`;
+    },
+  });
 }
 
 function escapeHtml(value) {

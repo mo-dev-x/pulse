@@ -193,6 +193,7 @@ export async function apiFetch(path, options = {}) {
       method: options.method || "GET",
       body: options.body,
       headers,
+      ...(options.signal ? { signal: options.signal } : {}),
     });
   } catch (error) {
     const isNetworkLike = error instanceof TypeError || /fetch/i.test(String(error?.message || ""));
@@ -221,4 +222,27 @@ export async function apiFetch(path, options = {}) {
   }
 
   return payload;
+}
+
+/**
+ * apiCall(label, fn)
+ *
+ * Wraps an async API function with structured console logging. Logs the call
+ * label on entry and the error message on failure (non-AbortError only).
+ * Re-throws all errors so callers remain responsible for UI feedback.
+ *
+ * @param {string} label         - Descriptive label for logging, e.g. "feed/load"
+ * @param {function(): Promise<*>} fn - Async function to invoke (typically an apiFetch call)
+ * @returns {Promise<*>}
+ */
+export async function apiCall(label, fn) {
+  console.debug(`[api] ${label}`);
+  try {
+    return await fn();
+  } catch (err) {
+    if (err.name !== "AbortError") {
+      console.error(`[api] ${label} failed:`, err.message);
+    }
+    throw err;
+  }
 }

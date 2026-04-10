@@ -1,10 +1,12 @@
 import {
   apiFetch,
+  apiCall,
   getAssetUrl,
   logout,
   requireAuth,
   saveCurrentUser,
 } from "./auth.js";
+import { notify, runAsyncUI } from "./notify.js";
 import { getDefaultAvatarUrl, getPostAvatarUrl, getProfileHref, getUserAvatarUrl } from "./avatar.js";
 import { initLanguageControls, t } from "./i18n.js";
 import { initMentionAutocomplete } from "./search.js";
@@ -74,7 +76,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 async function loadCurrentUser() {
-  const data = await apiFetch("/api/auth/me", { method: "GET" });
+  const data = await apiCall("feed/me", () => apiFetch("/api/auth/me", { method: "GET" }));
   currentUser = data.user;
   saveCurrentUser(currentUser);
   renderCurrentUser(currentUser);
@@ -362,9 +364,8 @@ async function loadCurrentFeed({ append = false } = {}) {
   }
 
   try {
-    const data = await apiFetch(
-      `${modeConfig.endpoint}?page=${currentPage}&per_page=10`,
-      { method: "GET" }
+    const data = await apiCall(`feed/${currentFeedMode}`, () =>
+      apiFetch(`${modeConfig.endpoint}?page=${currentPage}&per_page=10`, { method: "GET" })
     );
 
     const posts = (data.posts || []).map(normalizePost);
@@ -626,24 +627,48 @@ async function onReact(postId, emoji) {
   const post = currentPosts.find((item) => item.id === postId);
   if (!post) return;
 
+  // Save previous state for rollback
+  const prevReaction = post.myReaction;
+  const prevCounts   = { ...post.reactionCounts };
+  const removing     = post.myReaction === emoji;
+
+  // Optimistic update
+  if (removing) {
+    post.myReaction = null;
+    const updated = { ...post.reactionCounts };
+    if (updated[emoji]) { updated[emoji] = Math.max(0, updated[emoji] - 1); }
+    post.reactionCounts = updated;
+  } else {
+    if (post.myReaction) {
+      // switching emoji — decrement the old one
+      const updated = { ...post.reactionCounts };
+      if (updated[post.myReaction]) { updated[post.myReaction] = Math.max(0, updated[post.myReaction] - 1); }
+      post.reactionCounts = updated;
+    }
+    post.myReaction = emoji;
+    post.reactionCounts = { ...post.reactionCounts, [emoji]: (post.reactionCounts[emoji] || 0) + 1 };
+  }
+  rerenderPost(postId);
+
   try {
     let data;
-    if (post.myReaction === emoji) {
+    if (removing) {
       data = await apiFetch(`/api/posts/${postId}/react`, { method: "DELETE" });
-      post.myReaction = null;
-      post.reactionCounts = { ...(data.counts || {}) };
     } else {
       data = await apiFetch(`/api/posts/${postId}/react`, {
         method: "POST",
         body: JSON.stringify({ emoji }),
       });
-      post.myReaction = emoji;
-      post.reactionCounts = { ...(data.counts || {}) };
     }
-
+    // Reconcile with server counts
+    post.reactionCounts = { ...(data.counts || {}) };
     rerenderPost(postId);
   } catch (error) {
-    showToast(error.message || "Reaction failed", "error");
+    // Rollback
+    post.myReaction    = prevReaction;
+    post.reactionCounts = prevCounts;
+    rerenderPost(postId);
+    notify(error.message || "Reaction failed", "error");
   }
 }
 
@@ -651,21 +676,37 @@ async function toggleBookmark(postId) {
   const post = currentPosts.find((item) => item.id === postId);
   if (!post) return;
 
+  const wasBookmarked = bookmarkedPostIds.has(postId);
+
+  // Optimistic update
+  if (wasBookmarked) {
+    bookmarkedPostIds.delete(postId);
+    post.isBookmarked = false;
+  } else {
+    bookmarkedPostIds.add(postId);
+    post.isBookmarked = true;
+  }
+  rerenderPost(postId);
+
   try {
-    if (bookmarkedPostIds.has(postId)) {
+    if (wasBookmarked) {
       await apiFetch(`/api/posts/${postId}/bookmark`, { method: "DELETE" });
-      bookmarkedPostIds.delete(postId);
-      post.isBookmarked = false;
-      showToast("Bookmark removed", "success");
+      notify("Bookmark removed", "success");
     } else {
       await apiFetch(`/api/posts/${postId}/bookmark`, { method: "POST" });
+      notify("Post bookmarked", "success");
+    }
+  } catch (error) {
+    // Rollback
+    if (wasBookmarked) {
       bookmarkedPostIds.add(postId);
       post.isBookmarked = true;
-      showToast("Post bookmarked", "success");
+    } else {
+      bookmarkedPostIds.delete(postId);
+      post.isBookmarked = false;
     }
     rerenderPost(postId);
-  } catch (error) {
-    showToast(error.message || "Bookmark failed", "error");
+    notify(error.message || "Bookmark failed", "error");
   }
 }
 
@@ -698,9 +739,9 @@ async function loadCommentsForPost(postId, { refresh = false } = {}) {
   if (listEl) listEl.innerHTML = "";
 
   try {
-    const data = await apiFetch(`/api/posts/${postId}/comments?per_page=50`, {
-      method: "GET",
-    });
+    const data = await apiCall(`feed/comments/${postId}`, () =>
+      apiFetch(`/api/posts/${postId}/comments?per_page=50`, { method: "GET" })
+    );
     const comments = await Promise.all(
       (data.comments || []).map(async (comment) => ({
         ...comment,
@@ -859,9 +900,9 @@ async function submitComment(postId, form) {
     form.querySelector('input[name="is_anonymous"]').checked = false;
     clearReplyContext(postId);
     await loadCommentsForPost(postId, { refresh: true });
-    showToast("Comment added", "success");
+    notify("Comment added", "success");
   } catch (error) {
-    showToast(error.message || "Comment failed", "error");
+    notify(error.message || "Comment failed", "error");
   } finally {
     submitBtn.disabled = false;
     submitBtn.textContent = "Comment";
@@ -872,9 +913,9 @@ async function deleteComment(postId, commentId) {
   try {
     await apiFetch(`/api/comments/${commentId}`, { method: "DELETE" });
     await loadCommentsForPost(postId, { refresh: true });
-    showToast("Comment deleted", "success");
+    notify("Comment deleted", "success");
   } catch (error) {
-    showToast(error.message || "Delete failed", "error");
+    notify(error.message || "Delete failed", "error");
   }
 }
 
@@ -916,9 +957,9 @@ async function onDeletePost(postId) {
     if (!currentPosts.length) {
       showState(FEED_MODES[currentFeedMode]?.emptyMessage || "No posts found.");
     }
-    showToast("Post deleted", "success");
+    notify("Post deleted", "success");
   } catch (error) {
-    showToast(error.message || "Delete failed", "error");
+    notify(error.message || "Delete failed", "error");
   }
 }
 
@@ -939,7 +980,7 @@ function setupCreateResendLink() {
         body: JSON.stringify({ email }),
         skipAuthRedirect: true,
       });
-      showToast(t("auth.login.resend_success"), "success");
+      notify(t("auth.login.resend_success"), "success");
       document.getElementById("create-resend-verification").style.display = "none";
     } catch {
       showCreateError(t("auth.login.resend_error"));
@@ -983,7 +1024,7 @@ async function onCreatePostSubmit(event) {
       body,
     });
 
-    showToast(data.message || "Post created successfully.", "success");
+    notify(data.message || "Post created successfully.", "success");
     document.getElementById("createModal")?.classList.remove("open");
     form?.reset();
     zoneAutocomplete?.clearSelection();
@@ -1046,39 +1087,29 @@ function hideCreateError() {
   if (resendEl) resendEl.style.display = "none";
 }
 
-function showToast(message, type = "info") {
-  const container = document.getElementById("toastContainer");
-  if (!container) return;
-
-  const toast = document.createElement("div");
-  toast.className = `toast ${type}`;
-  toast.textContent = message;
-  container.appendChild(toast);
-
-  setTimeout(() => {
-    toast.remove();
-  }, 2600);
-}
-
 function setupGlobalUserSearch() {
   const input = document.getElementById("globalSearch");
   const resultsEl = document.getElementById("searchResults");
   if (!input || !resultsEl) return;
 
   let debounceTimer = null;
+  let activeController = null;
 
   input.addEventListener("input", () => {
     const query = input.value.trim();
     clearTimeout(debounceTimer);
+    activeController?.abort();
+    activeController = null;
 
     if (query.length < 2) {
       hideSearchResults();
       return;
     }
 
-    debounceTimer = setTimeout(async () => {
-      await searchUsers(query);
-    }, 250);
+    debounceTimer = setTimeout(() => {
+      activeController = new AbortController();
+      searchUsers(query, activeController.signal);
+    }, 300);
   });
 
   input.addEventListener("keydown", (event) => {
@@ -1095,19 +1126,29 @@ function setupGlobalUserSearch() {
   });
 }
 
-async function searchUsers(query) {
+async function searchUsers(query, signal) {
   const resultsEl = document.getElementById("searchResults");
   if (!resultsEl) return;
 
-  try {
-    const data = await apiFetch(`/api/search/users?q=${encodeURIComponent(query)}`, {
-      method: "GET",
-    });
-    renderSearchResults(data.users || []);
-  } catch (error) {
-    resultsEl.style.display = "block";
-    resultsEl.innerHTML = `<div class="search-empty">${escapeHtml(error.message || "Search failed")}</div>`;
-  }
+  await runAsyncUI({
+    fn:        () => apiCall("feed/search-users", () =>
+      apiFetch(`/api/search/users?q=${encodeURIComponent(query)}`, { method: "GET", signal })
+    ),
+    onLoad:    () => {
+      resultsEl.style.display = "block";
+      resultsEl.innerHTML = `
+        <div class="search-skeleton">
+          <div class="skeleton-line short"></div>
+          <div class="skeleton-line medium"></div>
+          <div class="skeleton-line short"></div>
+        </div>`;
+    },
+    onSuccess: (data) => renderSearchResults(data.users || []),
+    onError:   (err)  => {
+      if (err.name === "AbortError") return; // superseded by a newer query — do nothing
+      resultsEl.innerHTML = `<div class="search-empty">${escapeHtml(err.message || "Search failed")}</div>`;
+    },
+  });
 }
 
 function renderSearchResults(users) {
@@ -1161,7 +1202,7 @@ async function followUser(username, btn) {
       method: "POST",
     });
     btn.textContent = "Following";
-    showToast(data.message || `You are now following @${username}`, "success");
+    notify(data.message || `You are now following @${username}`, "success");
     hideSearchResults();
 
     if (currentFeedMode === "home") {
@@ -1170,7 +1211,7 @@ async function followUser(username, btn) {
   } catch (error) {
     btn.disabled = false;
     btn.textContent = "Follow";
-    showToast(error.message || "Follow failed", "error");
+    notify(error.message || "Follow failed", "error");
   }
 }
 
@@ -1307,14 +1348,14 @@ async function checkInMood(emotion) {
     });
 
     await loadCampusPulse();
-    showToast("Feeling logged!", "success");
+    notify("Feeling logged!", "success");
   } catch (err) {
     const payload = err?.payload;
     if (payload?.retry_after != null) {
-      showToast(`Already checked in. Next check-in in ${formatCooldown(payload.retry_after)}.`, "info");
+      notify(`Already checked in. Next check-in in ${formatCooldown(payload.retry_after)}.`, "info");
       await loadCampusPulse();
     } else {
-      showToast("Could not log feeling", "error");
+      notify("Could not log feeling", "error");
     }
   }
 }

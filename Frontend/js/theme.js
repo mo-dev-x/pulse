@@ -1,4 +1,5 @@
 import { apiFetch } from "./auth.js";
+import { bus } from "./bus.js";
 
 const THEME_KEY = "pulse_theme";
 let badgeTimer = null;
@@ -134,6 +135,11 @@ export function initUnreadBadges(root = document) {
   badgeTimer = setInterval(() => {
     refreshUnreadBadges(root);
   }, 60000);
+
+  // Immediately refresh nav badges when messages are marked read on any page.
+  // messages.js emits "messages:read" after a successful PATCH — this avoids
+  // waiting up to 60s for the interval to catch up.
+  bus.on("messages:read", () => refreshUnreadBadges(root));
 }
 
 export function initMobileDrawer() {

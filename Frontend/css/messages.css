@@ -533,6 +533,7 @@ html, body { height: 100%; overflow: hidden; color: var(--text); }
   border-radius: 14px;
   object-fit: contain;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+  transition: opacity 0.15s ease;
 }
 
 .dm-lightbox-actions {
@@ -657,6 +658,58 @@ html, body { height: 100%; overflow: hidden; color: var(--text); }
   background: var(--border-soft);
 }
 
+/* ── Voice player: mine vs theirs ─────────────────────── */
+/* "mine" voice messages — accent-tinted pill */
+.dm-msg-group--mine .dm-voice-player {
+  background: rgba(255, 77, 125, 0.18);
+  border-color: rgba(255, 77, 125, 0.32);
+}
+.dm-msg-group--mine .dm-voice-play {
+  background: #fff;
+  color: var(--accent);
+}
+.dm-msg-group--mine .dm-voice-bar {
+  background: rgba(255, 255, 255, 0.22);
+}
+.dm-msg-group--mine .dm-voice-fill {
+  background: #fff;
+}
+.dm-msg-group--mine .dm-voice-time {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* "theirs" voice messages — panel/surface pill */
+.dm-msg-group--theirs .dm-voice-player {
+  background: var(--panel2);
+  border-color: var(--border);
+}
+
+/* ── Light mode voice player overrides ─────────────────── */
+[data-theme="light"] .dm-msg-group--mine .dm-voice-player {
+  background: rgba(230, 59, 117, 0.12);
+  border-color: rgba(230, 59, 117, 0.28);
+}
+[data-theme="light"] .dm-msg-group--mine .dm-voice-play {
+  background: var(--accent);
+  color: #fff;
+}
+[data-theme="light"] .dm-msg-group--mine .dm-voice-bar {
+  background: rgba(230, 59, 117, 0.22);
+}
+[data-theme="light"] .dm-msg-group--mine .dm-voice-fill {
+  background: var(--accent);
+}
+[data-theme="light"] .dm-msg-group--mine .dm-voice-time {
+  color: rgba(15, 23, 42, 0.60);
+}
+[data-theme="light"] .dm-msg-group--theirs .dm-voice-player {
+  background: rgba(15, 23, 42, 0.06);
+  border-color: rgba(15, 23, 42, 0.16);
+}
+[data-theme="light"] .dm-voice-time {
+  color: rgba(15, 23, 42, 0.60);
+}
+
 /* ── Right-click context menu ─────────────────────── */
 .dm-ctx-menu {
   position: fixed;
@@ -748,32 +801,27 @@ html, body { height: 100%; overflow: hidden; color: var(--text); }
 .dm-reply-btn:hover  { background: var(--surface-hover); color: var(--text); }
 .dm-reply-btn:active { transform: scale(0.88); }
 
-/* ── In-bubble quote block (shows original message above the reply) ── */
+/* ── In-bubble quote block (iMessage/WhatsApp style — left bar only) ── */
 .dm-bubble-quote {
   display: flex;
   align-items: stretch;
-  gap: 7px;
-  margin-bottom: 7px;
-  padding: 5px 8px;
-  border-radius: 8px;
-  /* Slightly darker/lighter layer on top of the bubble background */
-  background: rgba(0, 0, 0, 0.12);
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 2px 0;
+  background: none;
   max-width: 100%;
   overflow: hidden;
 }
 
-/* Accent bar on the left edge of the quote */
+/* Thin left accent bar */
 .dm-bubble-quote-bar {
   width: 3px;
   border-radius: 2px;
   flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.65);
 }
 
-/* For "theirs" bubbles (dark bg isn't guaranteed) */
-.dm-msg-group--theirs .dm-bubble-quote {
-  background: rgba(0, 0, 0, 0.06);
-}
+/* "theirs" bubbles — accent bar */
 .dm-msg-group--theirs .dm-bubble-quote-bar {
   background: var(--accent);
 }
@@ -781,13 +829,14 @@ html, body { height: 100%; overflow: hidden; color: var(--text); }
 .dm-bubble-quote-text {
   font-size: 12px;
   line-height: 1.4;
-  opacity: 0.85;
+  opacity: 0.78;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   flex: 1;
   min-width: 0;
   font-style: italic;
+  padding: 1px 0;
 }
 
 /* ── Reply context strip above compose bar ─────────── */
@@ -849,15 +898,19 @@ html, body { height: 100%; overflow: hidden; color: var(--text); }
 }
 .dm-audio-recorder[hidden] { display: none; }
 
-.dm-audio-rec-state,
-.dm-audio-prev-state {
+/*
+ * Both states start with [hidden] attribute in HTML.
+ * JS removes [hidden] from whichever is active — no display conflict.
+ * Using :not([hidden]) means the flex rule ONLY applies to the visible panel;
+ * hidden elements stay display:none via the browser default, no override needed.
+ */
+.dm-audio-rec-state:not([hidden]),
+.dm-audio-prev-state:not([hidden]) {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 10px 14px 14px;
 }
-.dm-audio-rec-state[hidden],
-.dm-audio-prev-state[hidden] { display: none; }
 
 /* Pulsing recording dot */
 .dm-rec-dot {

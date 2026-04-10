@@ -2,6 +2,7 @@
   display: grid;
   grid-template-columns: 1.2fr 1fr;
   gap: 14px;
+  align-items: start; /* prevent rows from stretching to fill each other */
 }
 
 .analytics-card {
@@ -59,25 +60,25 @@
 }
 
 .chart-shell {
-  min-height: 320px;
+  /* Explicit height required for Chart.js maintainAspectRatio:false */
+  height: 320px;
+  overflow: hidden;
 }
 
 .chart-shell canvas {
   width: 100% !important;
-  height: 280px !important;
+  height: 100% !important;
 }
 
-/* Emotion doughnut — give it more room and center it */
+/* Emotion doughnut — taller to accommodate legend */
 .chart-shell--emotion {
-  min-height: 380px;
-  display: flex;
-  flex-direction: column;
+  height: 380px;
+  overflow: hidden;
 }
 
 .chart-shell--emotion canvas {
   width: 100% !important;
-  height: 340px !important;
-  flex: 1;
+  height: 100% !important;
 }
 
 .privacy-banner {
