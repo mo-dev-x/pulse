@@ -61,17 +61,31 @@
 
         <section class="panel analytics-card chart-shell chart-shell--emotion">
           <div class="panel-title"><span>Emotion breakdown</span></div>
-          <canvas id="emotionChart"></canvas>
+          <div class="chart-canvas-wrap chart-canvas-wrap--emotion">
+            <canvas id="emotionChart"></canvas>
+            <div class="emotion-center" id="emotionCenter" aria-live="polite">
+              <div class="emotion-center-label" id="emotionCenterLabel">Emotion signal</div>
+              <div class="emotion-center-value" id="emotionCenterValue">Loading…</div>
+              <div class="emotion-center-detail" id="emotionCenterDetail">Preparing today’s breakdown.</div>
+            </div>
+            <div class="chart-empty-state" id="emotionChartEmptyState" hidden></div>
+          </div>
         </section>
 
         <section class="panel analytics-card chart-shell">
           <div class="panel-title"><span>Daily mood trend</span></div>
-          <canvas id="dailyChart"></canvas>
+          <div class="chart-canvas-wrap">
+            <canvas id="dailyChart"></canvas>
+            <div class="chart-empty-state" id="dailyChartEmptyState" hidden></div>
+          </div>
         </section>
 
         <section class="panel analytics-card chart-shell">
           <div class="panel-title"><span>Weekly trend</span></div>
-          <canvas id="weeklyChart"></canvas>
+          <div class="chart-canvas-wrap">
+            <canvas id="weeklyChart"></canvas>
+            <div class="chart-empty-state" id="weeklyChartEmptyState" hidden></div>
+          </div>
         </section>
       </div>
 
