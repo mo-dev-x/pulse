@@ -483,7 +483,7 @@ function buildZoneRows(zones) {
   return zones.map((zone) => {
     const score = Number(zone.avg_sentiment || 0);
     const width = Math.min(100, Math.max(8, Math.abs(score) * 100));
-    const zoneName = zone.zone_name || zone.zone?.name || "Campus";
+    const zoneName = getZoneDisplayName(zone);
     return `
       <button class="zone-row ${zone.zone_id === selectedZoneId ? "is-selected" : ""}" type="button" data-zone-activity-id="${zone.zone_id || ""}">
         <div class="zone-row-main">
@@ -500,9 +500,10 @@ function buildZoneRows(zones) {
 
 function getVisibleZones(zones, query) {
   const ranked = rankZones(zones);
+  const normalizedQuery = normalizeSearchText(query);
 
-  if (query) {
-    return ranked.filter((zone) => (zone.zone_name || zone.zone?.name || "").toLowerCase().includes(query));
+  if (normalizedQuery) {
+    return ranked.filter((zone) => normalizeSearchText(getZoneDisplayName(zone)).includes(normalizedQuery));
   }
 
   const limited = ranked.slice(0, DEFAULT_ZONE_LIMIT);
@@ -623,14 +624,14 @@ function buildMockAnalyticsBundle(dateValue) {
   const emotionDistribution = buildMockEmotionDistribution(campusAvg, seed);
 
   const zoneTemplates = [
-    { zone_id: 1, zone_name: "Library", baseSentiment: 0.28, total_posts: 42, reaction_count: 118 },
-    { zone_id: 2, zone_name: "Student Union", baseSentiment: 0.19, total_posts: 36, reaction_count: 104 },
-    { zone_id: 3, zone_name: "Residence", baseSentiment: 0.08, total_posts: 31, reaction_count: 92 },
-    { zone_id: 4, zone_name: "Engineering Block", baseSentiment: -0.06, total_posts: 27, reaction_count: 74 },
-    { zone_id: 5, zone_name: "Cafeteria", baseSentiment: 0.14, total_posts: 24, reaction_count: 67 },
-    { zone_id: 6, zone_name: "Arts Wing", baseSentiment: 0.05, total_posts: 21, reaction_count: 58 },
-    { zone_id: 7, zone_name: "Sports Centre", baseSentiment: 0.22, total_posts: 19, reaction_count: 63 },
-    { zone_id: 8, zone_name: "Science Hub", baseSentiment: -0.02, total_posts: 17, reaction_count: 49 },
+    { zone_id: 1, zone_name: "Pavillon Alphonse-Desjardins", baseSentiment: 0.28, total_posts: 42, reaction_count: 118 },
+    { zone_id: 2, zone_name: "Pavillon Jean-Charles-Bonenfant", baseSentiment: 0.19, total_posts: 36, reaction_count: 104 },
+    { zone_id: 3, zone_name: "Place de l'Universite", baseSentiment: 0.08, total_posts: 31, reaction_count: 92 },
+    { zone_id: 4, zone_name: "Pavillon Adrien-Pouliot", baseSentiment: -0.06, total_posts: 27, reaction_count: 74 },
+    { zone_id: 5, zone_name: "Cafe Desjardins", baseSentiment: 0.14, total_posts: 24, reaction_count: 67 },
+    { zone_id: 6, zone_name: "Pavillon Felix-Antoine-Savard", baseSentiment: 0.05, total_posts: 21, reaction_count: 58 },
+    { zone_id: 7, zone_name: "PEPS - Pavillon principal", baseSentiment: 0.22, total_posts: 19, reaction_count: 63 },
+    { zone_id: 8, zone_name: "Pavillon Alexandre-Vachon", baseSentiment: -0.02, total_posts: 17, reaction_count: 49 },
   ];
 
   const zoneBreakdown = zoneTemplates.map((zone, index) => ({
@@ -719,6 +720,10 @@ function buildMockZoneActivity(zoneId, dateValue) {
 function getMockZoneSummary(zoneId) {
   return buildMockAnalyticsBundle(latestAnalyticsDate || new Date().toISOString().slice(0, 10))
     .campus.zone_breakdown.find((zone) => Number(zone.zone_id) === Number(zoneId)) || null;
+}
+
+function getZoneDisplayName(zone) {
+  return String(zone?.zone_name || zone?.zone?.name || "Campus");
 }
 
 function getChartPalette() {
@@ -853,6 +858,10 @@ function getSentimentBarColor(score) {
 function resolveSeriesDate(series, index, key) {
   if (!Number.isInteger(index) || index < 0 || index >= series.length) return "";
   return series[index]?.[key] || "";
+}
+
+function normalizeSearchText(value) {
+  return String(value || "").trim().toLocaleLowerCase();
 }
 
 function findLatestDefinedIndex(values) {

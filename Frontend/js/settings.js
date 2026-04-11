@@ -42,6 +42,7 @@ async function loadSettings() {
   document.getElementById("settingsTheme").value = currentUser.theme || "dark";
   document.getElementById("emailNotifications").checked = Boolean(currentUser.email_notifications);
   document.getElementById("pushNotifications").checked = Boolean(currentUser.push_notifications);
+  syncOptionalProfileFields();
   const avatarPreview = document.getElementById("settingsAvatarPreview");
   if (avatarPreview) {
     avatarPreview.src = getUserAvatarUrl(currentUser, getAssetUrl);
@@ -71,6 +72,10 @@ async function loadSettings() {
 }
 
 function wireForms() {
+  document.getElementById("showOptionalProfileFields")?.addEventListener("click", () => {
+    revealOptionalProfileFields();
+  });
+
   document.getElementById("profileSettingsForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const avatarFile = document.getElementById("settingsAvatarFile")?.files?.[0] || null;
@@ -258,12 +263,7 @@ async function loadSessions() {
             ${index === 0 ? '<span class="inline-badge">Current</span>' : ""}
           </div>
           <div class="session-subtitle">${escapeHtml(summary.subtitle)}</div>
-          <div class="session-meta">
-            <span class="session-pill">${escapeHtml(summary.deviceType)}</span>
-            <span class="session-pill">${escapeHtml(summary.ip)}</span>
-            <span class="session-pill">Started ${escapeHtml(summary.created)}</span>
-            <span class="session-pill">Seen ${escapeHtml(summary.lastSeen)}</span>
-          </div>
+          ${summary.pills.length ? `<div class="session-meta">${summary.pills.map((pill) => `<span class="session-pill">${escapeHtml(pill)}</span>`).join("")}</div>` : ""}
         </div>
         <div class="notification-actions">
           <button class="iconbtn" data-revoke-session="${session.id}" title="Revoke session" aria-label="Revoke session"><i class="ui-icon ui-icon--action uil uil-times" aria-hidden="true"></i></button>
@@ -282,7 +282,6 @@ async function loadSessions() {
 
 function describeSession(session) {
   const ua = String(session.user_agent || "");
-  const ip = session.ip_address || "Unknown IP";
   const deviceType = String(session.device_type || "unknown");
   const isMobile = /iphone|android|mobile|ipad/i.test(ua) || deviceType === "mobile";
   const isMac = /mac os|macintosh/i.test(ua);
@@ -313,23 +312,100 @@ function describeSession(session) {
           ? "Firefox"
           : "Browser";
 
+  const formattedDeviceType = formatDeviceType(deviceType);
+  const networkLabel = formatNetworkLabel(session.ip_address);
+  const pills = [
+    formattedDeviceType,
+    networkLabel,
+    `Started ${formatSessionTime(session.created_at)}`,
+    `Seen ${formatSessionTime(session.last_activity)}`,
+  ].filter(Boolean);
+
   return {
     icon: isMobile
       ? '<i class="ui-icon ui-icon--muted uil uil-mobile-android" aria-hidden="true"></i>'
       : isMac
         ? '<i class="ui-icon ui-icon--muted uil uil-laptop" aria-hidden="true"></i>'
         : isWindows
-          ? '<i class="ui-icon ui-icon--muted uil uil-desktop" aria-hidden="true"></i>'
-          : isLinux
-            ? '<i class="ui-icon ui-icon--muted uil uil-server" aria-hidden="true"></i>'
-            : '<i class="ui-icon ui-icon--muted uil uil-globe" aria-hidden="true"></i>',
-    title: `${os} ${browser}`.trim(),
-    subtitle: ua || "Unknown device",
-    deviceType: deviceType.charAt(0).toUpperCase() + deviceType.slice(1),
-    ip,
-    created: formatSessionTime(session.created_at),
-    lastSeen: formatSessionTime(session.last_activity),
+        ? '<i class="ui-icon ui-icon--muted uil uil-desktop" aria-hidden="true"></i>'
+        : isLinux
+          ? '<i class="ui-icon ui-icon--muted uil uil-server" aria-hidden="true"></i>'
+          : '<i class="ui-icon ui-icon--muted uil uil-globe" aria-hidden="true"></i>',
+    title: formatSessionTitle(browser, os),
+    subtitle: `${formattedDeviceType} session`,
+    pills,
   };
+}
+
+function syncOptionalProfileFields() {
+  const fieldIds = [
+    ["settingsBio", "settingsBioField"],
+    ["settingsLocation", "settingsLocationField"],
+    ["settingsWebsite", "settingsWebsiteField"],
+  ];
+  const hiddenFields = [];
+
+  fieldIds.forEach(([inputId, wrapperId]) => {
+    const input = document.getElementById(inputId);
+    const wrapper = document.getElementById(wrapperId);
+    if (!input || !wrapper) return;
+
+    const hasValue = String(input.value || "").trim().length > 0;
+    wrapper.hidden = !hasValue;
+    if (!hasValue) hiddenFields.push(wrapperId);
+  });
+
+  const toggle = document.getElementById("showOptionalProfileFields");
+  if (toggle) {
+    toggle.hidden = hiddenFields.length === 0;
+  }
+}
+
+function revealOptionalProfileFields() {
+  document.querySelectorAll(".settings-optional-field").forEach((field) => {
+    field.hidden = false;
+  });
+  const toggle = document.getElementById("showOptionalProfileFields");
+  if (toggle) toggle.hidden = true;
+}
+
+function formatDeviceType(value) {
+  const labels = {
+    desktop: "Desktop",
+    mobile: "Mobile",
+    web: "Web",
+    unknown: "Browser",
+  };
+  return labels[String(value || "unknown").toLowerCase()] || "Browser";
+}
+
+function formatSessionTitle(browser, os) {
+  const browserLabel = browser && browser !== "Browser" ? browser : "";
+  const osLabel = os && os !== "Unknown OS" ? os : "";
+  if (browserLabel && osLabel) return `${browserLabel} on ${osLabel}`;
+  if (browserLabel) return browserLabel;
+  if (osLabel) return osLabel;
+  return "Unknown device";
+}
+
+function formatNetworkLabel(ipAddress) {
+  const ip = String(ipAddress || "").trim();
+  if (!ip) return "";
+  if (isPrivateIpv4(ip) || ip === "::1" || ip.toLowerCase() === "localhost") return "Private network";
+  if (ip.includes(":")) return `IPv6 ${ip.split(":").filter(Boolean).slice(0, 2).join(":")}…`;
+
+  const parts = ip.split(".");
+  if (parts.length === 4) return `IP ${parts[0]}.${parts[1]}.${parts[2]}.xxx`;
+  return "Network available";
+}
+
+function isPrivateIpv4(ipAddress) {
+  const parts = ipAddress.split(".").map((part) => Number(part));
+  if (parts.length !== 4 || parts.some((part) => Number.isNaN(part))) return false;
+  return parts[0] === 10
+    || (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31)
+    || (parts[0] === 192 && parts[1] === 168)
+    || parts[0] === 127;
 }
 
 function formatSessionTime(value) {
