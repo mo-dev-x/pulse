@@ -1,3 +1,0 @@
-# ML dependencies are no longer needed.
-# Sentiment analysis now uses the Hugging Face Inference API (no local model).
-# See requirements.txt — the `requests` package is the only dependency needed.
