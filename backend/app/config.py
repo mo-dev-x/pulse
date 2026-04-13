@@ -128,6 +128,11 @@ class Config:
     PUSH_ENABLED = os.getenv('PUSH_ENABLED', 'false').lower() == 'true'
     FCM_SERVER_KEY = os.getenv('FCM_SERVER_KEY')
 
+    # Cloudinary — media storage (images + audio)
+    CLOUDINARY_CLOUD_NAME = os.getenv('CLOUDINARY_CLOUD_NAME', '')
+    CLOUDINARY_API_KEY = os.getenv('CLOUDINARY_API_KEY', '')
+    CLOUDINARY_API_SECRET = os.getenv('CLOUDINARY_API_SECRET', '')
+
     # Web Push (VAPID) — generate keys once:
     #   pip install pywebpush
     #   python -c "from py_vapid import Vapid; v=Vapid(); v.generate_keys(); print(v.public_key.decode(),v.private_key.decode())"

@@ -1385,6 +1385,12 @@ body::before{
 .pulse-center{
   display: flex;
   justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+.stories-row .story.pulse-card{
+  /* Allow drop-shadow filter to render beyond border-radius clip */
+  overflow: visible;
 }
 .story.pulse-card .pulse-ring{
   width: 180px;
@@ -1409,6 +1415,7 @@ body::before{
   text-align: center;
   padding: 18px 14px 12px;
   overflow: hidden;
+  box-sizing: border-box;
 }
 .story.pulse-card .pulse-kicker{ font-size: 11px; color: var(--muted); line-height: 1.2; margin: 0; }
 .story.pulse-card .pulse-mood{ margin: 6px 0 0; font-weight: 950; line-height: 1.05; font-size: 20px; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }

@@ -497,6 +497,18 @@ Currently manual testing via browser:
 - ✅ **Phase 5:** Production Auth & UX
 - ✅ **Phase 6:** Search, moderation, messaging, push, caching, background jobs
 
+### Phase 7 (Undocumented-but-Implemented Backend Additions)
+- **Mood check-ins**: lightweight daily emotion capture and a “Pulse” distribution endpoint (`/api/mood/*`)
+- **Cloudinary upload support**: generic authenticated upload endpoint (`POST /api/upload`) + Cloudinary-backed storage behavior across existing upload flows
+- **Direct messages**: message replies metadata + “unsend” delete endpoint for senders
+
+### Phase 7 (Undocumented-but-Implemented Frontend Additions)
+- **Shell UX & resilience**: global toasts for unhandled promise errors, offline banner wiring, skip-link injection, and shared unread badge refresh
+- **Feed interaction performance**: optimistic reactions/bookmarks with rollback + targeted per-post re-render (avoids full feed DOM replacement)
+- **DM experience upgrades**: smooth polling that appends only new bubbles, optimistic send previews (text/image/audio), reply quotes, and unsend UI
+- **Notifications polish**: grouped timeline (Today / This week / Earlier) with optimistic mark-all-read and delete
+- **PWA behaviors**: install banner, service-worker offline fallback, and Web Push subscription sync (when backend VAPID is configured)
+
 **Current Backend State:**
 - unified search across posts, users, and zones
 - discovery and trending feeds

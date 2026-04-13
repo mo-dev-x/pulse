@@ -1103,6 +1103,150 @@ if hours_since > 24:
 
 ---
 
+### **AD-056: Mood Check-Ins as a Separate Signal From Posts**
+
+**Date:** 2026-04-07  
+**Decision:** Implement mood check-ins as a dedicated `mood_checkins` table and `/api/mood/*` endpoints, separate from post sentiment analytics.
+
+**Rationale:**
+- Mood capture should not require writing a public/anonymous post.
+- Check-ins represent a lightweight, intentionally low-fidelity signal for “today’s pulse”.
+- Keeping them separate avoids conflating “what I posted” with “how I feel”.
+
+**Implementation:** `app/routes/mood.py` + `app/models/mood_checkin.py`.
+
+---
+
+### **AD-057: Check-In Cooldown (12 Hours)**
+
+**Date:** 2026-04-07  
+**Decision:** Enforce a 12-hour per-user cooldown between mood check-ins.
+
+**Rationale:** Prevents rapid toggling/spam while still allowing a user to update their state over a day.
+
+**Implementation:** `COOLDOWN_HOURS = 12` with `429` responses including `retry_after` in `app/routes/mood.py`.
+
+---
+
+### **AD-058: Cloudinary-First Media Storage With Explicit Fallbacks**
+
+**Date:** 2026-04-07  
+**Decision:** Prefer Cloudinary for user/profile/header/post/DM uploads when credentials exist; fall back to local disk only for specific endpoints to keep development simple.
+
+**Rationale:**
+- Object storage/CDN URLs are a better fit than local disk in hosted environments.
+- Development environments should remain usable without Cloudinary secrets.
+
+**Implementation:**
+- Cloudinary helper: `app/utils/cloudinary_utils.py`
+- Cloudinary-only “pre-upload”: `POST /api/upload` in `app/routes/uploads.py`
+- Cloudinary-preferred with local fallback: `app/routes/auth.py`, `app/routes/posts.py`, `app/routes/messages.py`
+
+---
+
+### **AD-059: DM Reply Metadata Stored as Snapshot, Not a Join**
+
+**Date:** 2026-04-07  
+**Decision:** Store `reply_to_id` plus a `reply_preview` snapshot on each message to render quotes without additional queries.
+
+**Rationale:** Reply UI should be cheap to render and not require joining or fetching the referenced message during pagination.
+
+**Implementation:** `Message.reply_to_id` + `Message.reply_preview` in `app/models/message.py`; optional inputs handled in `app/routes/messages.py`.
+
+---
+
+### **AD-060: JWT Revocation Check Uses a Short “Known-Valid JTI” Cache**
+
+**Date:** 2026-04-07  
+**Decision:** Cache known-valid JWT JTIs for 30 seconds to reduce DB lookups in the blocklist loader.
+
+**Rationale:** Session revocation requires a DB-backed source of truth, but checking it on every request is expensive. A short TTL keeps revocation effective while improving latency.
+
+**Implementation:** `@jwt.token_in_blocklist_loader` in `app/__init__.py` with cache key `jti_valid:<jti>` and `timeout=30`.
+
+---
+
+### **AD-061: Rate Limit Key Prefers Authenticated User Over IP**
+
+**Date:** 2026-04-07  
+**Decision:** For write-heavy authenticated endpoints, rate-limit primarily by user id (JWT identity), with IP as fallback.
+
+**Rationale:** IP-only limits are noisy behind NAT and can unfairly throttle shared networks; user-keyed limits better reflect abusive behavior.
+
+**Implementation:** `rate_limit_key_user()` in `app/__init__.py`, used as `key_func` on write endpoints (e.g. message send, post create).
+
+---
+
+### **AD-062: Additive “Boot-Time Migrations” for Small Schema Drift**
+
+**Date:** 2026-04-07  
+**Decision:** Allow a small set of additive, idempotent `ALTER TABLE` statements to run on app startup to patch known schema drift in hosted environments.
+
+**Rationale:** Some deployments may run without a formal migration runner. Additive-only boot migrations reduce incidents from missing columns while remaining safe to re-run.
+
+**Implementation:** `_migrate_schema()` in `app/__init__.py` (currently adds DM reply columns and `media.media_url`).
+
+---
+
+### **AD-063: Frontend “Targeted Re-render” Over Full Feed Replacement**
+
+**Date:** 2026-04-08  
+**Decision:** When a single post changes (reaction/bookmark/comments), re-render that post card only instead of rebuilding the entire feed DOM.
+
+**Rationale:** Improves perceived performance and reduces flicker (especially for media content) while keeping logic simple in a vanilla-JS codebase.
+
+**Implementation:** `Frontend/js/feed.js` maintains in-memory `currentPosts` and updates UI via `rerenderPost(postId)` on interaction handlers.
+
+---
+
+### **AD-064: Optimistic UI With Explicit Rollback + Server Reconciliation**
+
+**Date:** 2026-04-08  
+**Decision:** For high-frequency interactions (reactions, bookmarks, notifications actions), update UI immediately, then reconcile with the server response or rollback on failure.
+
+**Rationale:** Keeps the interface responsive on campus networks and masks normal request latency without sacrificing correctness.
+
+**Implementation:**
+- Reactions/bookmarks: `Frontend/js/feed.js` (`onReact`, `toggleBookmark`) store previous state for rollback.
+- Notifications: `Frontend/js/notifications.js` applies optimistic mark-read / delete and fires API in background.
+
+---
+
+### **AD-065: DM Polling Uses “Append Only When Changed” Strategy**
+
+**Date:** 2026-04-08  
+**Decision:** Poll DMs periodically but only mutate the DOM when new messages arrive; append only the new message bubbles rather than full thread replacement.
+
+**Rationale:** Prevents UI flash and image flicker, avoids unnecessary reflow, and keeps polling robust without introducing WebSockets.
+
+**Implementation:** `Frontend/js/messages.js` tracks `lastKnownMessageId` and `_renderedMessageIds`; removes optimistic bubbles, then appends only new messages.
+
+---
+
+### **AD-066: In-Page Event Bus for Shell Synchronization**
+
+**Date:** 2026-04-08  
+**Decision:** Use an in-page `EventTarget` pub/sub bus to keep nav badges and cross-module UI state in sync without a framework store.
+
+**Rationale:** Provides lightweight state coordination (e.g., updating unread badges after marking a conversation read) while keeping modules decoupled.
+
+**Implementation:** `Frontend/js/bus.js` + `Frontend/js/theme.js` (`initUnreadBadges` subscribes to `messages:read`).
+
+---
+
+### **AD-067: PWA Offline Strategy + Push Handling in Service Worker**
+
+**Date:** 2026-04-08  
+**Decision:** Implement a service worker with cache-first static assets, network-first API calls, and an offline navigation fallback page; handle Web Push events in the SW.
+
+**Rationale:** Improves resilience for spotty connectivity and enables installability and background push notifications for engagement.
+
+**Implementation:**
+- SW: `Frontend/sw.js` (static precache, `/api/*` network-first, offline fallback, push handlers)
+- Install + push subscription: `Frontend/js/pwa.js` (install banner, VAPID key fetch, subscription sync)
+
+---
+
 **📌 This document grows with the project. Every technical decision is recorded here.**
 
 **Last Updated:** Phase 6 complete — Search, discovery, rate limiting, moderation, messaging, push, caching, background jobs

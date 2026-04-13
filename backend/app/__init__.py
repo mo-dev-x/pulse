@@ -233,6 +233,8 @@ def _migrate_schema(app):
         "ALTER TABLE messages ADD COLUMN reply_to_id INT NULL",
         "ALTER TABLE messages ADD COLUMN reply_preview VARCHAR(255) NULL",
         "ALTER TABLE messages ADD INDEX ix_messages_reply_to_id (reply_to_id)",
+        # Cloudinary: store CDN URL alongside the legacy local file_path
+        "ALTER TABLE media ADD COLUMN media_url VARCHAR(500) NULL",
     ]
     with app.app_context():
         with db.engine.connect() as conn:
@@ -249,9 +251,10 @@ def register_blueprints(app):
     """
     Register all Flask blueprints
     """
-    from app.routes import auth, posts, social, reactions, analytics, comments, notifications, bookmarks, zones, search, reports, messages, push, mood
-    
+    from app.routes import auth, posts, social, reactions, analytics, comments, notifications, bookmarks, zones, search, reports, messages, push, mood, uploads
+
     app.register_blueprint(auth.bp, url_prefix='/api/auth')
+    app.register_blueprint(uploads.bp, url_prefix='/api')
     app.register_blueprint(posts.bp, url_prefix='/api/posts')
     app.register_blueprint(social.bp, url_prefix='/api')
     app.register_blueprint(reactions.bp, url_prefix='/api/posts')

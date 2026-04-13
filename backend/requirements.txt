@@ -34,5 +34,8 @@ gunicorn==21.2.0
 # Web Push notifications
 pywebpush>=1.14.0
 
+# Cloudinary media storage
+cloudinary==1.40.0
+
 # Development (optional)
 requests==2.31.0

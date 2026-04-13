@@ -10,6 +10,7 @@ let currentOtherUser = null;
 let pollTimer = null;
 let lastKnownMessageId = null;   // used by smooth polling
 let _pollRunning = false;        // guard: prevents concurrent poll executions
+let _renderedMessageIds = new Set(); // tracks which message IDs are in the DOM
 
 // Audio recording state
 let mediaRecorder = null;
@@ -32,7 +33,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   initThemeToggle();
   initOfflineBanner();
 
-  // Start new conversation
+  // Start new conversation (Enter key — exact username fallback)
   document.getElementById("newConversationUsername")?.addEventListener("keydown", async (e) => {
     if (e.key !== "Enter") return;
     e.preventDefault();
@@ -49,6 +50,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       showThread();
     }
   });
+
+  // Live partial/case-insensitive user search while typing
+  setupConversationSearch();
 
   const focusSearch = () => document.getElementById("newConversationUsername")?.focus();
   document.getElementById("newMsgBtn")?.addEventListener("click", focusSearch);
@@ -221,6 +225,8 @@ async function loadThread(conversationId) {
   lastKnownMessageId = messages.length ? messages[messages.length - 1].id : null;
 
   thread.innerHTML = renderMessageGroups(messages);
+  _renderedMessageIds.clear();
+  messages.forEach(m => _renderedMessageIds.add(m.id));
   fixAudioDurations(thread);
 
   const area = document.getElementById("messagesArea");
@@ -260,11 +266,18 @@ async function pollMessages(conversationId) {
     // Remember if user was near the bottom before update
     const nearBottom = area.scrollHeight - area.scrollTop - area.clientHeight < 120;
 
-    // Remove optimistic bubbles before re-rendering real messages
+    // Remove optimistic bubbles
     thread.querySelectorAll(".dm-optimistic").forEach((el) => el.remove());
 
-    thread.innerHTML = renderMessageGroups(messages);
-    fixAudioDurations(thread);
+    // Append only new messages — avoids full re-render that causes image flicker
+    const newMessages = messages.filter(m => !_renderedMessageIds.has(m.id));
+    if (newMessages.length > 0) {
+      const temp = document.createElement("div");
+      temp.innerHTML = renderMessageGroups(newMessages);
+      while (temp.firstChild) thread.appendChild(temp.firstChild);
+      newMessages.forEach(m => _renderedMessageIds.add(m.id));
+      fixAudioDurations(thread);
+    }
 
     if (nearBottom) area.scrollTop = area.scrollHeight;
 
@@ -1213,6 +1226,83 @@ async function updateUnreadBadge() {
     badge.hidden = count === 0;
   } catch {
     // Keep polling resilient
+  }
+}
+
+// ── Conversation user search ────────────────────────────────────────────────
+
+function setupConversationSearch() {
+  const input = document.getElementById("newConversationUsername");
+  if (!input) return;
+
+  let timer = null;
+  let isSearching = false;
+
+  input.addEventListener("input", () => {
+    const q = input.value.trim().replace(/^@/, "");
+    clearTimeout(timer);
+
+    if (!q) {
+      if (isSearching) { isSearching = false; loadConversations(); }
+      return;
+    }
+
+    isSearching = true;
+    timer = setTimeout(() => searchConversationUsers(q), 300);
+  });
+
+  // Restore conversation list when input is cleared via keyboard (Escape)
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && isSearching) {
+      input.value = "";
+      isSearching = false;
+      loadConversations();
+    }
+  });
+}
+
+async function searchConversationUsers(q) {
+  const list = document.getElementById("conversationList");
+  if (!list) return;
+  list.innerHTML = `<div class="dm-empty-thread" style="padding:12px 16px;opacity:.6;">Searching…</div>`;
+  try {
+    const data = await apiFetch(`/api/search/users?q=${encodeURIComponent(q)}&limit=8`, { method: "GET" });
+    const users = data.users || [];
+    if (!users.length) {
+      list.innerHTML = `<div class="dm-empty-thread" style="padding:16px;opacity:.7;">No users found.</div>`;
+      return;
+    }
+    list.innerHTML = users.map(u => `
+      <button class="dm-conv-row" data-search-username="${escapeAttr(u.username)}" type="button">
+        <div class="dm-conv-avatar-wrap">
+          <img class="dm-conv-avatar" src="${escapeAttr(getUserAvatarUrl(u, getAssetUrl))}" alt="" loading="lazy" />
+        </div>
+        <div class="dm-conv-body">
+          <div class="dm-conv-top">
+            <span class="dm-conv-name">${escapeHtml(u.display_name || u.username)}</span>
+          </div>
+          <div class="dm-conv-preview">@${escapeHtml(u.username)}</div>
+        </div>
+      </button>
+    `).join("");
+
+    list.querySelectorAll("[data-search-username]").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const username = btn.dataset.searchUsername;
+        const input = document.getElementById("newConversationUsername");
+        if (input) input.value = "";
+        const d = await apiFetch("/api/messages/conversations", {
+          method: "POST",
+          body: JSON.stringify({ username }),
+        });
+        if (d.conversation?.id) {
+          await loadConversations(d.conversation.id);
+          showThread();
+        }
+      });
+    });
+  } catch {
+    list.innerHTML = `<div class="dm-empty-thread" style="padding:16px;opacity:.7;">Search failed.</div>`;
   }
 }
 

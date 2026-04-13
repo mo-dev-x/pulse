@@ -9,13 +9,54 @@ document.addEventListener("DOMContentLoaded", async () => {
   initThemeToggle();
   initOfflineBanner();
 
-  document.getElementById("markAllRead")?.addEventListener("click", async () => {
-    await apiFetch("/api/notifications/read-all", { method: "PATCH" });
-    await loadNotifications();
+  // Optimistic mark-all-read: update UI instantly, fire API in background
+  document.getElementById("markAllRead")?.addEventListener("click", () => {
+    document.querySelectorAll(".notif-row--unread").forEach(row => {
+      row.classList.remove("notif-row--unread");
+      row.dataset.read = "1";
+    });
+    apiFetch("/api/notifications/read-all", { method: "PATCH" }).catch(() => {});
   });
+
+  // Single delegated click handler — set up once to avoid listener accumulation
+  setupListClickHandler();
 
   await loadNotifications();
 });
+
+function setupListClickHandler() {
+  const listEl  = document.getElementById("notificationList");
+  const emptyEl = document.getElementById("notifEmpty");
+
+  listEl.addEventListener("click", async (e) => {
+    // ── Delete button ──────────────────────────────────────────────────────
+    const deleteBtn = e.target.closest("[data-delete-id]");
+    if (deleteBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const row = deleteBtn.closest(".notif-row");
+      // Optimistic remove
+      row?.remove();
+      // Remove parent section if it has no remaining rows
+      document.querySelectorAll("#notificationList section").forEach(section => {
+        if (!section.querySelector(".notif-row")) section.remove();
+      });
+      if (!listEl.querySelector(".notif-row")) emptyEl.hidden = false;
+      // Background API call (failure is silent — row is already gone)
+      apiFetch(`/api/notifications/${deleteBtn.dataset.deleteId}`, { method: "DELETE" }).catch(() => {});
+      return;
+    }
+
+    // ── Mark as read on row click ──────────────────────────────────────────
+    const row = e.target.closest(".notif-row[data-notif-id]");
+    if (row && !row.dataset.read) {
+      const id = row.dataset.notifId;
+      row.dataset.read = "1";
+      row.classList.remove("notif-row--unread");
+      apiFetch(`/api/notifications/${id}/read`, { method: "PATCH" }).catch(() => {});
+    }
+  });
+}
 
 async function loadNotifications() {
   const loadingEl = document.getElementById("notifLoadingState");
@@ -57,32 +98,6 @@ async function loadNotifications() {
     }
 
     listEl.appendChild(fragment);
-
-    // Delegate delete clicks
-    listEl.addEventListener("click", async (e) => {
-      const deleteBtn = e.target.closest("[data-delete-id]");
-      if (deleteBtn) {
-        e.preventDefault();
-        e.stopPropagation();
-        await apiFetch(`/api/notifications/${deleteBtn.dataset.deleteId}`, { method: "DELETE" });
-        deleteBtn.closest(".notif-row")?.remove();
-        if (!listEl.querySelector(".notif-row")) {
-          emptyEl.hidden = false;
-        }
-        return;
-      }
-
-      // Mark as read on row click
-      const row = e.target.closest(".notif-row[data-notif-id]");
-      if (row && !row.dataset.read) {
-        const id = row.dataset.notifId;
-        row.dataset.read = "1";
-        row.classList.remove("notif-row--unread");
-        const dot = row.querySelector(".notif-row::before");
-        if (dot) dot.style.display = "none";
-        apiFetch(`/api/notifications/${id}/read`, { method: "PATCH" }).catch(() => {});
-      }
-    });
 
   } catch (error) {
     loadingEl.hidden = true;
@@ -172,9 +187,24 @@ function describeNotification(n) {
 }
 
 function notificationHref(n) {
+  const type = (n.type || "").toLowerCase();
+
+  // Follow → actor's profile page
+  if (type.includes("follow")) {
+    return n.actor?.username
+      ? `profile.html?u=${encodeURIComponent(n.actor.username)}`
+      : "#";
+  }
+
+  // Like / react / comment / mention → the related post
+  if ((type.includes("react") || type.includes("like") || type.includes("comment") || type.includes("mention")) && n.related_id) {
+    return `feed.html#post-${n.related_id}`;
+  }
+
+  // Fallback by related_type
   if (n.related_type === "post" && n.related_id)    return `feed.html#post-${n.related_id}`;
-  if (n.related_type === "user" && n.related_id)    return `profile.html?id=${n.related_id}`;
   if (n.related_type === "comment" && n.related_id) return `feed.html#post-${n.related_id}`;
+  if (n.related_type === "user" && n.actor?.username) return `profile.html?u=${encodeURIComponent(n.actor.username)}`;
   return "#";
 }
 

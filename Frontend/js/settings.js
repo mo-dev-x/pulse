@@ -23,6 +23,10 @@ function setupTabs() {
       ["profile", "preferences", "security"].forEach((tab) => {
         document.getElementById(`tab-${tab}`).hidden = tab !== btn.dataset.settingsTab;
       });
+      // Hide any stale feedback messages when switching tabs
+      document.querySelectorAll(".msg").forEach((el) => {
+        if (!el.textContent.trim()) el.hidden = true;
+      });
     });
   });
 }
@@ -38,8 +42,14 @@ async function loadSettings() {
   document.getElementById("settingsWebsite").value = currentUser.website || "";
   document.getElementById("settingsVisibility").value = currentUser.profile_visibility || "public";
   document.getElementById("settingsShowEmail").checked = Boolean(currentUser.show_email);
-  document.getElementById("settingsLanguage").value = currentUser.preferred_language || "en";
-  document.getElementById("settingsTheme").value = currentUser.theme || "dark";
+  // Auto-detect language from browser if user has not set one
+  const detectedLang = navigator.language?.startsWith("fr") ? "fr" : "en";
+  const preferredLang = currentUser.preferred_language || detectedLang;
+  document.getElementById("settingsLanguage").value = preferredLang;
+  setLang(preferredLang);
+
+  // Default to "auto" so the system preference is respected when unset
+  document.getElementById("settingsTheme").value = currentUser.theme || "auto";
   document.getElementById("emailNotifications").checked = Boolean(currentUser.email_notifications);
   document.getElementById("pushNotifications").checked = Boolean(currentUser.push_notifications);
   syncOptionalProfileFields();
@@ -123,6 +133,7 @@ function wireForms() {
       method: "PATCH",
       body: JSON.stringify({
         theme,
+        preferred_language: language,
         email_notifications: document.getElementById("emailNotifications").checked,
         push_notifications: document.getElementById("pushNotifications").checked,
       }),

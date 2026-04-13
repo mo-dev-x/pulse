@@ -1,7 +1,7 @@
 import { apiFetch, requireAuth } from "./auth.js";
 import { getProfileHref } from "./avatar.js";
 import { initLanguageControls } from "./i18n.js";
-import { initMobileDrawer, initThemeToggle, initOfflineBanner } from "./theme.js";
+import { initMobileDrawer, initThemeToggle, initOfflineBanner, initUnreadBadges } from "./theme.js";
 
 let discoverPage = 1;
 let discoverLoading = false;
@@ -13,6 +13,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   initThemeToggle();
   initOfflineBanner();
   initMobileDrawer();
+  initUnreadBadges();
 
   document.getElementById("discoverSentiment")?.addEventListener("change", async () => {
     discoverPage = 1;

@@ -62,6 +62,7 @@ except ImportError:  # pragma: no cover
 
 from app import db, limiter, rate_limit_value
 from app.models.post import Post
+from app.utils.cloudinary_utils import upload_to_cloudinary, is_cloudinary_configured
 from app.models.session import Session
 from app.models.user import User
 from app.services import upsert_documents
@@ -1129,33 +1130,72 @@ def update_bio():
     return jsonify({'message': get_localized_message(request, 'bio_updated_success'), 'user': user.to_dict(include_private=True)}), 200
 
 
-def _handle_image_upload(user, request_key, upload_folder, filename_prefix, size):
+def _validate_image_file(request_key):
+    """Validate presence, filename, and size of an uploaded image. Returns (file, error)."""
     if request_key not in request.files:
         return None, ({'error': get_localized_message(request, 'validation_error'), 'message': get_localized_message(request, 'no_file_uploaded')}, 400)
-
     file = request.files[request_key]
     if not file or not file.filename:
         return None, ({'error': get_localized_message(request, 'validation_error'), 'message': get_localized_message(request, 'no_file_uploaded')}, 400)
-
     if not _allowed_file(file.filename):
         return None, ({'error': get_localized_message(request, 'validation_error'), 'message': get_localized_message(request, 'file_type_invalid')}, 400)
-
     file.seek(0, os.SEEK_END)
     file_size = file.tell()
     file.seek(0)
     if file_size > current_app.config.get('MAX_CONTENT_LENGTH', 5 * 1024 * 1024):
         return None, ({'error': get_localized_message(request, 'validation_error'), 'message': get_localized_message(request, 'file_too_large')}, 400)
+    return file, None
 
-    os.makedirs(upload_folder, exist_ok=True)
-    filename = secure_filename(f"{filename_prefix}_{user.id}_{secrets.token_hex(8)}.jpg")
-    destination = os.path.join(upload_folder, filename)
 
-    try:
-        _resize_and_save_image(file.stream, destination, size)
-    except Exception as exc:
-        return None, ({'error': get_localized_message(request, 'server_error'), 'message': str(exc)}, 500)
+def _handle_image_upload(user, request_key, upload_folder, filename_prefix, size):
+    """Upload an image to Cloudinary (preferred) or local disk (fallback).
 
-    return filename, None
+    Returns (result, error) where result is either:
+      - A full Cloudinary URL string  (when Cloudinary is configured)
+      - A bare filename string        (local fallback)
+    """
+    file, error = _validate_image_file(request_key)
+    if error:
+        return None, error
+
+    if is_cloudinary_configured():
+        # Resize in-memory with PIL then upload the JPEG bytes to Cloudinary
+        import io as _io
+        try:
+            resized_buf = _io.BytesIO()
+            if Image is not None:
+                img = Image.open(file.stream)
+                img = img.convert('RGB')
+                img.thumbnail(size)
+                img.save(resized_buf, format='JPEG', optimize=True, quality=85)
+                resized_buf.seek(0)
+            else:
+                file.stream.seek(0)
+                resized_buf = file.stream
+
+            folder_name = 'pulse/profiles' if 'profile' in filename_prefix else 'pulse/headers'
+            public_id = f"{filename_prefix}_{user.id}_{secrets.token_hex(8)}"
+            secure_url, upload_err = upload_to_cloudinary(
+                resized_buf,
+                folder=folder_name,
+                public_id=public_id,
+            )
+            if upload_err:
+                return None, ({'error': get_localized_message(request, 'server_error'), 'message': upload_err}, 500)
+            # Return the full URL as the "filename" so callers can store it directly
+            return secure_url, None
+        except Exception as exc:
+            return None, ({'error': get_localized_message(request, 'server_error'), 'message': str(exc)}, 500)
+    else:
+        # Local fallback (development without Cloudinary credentials)
+        os.makedirs(upload_folder, exist_ok=True)
+        filename = secure_filename(f"{filename_prefix}_{user.id}_{secrets.token_hex(8)}.jpg")
+        destination = os.path.join(upload_folder, filename)
+        try:
+            _resize_and_save_image(file.stream, destination, size)
+        except Exception as exc:
+            return None, ({'error': get_localized_message(request, 'server_error'), 'message': str(exc)}, 500)
+        return filename, None
 
 
 @bp.route('/upload-profile-pic', methods=['POST'])
@@ -1167,42 +1207,46 @@ def upload_profile_picture():
     if not user:
         return jsonify({'error': get_localized_message(request, 'user_not_found')}), 404
 
-    # upload_folder = current_app.config.get('PROFILE_UPLOAD_FOLDER', 'uploads/profiles') Faten did this
     upload_folder = os.path.join(_get_upload_root(), 'profiles')
 
-    filename, error = _handle_image_upload(
+    result, error = _handle_image_upload(
         user=user,
         request_key='file',
         upload_folder=upload_folder,
         filename_prefix='profile',
-        size=(500, 500)
+        size=(500, 500),
     )
     if error:
         body, status = error
         return jsonify(body), status
 
-    old_filename = user.profile_picture
-    user.profile_picture = f'profiles/{filename}'
+    old_value = user.profile_picture
+
+    if is_cloudinary_configured():
+        # result is a full Cloudinary URL — store it directly
+        user.profile_picture = result
+        profile_url = result
+    else:
+        # result is a bare filename — build the legacy relative path
+        user.profile_picture = f'profiles/{result}'
+        profile_url = f"/uploads/profiles/{result}"
+
     db.session.commit()
     try:
         upsert_documents('users', [_user_search_document(user)])
     except Exception:
         current_app.logger.warning('Meilisearch user upsert failed for user_id=%s', user.id)
 
-    # if old_filename:
-    #     old_path = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'uploads/'), old_filename)
-    #     if os.path.exists(old_path):
-    #         os.remove(old_path)
-    #Faten did this 
-    if old_filename:
-        old_path = os.path.join(_get_upload_root(), old_filename)
+    # Delete old local file if it was a local path (not a URL)
+    if old_value and not old_value.startswith('http'):
+        old_path = os.path.join(_get_upload_root(), old_value)
         if os.path.exists(old_path):
             os.remove(old_path)
 
     return jsonify({
         'message': get_localized_message(request, 'profile_picture_updated'),
         'profile_picture': user.profile_picture,
-        'profile_picture_url': f"/uploads/{user.profile_picture}"
+        'profile_picture_url': profile_url,
     }), 200
 
 
@@ -1215,37 +1259,44 @@ def upload_header_image():
     if not user:
         return jsonify({'error': get_localized_message(request, 'user_not_found')}), 404
 
-    # upload_folder = current_app.config.get('HEADER_UPLOAD_FOLDER', 'uploads/headers') Faten did this
     upload_folder = os.path.join(_get_upload_root(), 'headers')
-    
-    filename, error = _handle_image_upload(
+
+    result, error = _handle_image_upload(
         user=user,
         request_key='file',
         upload_folder=upload_folder,
         filename_prefix='header',
-        size=(1500, 500)
+        size=(1500, 500),
     )
     if error:
         body, status = error
         return jsonify(body), status
 
-    old_filename = user.header_image
-    user.header_image = f'headers/{filename}'
+    old_value = user.header_image
+
+    if is_cloudinary_configured():
+        user.header_image = result
+        header_url = result
+    else:
+        user.header_image = f'headers/{result}'
+        header_url = f"/uploads/headers/{result}"
+
     db.session.commit()
     try:
         upsert_documents('users', [_user_search_document(user)])
     except Exception:
         current_app.logger.warning('Meilisearch user upsert failed for user_id=%s', user.id)
 
-    if old_filename:
-        old_path = os.path.join(current_app.config.get('UPLOAD_FOLDER', 'uploads/'), old_filename)
+    # Delete old local file if it was a local path (not a URL)
+    if old_value and not old_value.startswith('http'):
+        old_path = os.path.join(_get_upload_root(), old_value)
         if os.path.exists(old_path):
             os.remove(old_path)
 
     return jsonify({
         'message': get_localized_message(request, 'header_image_updated'),
         'header_image': user.header_image,
-        'header_image_url': f"/uploads/{user.header_image}"
+        'header_image_url': header_url,
     }), 200
 
 

@@ -26,6 +26,8 @@ from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from werkzeug.utils import secure_filename
 
+from app.utils.cloudinary_utils import upload_to_cloudinary, is_cloudinary_configured
+
 from app import cache, db, limiter, rate_limit_key_user, rate_limit_value
 from app.middleware import require_verification
 from app.models import Post, CampusZone, User, Comment
@@ -325,23 +327,42 @@ def create_post():
                     'message': get_localized_message(request, 'file_type_invalid')
                 }), 400
 
-            # Generate unique filename
             ext = uploaded_file.filename.rsplit('.', 1)[1].lower()
             unique_filename = f"{uuid.uuid4().hex}.{ext}"
+            media_url = None
 
-            upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads/')
-            os.makedirs(upload_folder, exist_ok=True)
-            file_path = os.path.join(upload_folder, unique_filename)
-
-            uploaded_file.save(file_path)
-            file_size = os.path.getsize(file_path)
+            if is_cloudinary_configured():
+                # Upload directly from the in-memory stream — no disk write needed
+                uploaded_file.stream.seek(0)
+                secure_url, upload_err = upload_to_cloudinary(
+                    uploaded_file.stream,
+                    folder='pulse/posts',
+                    public_id=uuid.uuid4().hex,
+                )
+                if upload_err:
+                    db.session.rollback()
+                    return jsonify({
+                        'error': get_localized_message(request, 'server_error'),
+                        'message': upload_err,
+                    }), 500
+                media_url = secure_url
+                file_path = media_url  # store URL as path for legacy compat
+                file_size = 0          # stream already consumed; size unavailable
+            else:
+                # Fallback: save locally (development without Cloudinary creds)
+                upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads/')
+                os.makedirs(upload_folder, exist_ok=True)
+                file_path = os.path.join(upload_folder, unique_filename)
+                uploaded_file.save(file_path)
+                file_size = os.path.getsize(file_path)
 
             media = Media(
                 post_id=new_post.id,
                 file_path=file_path,
+                media_url=media_url,
                 file_type='image',
                 file_size=file_size,
-                mime_type=uploaded_file.content_type
+                mime_type=uploaded_file.content_type,
             )
             db.session.add(media)
 

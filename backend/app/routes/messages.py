@@ -30,6 +30,7 @@ from sqlalchemy import func
 
 from app import db, limiter, rate_limit_key_user, rate_limit_value
 from app.models import Conversation, Message, User
+from app.utils.cloudinary_utils import upload_to_cloudinary, is_cloudinary_configured
 from app.utils.i18n import get_localized_message
 
 _ALLOWED_AUDIO_EXTS = {'webm', 'ogg', 'mp4', 'm4a', 'wav', 'opus'}
@@ -203,12 +204,23 @@ def send_audio_message(conversation_id):
 
     raw_ext = audio_file.filename.rsplit('.', 1)[-1].lower() if '.' in audio_file.filename else 'webm'
     ext = raw_ext if raw_ext in _ALLOWED_AUDIO_EXTS else 'webm'
-    filename = f"{uuid.uuid4().hex}.{ext}"
-    upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads/')
-    os.makedirs(upload_folder, exist_ok=True)
-    audio_file.save(os.path.join(upload_folder, filename))
 
-    content = f"[audio]/api/uploads/{filename}"
+    if is_cloudinary_configured():
+        audio_file.stream.seek(0)
+        secure_url, upload_err = upload_to_cloudinary(
+            audio_file.stream,
+            folder='pulse/messages/audio',
+            public_id=uuid.uuid4().hex,
+        )
+        if upload_err:
+            return jsonify({'error': upload_err}), 500
+        content = f"[audio]{secure_url}"
+    else:
+        filename = f"{uuid.uuid4().hex}.{ext}"
+        upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads/')
+        os.makedirs(upload_folder, exist_ok=True)
+        audio_file.save(os.path.join(upload_folder, filename))
+        content = f"[audio]/api/uploads/{filename}"
     message = Message(
         conversation_id=conversation.id,
         sender_id=current_user_id,
@@ -239,12 +251,22 @@ def send_media_message(conversation_id):
     if raw_ext not in _ALLOWED_MEDIA_EXTS:
         return jsonify({'error': 'Unsupported file type. Only images (jpg, png, gif, webp) are accepted.'}), 400
 
-    filename = f"{uuid.uuid4().hex}.{raw_ext}"
-    upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads/')
-    os.makedirs(upload_folder, exist_ok=True)
-    media_file.save(os.path.join(upload_folder, filename))
-
-    content  = f"[image]/api/uploads/{filename}"
+    if is_cloudinary_configured():
+        media_file.stream.seek(0)
+        secure_url, upload_err = upload_to_cloudinary(
+            media_file.stream,
+            folder='pulse/messages/images',
+            public_id=uuid.uuid4().hex,
+        )
+        if upload_err:
+            return jsonify({'error': upload_err}), 500
+        content = f"[image]{secure_url}"
+    else:
+        filename = f"{uuid.uuid4().hex}.{raw_ext}"
+        upload_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads/')
+        os.makedirs(upload_folder, exist_ok=True)
+        media_file.save(os.path.join(upload_folder, filename))
+        content = f"[image]/api/uploads/{filename}"
     message  = Message(
         conversation_id=conversation.id,
         sender_id=current_user_id,
