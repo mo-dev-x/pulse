@@ -248,7 +248,7 @@ API responses use JSON (shape varies by endpoint):
 - **Security:** bcrypt, optional 2FA, session tracking, security logs, rate limiting
 - **Search & Discovery:** unified search, trending, zone discovery
 - **Infra:** Flask-Caching, optional Redis/RQ background jobs
-- **NLP:** VADER (English) + CamemBERT (French) sentiment analysis
+- **NLP:** VADER (English) + a multilingual XLM-RoBERTa emotion model (cardiffnlp/twitter-xlm-roberta-base-emotion, through the Hugging Face Inference API) for French
 - **API:** RESTful JSON endpoints
 
 **Key Components:**
