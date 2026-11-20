@@ -1,4 +1,24 @@
-# PULSE
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
+    <img src="assets/logo.svg" alt="PULSE" height="120">
+  </picture>
+</p>
+
+<p align="center">
+  <img alt="Python 3.12+" src="https://img.shields.io/badge/python-3.12%2B-3776AB?logo=python&amp;logoColor=white">
+  <a href="https://github.com/mo-dev-x/pulse/commits/main"><img alt="Last commit" src="https://img.shields.io/github/last-commit/mo-dev-x/pulse"></a>
+  <img alt="Top language" src="https://img.shields.io/github/languages/top/mo-dev-x/pulse">
+</p>
+
+<p align="center">
+  <a href="#features">Features</a> ·
+  <a href="#architecture">Architecture</a> ·
+  <a href="#api-overview">API overview</a> ·
+  <a href="#quickstart">Quickstart</a> ·
+  <a href="#tests">Tests</a> ·
+  <a href="#limitations-and-roadmap">Roadmap</a>
+</p>
 
 A privacy-first campus wellness platform for Université Laval. Students post how they feel, publicly or under a pseudonym, and the campus gets mood analytics that never expose anyone.
 
@@ -21,7 +41,8 @@ Students rarely share stress or low mood when their name is attached, and asking
 - **Individual layer.** Each post is either public (on your profile) or anonymous (shown under a persistent pseudonym). The author's `user_id` is stored for moderation but never returned by the API for anonymous posts, and followers never see your anonymous posts.
 - **Collective layer.** Every post is scored for sentiment and emotion in English or French. Scores are rolled up by day, week and campus zone. An aggregate is shown only once it covers **at least 10 posts**, so no single person's mood can be worked out from it.
 
-Sign-up is limited to `@ulaval.ca` email addresses, and you must verify your email before you can post or comment.
+> [!NOTE]
+> Sign-up is limited to `@ulaval.ca` email addresses, and you must verify your email before you can post or comment.
 
 ## Features
 
@@ -123,7 +144,8 @@ Key columns: `users.pseudonym` and `pseudonym_last_changed` (90-day cooldown), `
 
 ## Quickstart
 
-**Prerequisites:** Python 3.12+ and MySQL 8. Email delivery needs a [Brevo](https://www.brevo.com/) API key and media uploads need a [Cloudinary](https://cloudinary.com/) account; both are optional for a local tour. Redis is optional.
+> [!IMPORTANT]
+> **Prerequisites:** Python 3.12+ and MySQL 8. Email delivery needs a [Brevo](https://www.brevo.com/) API key and media uploads need a [Cloudinary](https://cloudinary.com/) account; both are optional for a local tour. Redis is optional.
 
 ### 1. Backend
 
@@ -157,7 +179,8 @@ python3 -m http.server 8000       # ES modules need http://, not file://
 # open http://127.0.0.1:8000/login.html
 ```
 
-When served from `localhost`, the frontend uses `http://127.0.0.1:5000` as its API. On any other host it uses the deployed Railway backend (see `Frontend/js/auth.js`).
+> [!TIP]
+> When served from `localhost`, the frontend uses `http://127.0.0.1:5000` as its API. On any other host it uses the deployed Railway backend (see `Frontend/js/auth.js`).
 
 ### 3. Example requests
 
@@ -186,7 +209,8 @@ curl -s -X POST http://127.0.0.1:5000/api/posts \
 curl -s "http://127.0.0.1:5000/api/analytics/campus?date=2026-04-07" -H "Authorization: Bearer $TOKEN"
 ```
 
-Add `-H "Accept-Language: fr"` to get the messages in French.
+> [!TIP]
+> Add `-H "Accept-Language: fr"` to get the messages in French.
 
 ## Tests
 
@@ -203,7 +227,8 @@ There are two kinds of tests:
 - **In-process suites.** Most files in `backend/tests/` (2FA, sessions, messages, search, reports, rate limiting, caching, background jobs and others) use Flask's test client with in-memory SQLite (`create_app('testing')`), so they need no external services.
 - **HTTP scripts.** `test_auth.py`, `test_posts.py`, `test_reactions.py`, `test_analytics.py` and `test_social.py` are scripts that call a running server at `127.0.0.1:5000` backed by MySQL. Run them with `python tests/test_auth.py` while `python run.py` is running. `test_nlp_camembert.py` exercises the NLP service directly.
 
-Current state: the in-process suites give **79 passing and 23 failing** tests. The failures are mostly in comments, reports, bookmarks and caching, where tests still patch `app.routes.posts.analyze_sentiment`, a function the code no longer has after the switch to the Hugging Face NLP service. The tests need updating; the endpoints themselves are not known to be broken.
+> [!WARNING]
+> Current state: the in-process suites give **79 passing and 23 failing** tests. The failures are mostly in comments, reports, bookmarks and caching, where tests still patch `app.routes.posts.analyze_sentiment`, a function the code no longer has after the switch to the Hugging Face NLP service. The tests need updating; the endpoints themselves are not known to be broken.
 
 ## Project structure
 
