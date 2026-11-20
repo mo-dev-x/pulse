@@ -6,6 +6,14 @@ A privacy-first campus wellness platform for Université Laval. Students post ho
 
 **Stack:** Python 3.12 · Flask 3 · SQLAlchemy · MySQL 8 · JWT · Redis/RQ (optional) · Hugging Face Inference API · vanilla JS PWA
 
+<p align="center">
+  <img src="assets/landing-page.png" alt="PULSE landing page: 'Your campus. Alive.' with Get Started and Explore features buttons" width="800">
+</p>
+<p align="center">
+  <img src="assets/feed.png" alt="PULSE home feed: sidebar navigation, Campus Pulse mood check-in card, post composer, and two posts with emotion badges" width="800">
+</p>
+<p align="center"><sub>Screenshots of a local run: the Flask backend started with its <code>testing</code> config on a throwaway SQLite file (no MySQL, no API keys) and the <code>Frontend/</code> folder served statically. The two accounts and the posts were created through the API for the screenshot; the emotion badges are what the backend assigned to them.</sub></p>
+
 ## The problem
 
 Students rarely share stress or low mood when their name is attached, and asking about it directly gives no picture of how the campus as a whole is doing. PULSE separates two things:
