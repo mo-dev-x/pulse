@@ -20,8 +20,8 @@ Before you start, make sure you have:
 
 ```bash
 # Clone the repository
-git clone https://github.com/mo-dev-x/pulse-backend.git
-cd pulse-backend
+git clone https://github.com/mo-dev-x/pulse.git
+cd pulse
 
 # Navigate to backend folder
 cd backend
@@ -111,7 +111,7 @@ Copy the outputs - you'll need them next!
 
 ```bash
 # Copy template
-cp .env.template .env
+cp .env.example .env
 
 # Edit with your favorite editor
 nano .env  # or: vim .env, code .env, etc.
@@ -580,7 +580,7 @@ pulse-backend/
 │   │   └── test_nlp_camembert.py
 │   ├── venv/                   # Virtual environment
 │   ├── .env                    # Your secrets (NOT in git)
-│   ├── .env.template           # Template
+│   ├── .env.example            # Template
 │   ├── requirements.txt        # Python dependencies
 │   ├── run.py                  # Entry point
 │   ├── setup_db.py             # Database setup
