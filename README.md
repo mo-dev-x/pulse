@@ -278,4 +278,4 @@ More documentation:
 
 ## License
 
-No license has been chosen yet.
+Released under the [MIT License](LICENSE).
