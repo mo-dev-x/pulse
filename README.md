@@ -6,6 +6,7 @@
 </p>
 
 <p align="center">
+  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-blue"></a>
   <img alt="Python 3.12+" src="https://img.shields.io/badge/python-3.12%2B-3776AB?logo=python&amp;logoColor=white">
   <a href="https://github.com/mo-dev-x/pulse/commits/main"><img alt="Last commit" src="https://img.shields.io/github/last-commit/mo-dev-x/pulse"></a>
   <img alt="Top language" src="https://img.shields.io/github/languages/top/mo-dev-x/pulse">
