@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
-    <img src="assets/logo.svg" alt="PULSE" height="120">
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-animated-dark.svg">
+    <img src="assets/logo-animated.svg" alt="PULSE" height="120">
   </picture>
 </p>
 
@@ -18,6 +18,13 @@
   <a href="#quickstart">Quickstart</a> ·
   <a href="#tests">Tests</a> ·
   <a href="#limitations-and-roadmap">Roadmap</a>
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/divider-dark.svg">
+    <img src="assets/divider.svg" alt="" width="100%" height="12">
+  </picture>
 </p>
 
 A privacy-first campus wellness platform for Université Laval. Students post how they feel, publicly or under a pseudonym, and the campus gets mood analytics that never expose anyone.
